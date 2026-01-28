@@ -239,14 +239,16 @@ export default function SettingsPage() {
           <CardDescription>로그인 화면 하단에 표시될 추가 텍스트를 입력하세요.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* 저작권 문구 - 수정 불가 (고정) */}
           <div className="space-y-2">
             <Label htmlFor="copyright">저작권 문구</Label>
             <Input
               id="copyright"
-              value={formData.copyright}
-              onChange={(e) => handleChange('copyright', e.target.value)}
-              placeholder="© 2026 회사명. All rights reserved."
+              value="© 2026 KDH | Sales Management Team. All rights reserved."
+              disabled
+              className="bg-muted"
             />
+            <p className="text-xs text-muted-foreground">저작권 문구는 수정할 수 없습니다.</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="additional_info">추가 정보</Label>
@@ -283,12 +285,8 @@ export default function SettingsPage() {
               {formData.fax && <span>FAX: {formData.fax}</span>}
               {formData.email && <span>{formData.email}</span>}
               {formData.website && <span className="text-primary">{formData.website}</span>}
-              {formData.copyright && (
-                <>
-                  <span className="text-muted-foreground/50">|</span>
-                  <span>{formData.copyright}</span>
-                </>
-              )}
+              <span className="text-muted-foreground/50">|</span>
+              <span>© 2026 KDH | Sales Management Team. All rights reserved.</span>
             </div>
             {formData.additional_info && (
               <p className="text-center mt-1 text-muted-foreground/70">{formData.additional_info}</p>
