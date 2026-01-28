@@ -435,7 +435,15 @@ export async function getSettlementStats(): Promise<{
 export async function getSettlementStatsByMonth(): Promise<{
   totalRows: number;
   totalBusinesses: number;
-  months: { month: string; count: number; businessCount: number; totalAmount: number }[];
+  months: { 
+    month: string; 
+    prescriptionMonth: string;
+    count: number; 
+    csoCount: number;
+    totalQuantity: number;
+    totalAmount: number;
+    totalCommission: number;
+  }[];
 }> {
   // 전체 개수 먼저 조회
   const { count: totalCount } = await supabase
@@ -443,7 +451,15 @@ export async function getSettlementStatsByMonth(): Promise<{
     .select('*', { count: 'exact', head: true });
 
   // 모든 데이터 페이지네이션으로 가져오기
-  type MonthRow = { 정산월: string | null; business_number: string; 금액: number | null };
+  type MonthRow = { 
+    정산월: string | null; 
+    처방월: string | null;
+    business_number: string; 
+    CSO관리업체: string | null;
+    수량: number | null;
+    금액: number | null;
+    제약수수료_합계: number | null;
+  };
   const allRows: MonthRow[] = [];
   const pageSize = 1000;
   let page = 0;
@@ -451,7 +467,7 @@ export async function getSettlementStatsByMonth(): Promise<{
   while (true) {
     const { data, error } = await supabase
       .from('settlements')
-      .select('정산월, business_number, 금액')
+      .select('정산월, 처방월, business_number, CSO관리업체, 수량, 금액, 제약수수료_합계')
       .range(page * pageSize, (page + 1) * pageSize - 1);
     
     if (error || !data || data.length === 0) break;
@@ -461,15 +477,37 @@ export async function getSettlementStatsByMonth(): Promise<{
     page++;
   }
 
-  const monthData = new Map<string, { count: number; businesses: Set<string>; amount: number }>();
+  const monthData = new Map<string, { 
+    prescriptionMonth: string;
+    count: number; 
+    csoSet: Set<string>; 
+    quantity: number;
+    amount: number;
+    commission: number;
+  }>();
   const allBusinesses = new Set<string>();
 
   for (const s of allRows) {
     if (s.정산월) {
-      const existing = monthData.get(s.정산월) || { count: 0, businesses: new Set<string>(), amount: 0 };
+      const existing = monthData.get(s.정산월) || { 
+        prescriptionMonth: s.처방월 || '',
+        count: 0, 
+        csoSet: new Set<string>(), 
+        quantity: 0,
+        amount: 0,
+        commission: 0
+      };
       existing.count++;
-      existing.businesses.add(s.business_number);
+      if (s.CSO관리업체) {
+        existing.csoSet.add(s.CSO관리업체);
+      }
+      existing.quantity += Number(s.수량) || 0;
       existing.amount += Number(s.금액) || 0;
+      existing.commission += Number(s.제약수수료_합계) || 0;
+      // 처방월이 비어있으면 업데이트
+      if (!existing.prescriptionMonth && s.처방월) {
+        existing.prescriptionMonth = s.처방월;
+      }
       monthData.set(s.정산월, existing);
     }
     allBusinesses.add(s.business_number);
@@ -478,9 +516,12 @@ export async function getSettlementStatsByMonth(): Promise<{
   const months = Array.from(monthData.entries())
     .map(([month, d]) => ({
       month,
+      prescriptionMonth: d.prescriptionMonth,
       count: d.count,
-      businessCount: d.businesses.size,
+      csoCount: d.csoSet.size,
+      totalQuantity: d.quantity,
       totalAmount: d.amount,
+      totalCommission: d.commission,
     }))
     .sort((a, b) => b.month.localeCompare(a.month));
 

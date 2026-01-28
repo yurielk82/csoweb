@@ -31,9 +31,12 @@ import { Loading } from '@/components/shared/loading';
 
 interface SettlementMonthData {
   month: string;
+  prescriptionMonth: string;
   count: number;
-  businessCount: number;
+  csoCount: number;
+  totalQuantity: number;
   totalAmount: number;
+  totalCommission: number;
 }
 
 export default function DataManagementPage() {
@@ -183,14 +186,16 @@ export default function DataManagementPage() {
           <CardTitle className="text-base">정산월별 데이터</CardTitle>
           <CardDescription>각 정산월의 데이터 현황을 확인하고 관리할 수 있습니다.</CardDescription>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>정산월</TableHead>
-                <TableHead className="text-right">데이터 건수</TableHead>
-                <TableHead className="text-right">업체 수</TableHead>
-                <TableHead className="text-right">총 금액</TableHead>
+                <TableHead>처방월</TableHead>
+                <TableHead className="text-right">CSO관리업체 수</TableHead>
+                <TableHead className="text-right">수량 합계</TableHead>
+                <TableHead className="text-right">금액 합계</TableHead>
+                <TableHead className="text-right">제약수수료 합계</TableHead>
                 <TableHead className="text-right">관리</TableHead>
               </TableRow>
             </TableHeader>
@@ -203,14 +208,22 @@ export default function DataManagementPage() {
                       {item.month}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="font-mono">
+                      {item.prescriptionMonth || '-'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {formatNumber(item.csoCount)}개
+                  </TableCell>
                   <TableCell className="text-right font-medium">
-                    {formatNumber(item.count)}건
+                    {formatNumber(item.totalQuantity)}
                   </TableCell>
-                  <TableCell className="text-right">
-                    {formatNumber(item.businessCount)}개
-                  </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right font-medium">
                     {formatCurrency(item.totalAmount)}
+                  </TableCell>
+                  <TableCell className="text-right font-medium text-blue-600">
+                    {formatCurrency(item.totalCommission)}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button
@@ -227,7 +240,7 @@ export default function DataManagementPage() {
               ))}
               {data.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     업로드된 정산 데이터가 없습니다.
                   </TableCell>
                 </TableRow>
