@@ -35,10 +35,18 @@ interface SettlementResponse {
     totalPages: number;
   };
   totals: {
+    수량: number;
     금액: number;
     제약수수료_합계: number;
     담당수수료_합계: number;
   };
+}
+
+interface CSOSubtotal {
+  csoName: string;
+  수량: number;
+  금액: number;
+  제약수수료_합계: number;
 }
 
 export default function DashboardPage() {
@@ -163,6 +171,21 @@ export default function DashboardPage() {
     .filter(c => selectedColumns.includes(c.column_key))
     .sort((a, b) => a.display_order - b.display_order);
 
+  // CSO관리업체별 소계 계산
+  const csoSubtotals: CSOSubtotal[] = [];
+  if (data?.settlements) {
+    const csoMap = new Map<string, CSOSubtotal>();
+    for (const row of data.settlements) {
+      const csoName = row.CSO관리업체 || '(미지정)';
+      const existing = csoMap.get(csoName) || { csoName, 수량: 0, 금액: 0, 제약수수료_합계: 0 };
+      existing.수량 += Number(row.수량) || 0;
+      existing.금액 += Number(row.금액) || 0;
+      existing.제약수수료_합계 += Number(row.제약수수료_합계) || 0;
+      csoMap.set(csoName, existing);
+    }
+    csoSubtotals.push(...Array.from(csoMap.values()).sort((a, b) => a.csoName.localeCompare(b.csoName)));
+  }
+
   if (loading && !data) {
     return <Loading text="정산서를 불러오는 중..." />;
   }
@@ -268,6 +291,14 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
             <CardHeader className="pb-2">
+              <CardDescription>총 수량</CardDescription>
+              <CardTitle className="text-2xl">
+                {formatNumber(data.totals.수량)}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
               <CardDescription>총 금액</CardDescription>
               <CardTitle className="text-2xl">
                 {formatNumber(data.totals.금액)}원
@@ -277,20 +308,53 @@ export default function DashboardPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>제약수수료 합계</CardDescription>
-              <CardTitle className="text-2xl">
+              <CardTitle className="text-2xl text-blue-600">
                 {formatNumber(data.totals.제약수수료_합계)}원
               </CardTitle>
             </CardHeader>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>담당수수료 합계</CardDescription>
-              <CardTitle className="text-2xl">
-                {formatNumber(data.totals.담당수수료_합계)}원
-              </CardTitle>
-            </CardHeader>
-          </Card>
         </div>
+      )}
+
+      {/* CSO관리업체별 소계 */}
+      {csoSubtotals.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">CSO관리업체별 소계</CardTitle>
+            <CardDescription>거래처별 수량, 금액, 수수료 합계</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="settlement-table">
+                <thead>
+                  <tr>
+                    <th>CSO관리업체</th>
+                    <th className="text-right">수량</th>
+                    <th className="text-right">금액</th>
+                    <th className="text-right">제약수수료 합계</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {csoSubtotals.map((cso, idx) => (
+                    <tr key={idx}>
+                      <td className="font-medium">{cso.csoName}</td>
+                      <td className="text-right">{formatNumber(cso.수량)}</td>
+                      <td className="text-right">{formatNumber(cso.금액)}원</td>
+                      <td className="text-right text-blue-600 font-medium">{formatNumber(cso.제약수수료_합계)}원</td>
+                    </tr>
+                  ))}
+                  {/* 총합계 */}
+                  <tr className="bg-muted/50 font-bold">
+                    <td>총 합계</td>
+                    <td className="text-right">{formatNumber(data?.totals.수량 || 0)}</td>
+                    <td className="text-right">{formatNumber(data?.totals.금액 || 0)}원</td>
+                    <td className="text-right text-blue-600">{formatNumber(data?.totals.제약수수료_합계 || 0)}원</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Table */}

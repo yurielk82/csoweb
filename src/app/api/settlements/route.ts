@@ -54,9 +54,10 @@ export async function GET(request: NextRequest) {
     
     // Calculate totals
     const totals = {
-      금액: settlements.reduce((sum, s) => sum + (s.금액 || 0), 0),
-      제약수수료_합계: settlements.reduce((sum, s) => sum + (s.제약수수료_합계 || 0), 0),
-      담당수수료_합계: settlements.reduce((sum, s) => sum + (s.담당수수료_합계 || 0), 0),
+      수량: settlements.reduce((sum, s) => sum + (Number(s.수량) || 0), 0),
+      금액: settlements.reduce((sum, s) => sum + (Number(s.금액) || 0), 0),
+      제약수수료_합계: settlements.reduce((sum, s) => sum + (Number(s.제약수수료_합계) || 0), 0),
+      담당수수료_합계: settlements.reduce((sum, s) => sum + (Number(s.담당수수료_합계) || 0), 0),
     };
     
     return NextResponse.json({
