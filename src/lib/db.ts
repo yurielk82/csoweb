@@ -144,6 +144,36 @@ export async function updateUserPassword(businessNumber: string, passwordHash: s
   return false;
 }
 
+export async function updateUserEmail(businessNumber: string, email: string): Promise<boolean> {
+  const user = users.get(businessNumber);
+  if (user) {
+    user.email = email;
+    user.updated_at = new Date().toISOString();
+    return true;
+  }
+  return false;
+}
+
+export async function updateUser(businessNumber: string, data: {
+  email?: string;
+  is_admin?: boolean;
+  is_approved?: boolean;
+}): Promise<boolean> {
+  const user = users.get(businessNumber);
+  if (user) {
+    if (data.email !== undefined) user.email = data.email;
+    if (data.is_admin !== undefined) user.is_admin = data.is_admin;
+    if (data.is_approved !== undefined) user.is_approved = data.is_approved;
+    user.updated_at = new Date().toISOString();
+    return true;
+  }
+  return false;
+}
+
+export async function deleteUser(businessNumber: string): Promise<boolean> {
+  return users.delete(businessNumber);
+}
+
 // ============================================
 // Settlement Operations (정산월 기준)
 // ============================================
@@ -304,6 +334,51 @@ export async function getSettlementStats(): Promise<{
     settlementMonths,
     businessCount: businessNumbers.size,
   };
+}
+
+// 정산월별 상세 통계 (데이터 관리 페이지용)
+export async function getSettlementStatsByMonth(): Promise<{
+  totalRows: number;
+  totalBusinesses: number;
+  months: { month: string; count: number; businessCount: number; totalAmount: number }[];
+}> {
+  const monthData = new Map<string, { count: number; businesses: Set<string>; amount: number }>();
+  const allBusinesses = new Set<string>();
+  
+  for (const s of settlements) {
+    if (s.정산월) {
+      const existing = monthData.get(s.정산월) || { count: 0, businesses: new Set<string>(), amount: 0 };
+      existing.count++;
+      existing.businesses.add(s.business_number);
+      existing.amount += s.금액 || 0;
+      monthData.set(s.정산월, existing);
+    }
+    allBusinesses.add(s.business_number);
+  }
+  
+  const months = Array.from(monthData.entries())
+    .map(([month, data]) => ({
+      month,
+      count: data.count,
+      businessCount: data.businesses.size,
+      totalAmount: data.amount,
+    }))
+    .sort((a, b) => b.month.localeCompare(a.month));
+  
+  return {
+    totalRows: settlements.length,
+    totalBusinesses: allBusinesses.size,
+    months,
+  };
+}
+
+// 특정 정산월 데이터 삭제
+export async function deleteSettlementsByMonth(month: string): Promise<number> {
+  const beforeCount = settlements.length;
+  const filtered = settlements.filter(s => s.정산월 !== month);
+  settlements.length = 0;
+  settlements.push(...filtered);
+  return beforeCount - settlements.length;
 }
 
 // ============================================

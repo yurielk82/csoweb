@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { parseExcelFile } from '@/lib/excel';
-import { 
-  insertSettlements, 
-  getBusinessNumbersForSettlementMonth, 
-  getUserByBusinessNumber,
-  getSettlementSummary
-} from '@/lib/db';
-import { sendEmail } from '@/lib/email';
+import { insertSettlements } from '@/lib/db';
 
 // 메모리 제한 증가
 export const maxDuration = 60; // 60초 타임아웃
@@ -70,34 +64,7 @@ export async function POST(request: NextRequest) {
     // Insert settlements (정산월 기준으로 자동 관리)
     const { rowCount, settlementMonths } = await insertSettlements(data);
     
-    // 각 정산월별로 알림 발송
-    let emailsSent = 0;
-    let emailsFailed = 0;
-    
-    for (const month of settlementMonths) {
-      const businessNumbers = await getBusinessNumbersForSettlementMonth(month);
-      
-      for (const bn of businessNumbers) {
-        const user = await getUserByBusinessNumber(bn);
-        if (user && user.is_approved) {
-          const summary = await getSettlementSummary(bn, month);
-          const result = await sendEmail(user.email, 'settlement_uploaded', {
-            company_name: user.company_name,
-            year_month: month,
-            count: summary.데이터_건수,
-          });
-          
-          if (result.success) {
-            emailsSent++;
-          } else {
-            emailsFailed++;
-          }
-          
-          // Rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      }
-    }
+    // 이메일 자동 발송 제거 - 별도 메뉴에서 수동 발송
     
     return NextResponse.json({
       success: true,
@@ -105,12 +72,8 @@ export async function POST(request: NextRequest) {
         rowCount,
         settlementMonths,
         errors: errors.length > 0 ? errors : undefined,
-        notifications: {
-          sent: emailsSent,
-          failed: emailsFailed,
-        },
       },
-      message: `${rowCount.toLocaleString()}건 업로드 완료 (정산월: ${settlementMonths.join(', ')}). ${emailsSent}개 업체에게 알림 발송.`,
+      message: `${rowCount.toLocaleString()}건 업로드 완료 (정산월: ${settlementMonths.join(', ')})`,
     });
   } catch (error) {
     console.error('Upload error:', error);

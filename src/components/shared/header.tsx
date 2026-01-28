@@ -15,7 +15,9 @@ import {
   Users,
   Columns,
   Mail,
-  MailPlus
+  MailPlus,
+  Database,
+  UserCog
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -48,6 +50,8 @@ export function Header({ user }: HeaderProps) {
   const adminMenuItems = [
     { href: '/admin', label: '대시보드', icon: LayoutDashboard },
     { href: '/admin/upload', label: '엑셀 업로드', icon: Upload },
+    { href: '/admin/data', label: '데이터 관리', icon: Database },
+    { href: '/admin/members', label: '회원 관리', icon: UserCog },
     { href: '/admin/approvals', label: '회원 승인', icon: Users },
     { href: '/admin/columns', label: '컬럼 설정', icon: Columns },
     { href: '/admin/emails', label: '이메일 이력', icon: Mail },
@@ -102,16 +106,18 @@ export function Header({ user }: HeaderProps) {
                 <p className="text-xs text-muted-foreground">{user.email}</p>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem disabled>
-                <User className="mr-2 h-4 w-4" />
-                {user.business_number}
+              <DropdownMenuItem asChild>
+                <Link href="/profile" className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  내 정보 수정
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem disabled>
                 <Settings className="mr-2 h-4 w-4" />
-                {user.is_admin ? '관리자' : '업체'}
+                {user.is_admin ? '관리자' : '업체'} ({user.business_number})
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
                 <LogOut className="mr-2 h-4 w-4" />
                 로그아웃
               </DropdownMenuItem>
@@ -145,6 +151,12 @@ export function Header({ user }: HeaderProps) {
               </Button>
             </Link>
           ))}
+          <Link href="/profile" onClick={() => setMobileMenuOpen(false)}>
+            <Button variant="ghost" className="w-full justify-start gap-2">
+              <User className="h-4 w-4" />
+              내 정보 수정
+            </Button>
+          </Link>
         </nav>
       )}
     </header>
