@@ -1,7 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+// 환경변수는 getSupabase() 함수 내에서 직접 읽음
 
 // 서버 사이드에서 사용하는 Supabase 클라이언트 (service_role 키 사용)
 // 빌드 시 환경변수가 없을 수 있으므로 lazy initialization 사용
@@ -9,10 +8,14 @@ let _supabase: SupabaseClient | null = null;
 
 export function getSupabase(): SupabaseClient {
   if (!_supabase) {
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Supabase environment variables are not configured');
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!url || !key) {
+      console.error('Supabase config missing - URL:', !!url, 'Key:', !!key);
+      throw new Error(`Supabase 환경변수가 설정되지 않았습니다. URL: ${!!url}, KEY: ${!!key}`);
     }
-    _supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    _supabase = createClient(url, key, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
