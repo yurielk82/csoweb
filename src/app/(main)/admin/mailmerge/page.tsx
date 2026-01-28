@@ -45,10 +45,13 @@ const AVAILABLE_VARIABLES = [
   { key: '업체명', description: '업체명' },
   { key: '사업자번호', description: '사업자번호' },
   { key: '이메일', description: '이메일 주소' },
-  { key: '정산월', description: '정산 년월' },
-  { key: '총_금액', description: '총 금액 (원)' },
-  { key: '총_수수료', description: '총 수수료 (원)' },
-  { key: '데이터_건수', description: '데이터 건수' },
+  { key: '정산월', description: '정산 년월 (YYYY-MM)' },
+  { key: '총_금액', description: '총 금액 (= 전체 금액 합계)' },
+  { key: '총_수수료', description: '제약수수료 합계 (= 세금계산서 발행 금액)' },
+  { key: '제약수수료_합계', description: '제약수수료 합계 (상세)' },
+  { key: '담당수수료_합계', description: '담당수수료 합계' },
+  { key: '총_수량', description: '총 수량 합계' },
+  { key: '데이터_건수', description: '정산 데이터 행 개수' },
 ];
 
 export default function MailMergePage() {

@@ -359,25 +359,34 @@ export async function getBusinessNumbersForSettlementMonth(settlementMonth: stri
 export async function getSettlementSummary(businessNumber: string, settlementMonth: string): Promise<{
   총_금액: number;
   총_수수료: number;
+  제약수수료_합계: number;
+  담당수수료_합계: number;
   데이터_건수: number;
+  총_수량: number;
 }> {
   const { data, error } = await supabase
     .from('settlements')
-    .select('금액, 제약수수료_합계, 담당수수료_합계')
+    .select('금액, 수량, 제약수수료_합계, 담당수수료_합계')
     .eq('business_number', businessNumber)
     .eq('정산월', settlementMonth);
 
   if (error || !data) {
-    return { 총_금액: 0, 총_수수료: 0, 데이터_건수: 0 };
+    return { 총_금액: 0, 총_수수료: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 데이터_건수: 0, 총_수량: 0 };
   }
 
-  type SummaryRow = { 금액: number | null; 제약수수료_합계: number | null; 담당수수료_합계: number | null };
+  type SummaryRow = { 금액: number | null; 수량: number | null; 제약수수료_합계: number | null; 담당수수료_합계: number | null };
   const rows = data as unknown as SummaryRow[];
+  
+  const 제약수수료_합계 = rows.reduce((sum, s) => sum + (Number(s.제약수수료_합계) || 0), 0);
+  const 담당수수료_합계 = rows.reduce((sum, s) => sum + (Number(s.담당수수료_합계) || 0), 0);
   
   return {
     총_금액: rows.reduce((sum, s) => sum + (Number(s.금액) || 0), 0),
-    총_수수료: rows.reduce((sum, s) => sum + (Number(s.제약수수료_합계) || 0) + (Number(s.담당수수료_합계) || 0), 0),
+    총_수수료: 제약수수료_합계, // 제약수수료 합계 = 세금계산서 발행 금액
+    제약수수료_합계,
+    담당수수료_합계,
     데이터_건수: data.length,
+    총_수량: rows.reduce((sum, s) => sum + (Number(s.수량) || 0), 0),
   };
 }
 

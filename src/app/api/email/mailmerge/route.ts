@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       if (!user || !user.is_approved) continue;
       
       // Get settlement summary if year_month is specified
-      let summary = { 총_금액: 0, 총_수수료: 0, 데이터_건수: 0 };
+      let summary = { 총_금액: 0, 총_수수료: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 데이터_건수: 0, 총_수량: 0 };
       if (year_month) {
         summary = await getSettlementSummary(bn, year_month);
       }
@@ -101,7 +101,10 @@ export async function POST(request: NextRequest) {
         '정산월': year_month || '',
         '총_금액': formatCurrency(summary.총_금액),
         '총_수수료': formatCurrency(summary.총_수수료),
+        '제약수수료_합계': formatCurrency(summary.제약수수료_합계),
+        '담당수수료_합계': formatCurrency(summary.담당수수료_합계),
         '데이터_건수': summary.데이터_건수,
+        '총_수량': summary.총_수량.toLocaleString('ko-KR'),
       };
       
       // Replace variables in subject and body
@@ -165,8 +168,11 @@ export async function PUT(request: NextRequest) {
       '이메일': 'sample@example.com',
       '정산월': year_month || '2026-01',
       '총_금액': formatCurrency(15234000),
-      '총_수수료': formatCurrency(1523400),
+      '총_수수료': formatCurrency(1781729),
+      '제약수수료_합계': formatCurrency(1781729),
+      '담당수수료_합계': formatCurrency(523400),
       '데이터_건수': 127,
+      '총_수량': '1,250',
     };
     
     const previewSubject = replaceVariables(subject || '', sampleVariables);
