@@ -27,6 +27,13 @@ interface DashboardStats {
   };
 }
 
+interface SystemStatus {
+  supabase: boolean;
+  resend: boolean;
+  version: string;
+  environment: string;
+}
+
 export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
@@ -34,6 +41,12 @@ export default function AdminDashboardPage() {
     totalUsers: 0,
     totalSettlements: 0,
     recentEmails: { sent: 0, failed: 0 },
+  });
+  const [systemStatus, setSystemStatus] = useState<SystemStatus>({
+    supabase: false,
+    resend: false,
+    version: 'v2.0',
+    environment: 'Production',
   });
 
   useEffect(() => {
@@ -50,6 +63,13 @@ export default function AdminDashboardPage() {
         // Fetch email stats
         const emailRes = await fetch('/api/email/logs?limit=100');
         const emailData = await emailRes.json();
+
+        // Fetch system status
+        const statusRes = await fetch('/api/system/status');
+        const statusData = await statusRes.json();
+        if (statusData.success) {
+          setSystemStatus(statusData.data);
+        }
         
         setStats({
           pendingApprovals: usersData.success ? usersData.data.length : 0,
@@ -206,19 +226,23 @@ export default function AdminDashboardPage() {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between py-2 border-b">
               <span className="text-muted-foreground">버전</span>
-              <span>v2.0</span>
+              <span>{systemStatus.version}</span>
             </div>
             <div className="flex justify-between py-2 border-b">
               <span className="text-muted-foreground">데이터베이스</span>
-              <Badge variant="default" className="bg-green-600">Supabase 연결됨</Badge>
+              <Badge className={systemStatus.supabase ? 'bg-blue-600' : 'bg-gray-400'}>
+                Supabase {systemStatus.supabase ? '연결됨' : '미연결'}
+              </Badge>
             </div>
             <div className="flex justify-between py-2 border-b">
               <span className="text-muted-foreground">이메일 서비스</span>
-              <Badge variant="default" className="bg-green-600">Resend 연결됨</Badge>
+              <Badge className={systemStatus.resend ? 'bg-blue-600' : 'bg-gray-400'}>
+                Resend {systemStatus.resend ? '연결됨' : '미연결'}
+              </Badge>
             </div>
             <div className="flex justify-between py-2">
               <span className="text-muted-foreground">환경</span>
-              <Badge>Production</Badge>
+              <Badge variant="outline">{systemStatus.environment}</Badge>
             </div>
           </div>
         </CardContent>

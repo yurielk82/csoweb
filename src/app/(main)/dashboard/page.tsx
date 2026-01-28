@@ -42,11 +42,14 @@ interface SettlementResponse {
   };
 }
 
-interface CSOSubtotal {
+interface GroupedData {
   csoName: string;
-  수량: number;
-  금액: number;
-  제약수수료_합계: number;
+  customers: {
+    customerName: string;
+    rows: Settlement[];
+    subtotal: { 수량: number; 금액: number; 제약수수료_합계: number };
+  }[];
+  total: { 수량: number; 금액: number; 제약수수료_합계: number };
 }
 
 export default function DashboardPage() {
@@ -171,19 +174,45 @@ export default function DashboardPage() {
     .filter(c => selectedColumns.includes(c.column_key))
     .sort((a, b) => a.display_order - b.display_order);
 
-  // CSO관리업체별 소계 계산
-  const csoSubtotals: CSOSubtotal[] = [];
+  // 피벗 데이터 생성: CSO관리업체 > 거래처명 > 상세 데이터
+  const groupedData: GroupedData[] = [];
   if (data?.settlements) {
-    const csoMap = new Map<string, CSOSubtotal>();
+    const csoMap = new Map<string, Map<string, Settlement[]>>();
+    
+    // CSO관리업체 > 거래처명으로 그룹핑
     for (const row of data.settlements) {
       const csoName = row.CSO관리업체 || '(미지정)';
-      const existing = csoMap.get(csoName) || { csoName, 수량: 0, 금액: 0, 제약수수료_합계: 0 };
-      existing.수량 += Number(row.수량) || 0;
-      existing.금액 += Number(row.금액) || 0;
-      existing.제약수수료_합계 += Number(row.제약수수료_합계) || 0;
-      csoMap.set(csoName, existing);
+      const customerName = row.거래처명 || '(미지정)';
+      
+      if (!csoMap.has(csoName)) {
+        csoMap.set(csoName, new Map());
+      }
+      const customerMap = csoMap.get(csoName)!;
+      if (!customerMap.has(customerName)) {
+        customerMap.set(customerName, []);
+      }
+      customerMap.get(customerName)!.push(row);
     }
-    csoSubtotals.push(...Array.from(csoMap.values()).sort((a, b) => a.csoName.localeCompare(b.csoName)));
+    
+    // 구조화된 데이터로 변환
+    for (const [csoName, customerMap] of Array.from(csoMap.entries()).sort((a, b) => a[0].localeCompare(b[0]))) {
+      const customers: GroupedData['customers'] = [];
+      const csoTotal = { 수량: 0, 금액: 0, 제약수수료_합계: 0 };
+      
+      for (const [customerName, rows] of Array.from(customerMap.entries()).sort((a, b) => a[0].localeCompare(b[0]))) {
+        const subtotal = {
+          수량: rows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
+          금액: rows.reduce((sum, r) => sum + (Number(r.금액) || 0), 0),
+          제약수수료_합계: rows.reduce((sum, r) => sum + (Number(r.제약수수료_합계) || 0), 0),
+        };
+        customers.push({ customerName, rows, subtotal });
+        csoTotal.수량 += subtotal.수량;
+        csoTotal.금액 += subtotal.금액;
+        csoTotal.제약수수료_합계 += subtotal.제약수수료_합계;
+      }
+      
+      groupedData.push({ csoName, customers, total: csoTotal });
+    }
   }
 
   if (loading && !data) {
@@ -316,49 +345,12 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* CSO관리업체별 소계 */}
-      {csoSubtotals.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">CSO관리업체별 소계</CardTitle>
-            <CardDescription>거래처별 수량, 금액, 수수료 합계</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="settlement-table">
-                <thead>
-                  <tr>
-                    <th>CSO관리업체</th>
-                    <th className="text-right">수량</th>
-                    <th className="text-right">금액</th>
-                    <th className="text-right">제약수수료 합계</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {csoSubtotals.map((cso, idx) => (
-                    <tr key={idx}>
-                      <td className="font-medium">{cso.csoName}</td>
-                      <td className="text-right">{formatNumber(cso.수량)}</td>
-                      <td className="text-right">{formatNumber(cso.금액)}원</td>
-                      <td className="text-right text-blue-600 font-medium">{formatNumber(cso.제약수수료_합계)}원</td>
-                    </tr>
-                  ))}
-                  {/* 총합계 */}
-                  <tr className="bg-muted/50 font-bold">
-                    <td>총 합계</td>
-                    <td className="text-right">{formatNumber(data?.totals.수량 || 0)}</td>
-                    <td className="text-right">{formatNumber(data?.totals.금액 || 0)}원</td>
-                    <td className="text-right text-blue-600">{formatNumber(data?.totals.제약수수료_합계 || 0)}원</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Table */}
+      {/* Table - 피벗 형태 (거래처명별 소계 + CSO관리업체 총합계) */}
       <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">정산 상세 내역</CardTitle>
+          <CardDescription>거래처명별 소계 및 CSO관리업체 총합계 포함</CardDescription>
+        </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="settlement-table">
@@ -370,22 +362,83 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {data?.settlements.map((row, idx) => (
-                  <tr key={row.id || idx}>
-                    {displayColumns.map(col => (
-                      <td 
-                        key={col.column_key}
-                        className={typeof row[col.column_key] === 'number' ? 'number-cell' : ''}
-                      >
-                        {typeof row[col.column_key] === 'number' 
-                          ? formatNumber(row[col.column_key] as number)
-                          : row[col.column_key] || '-'
-                        }
-                      </td>
+                {groupedData.length > 0 ? (
+                  <>
+                    {groupedData.map((csoGroup) => (
+                      <>
+                        {/* CSO관리업체 내 거래처별 데이터 */}
+                        {csoGroup.customers.map((customer) => (
+                          <>
+                            {/* 거래처 상세 데이터 */}
+                            {customer.rows.map((row, rowIdx) => (
+                              <tr key={`${csoGroup.csoName}-${customer.customerName}-${rowIdx}`}>
+                                {displayColumns.map(col => (
+                                  <td 
+                                    key={col.column_key}
+                                    className={typeof row[col.column_key] === 'number' ? 'number-cell' : ''}
+                                  >
+                                    {typeof row[col.column_key] === 'number' 
+                                      ? formatNumber(row[col.column_key] as number)
+                                      : row[col.column_key] || '-'
+                                    }
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                            {/* 거래처별 소계 */}
+                            <tr className="bg-gray-100 font-medium" key={`subtotal-${csoGroup.csoName}-${customer.customerName}`}>
+                              {displayColumns.map((col, colIdx) => (
+                                <td key={col.column_key} className={typeof customer.subtotal[col.column_key as keyof typeof customer.subtotal] === 'number' ? 'text-right' : ''}>
+                                  {colIdx === 0 ? (
+                                    <span className="text-gray-600">└ {customer.customerName} 소계</span>
+                                  ) : col.column_key === '수량' ? (
+                                    formatNumber(customer.subtotal.수량)
+                                  ) : col.column_key === '금액' ? (
+                                    formatNumber(customer.subtotal.금액)
+                                  ) : col.column_key === '제약수수료_합계' ? (
+                                    <span className="text-blue-600">{formatNumber(customer.subtotal.제약수수료_합계)}</span>
+                                  ) : ''}
+                                </td>
+                              ))}
+                            </tr>
+                          </>
+                        ))}
+                        {/* CSO관리업체 총합계 */}
+                        <tr className="bg-blue-50 font-bold border-b-2 border-blue-200" key={`total-${csoGroup.csoName}`}>
+                          {displayColumns.map((col, colIdx) => (
+                            <td key={col.column_key} className={typeof csoGroup.total[col.column_key as keyof typeof csoGroup.total] === 'number' ? 'text-right' : ''}>
+                              {colIdx === 0 ? (
+                                <span className="text-blue-700">■ {csoGroup.csoName} 총합계</span>
+                              ) : col.column_key === '수량' ? (
+                                formatNumber(csoGroup.total.수량)
+                              ) : col.column_key === '금액' ? (
+                                formatNumber(csoGroup.total.금액)
+                              ) : col.column_key === '제약수수료_합계' ? (
+                                <span className="text-blue-700">{formatNumber(csoGroup.total.제약수수료_합계)}</span>
+                              ) : ''}
+                            </td>
+                          ))}
+                        </tr>
+                      </>
                     ))}
-                  </tr>
-                ))}
-                {(!data?.settlements || data.settlements.length === 0) && (
+                    {/* 전체 총합계 */}
+                    <tr className="bg-gray-800 text-white font-bold">
+                      {displayColumns.map((col, colIdx) => (
+                        <td key={col.column_key} className={colIdx > 0 ? 'text-right' : ''}>
+                          {colIdx === 0 ? (
+                            '★ 전체 총합계'
+                          ) : col.column_key === '수량' ? (
+                            formatNumber(data?.totals.수량 || 0)
+                          ) : col.column_key === '금액' ? (
+                            formatNumber(data?.totals.금액 || 0)
+                          ) : col.column_key === '제약수수료_합계' ? (
+                            formatNumber(data?.totals.제약수수료_합계 || 0)
+                          ) : ''}
+                        </td>
+                      ))}
+                    </tr>
+                  </>
+                ) : (
                   <tr>
                     <td colSpan={displayColumns.length} className="text-center py-8 text-muted-foreground">
                       데이터가 없습니다.
