@@ -719,17 +719,22 @@ interface CompanyInfo {
 }
 
 export async function getCompanyInfo(): Promise<CompanyInfo> {
-  const { data, error } = await supabase
+  // .single() 대신 배열로 받아서 첫 번째 항목 사용
+  const { data: rows, error } = await supabase
     .from('company_settings')
     .select('*')
-    .limit(1)
-    .single();
+    .limit(1);
 
   if (error) {
     console.log('getCompanyInfo error:', error.message, error.code);
   }
+  
+  const data = rows && rows.length > 0 ? rows[0] : null;
+  
   if (data) {
     console.log('getCompanyInfo raw data from DB:', JSON.stringify(data, null, 2));
+  } else {
+    console.log('getCompanyInfo: no data found, rows:', rows);
   }
 
   if (error || !data) {
