@@ -215,6 +215,12 @@ export default function DashboardPage() {
     .filter(c => selectedColumns.includes(c.column_key))
     .sort((a, b) => a.display_order - b.display_order);
 
+  // 소계/총합계를 표시할 컬럼 인덱스 찾기
+  const customerColumnIndex = displayColumns.findIndex(c => c.column_key === '거래처명');  // 소계용 (B열)
+  const csoColumnIndex = displayColumns.findIndex(c => c.column_key === 'CSO관리업체');     // 총합계용 (A열)
+  const subtotalLabelIndex = customerColumnIndex >= 0 ? customerColumnIndex : 0;  // 소계는 거래처명 열
+  const totalLabelIndex = csoColumnIndex >= 0 ? csoColumnIndex : 0;               // 총합계는 CSO관리업체 열
+
   // 피벗 데이터 생성: CSO관리업체 > 거래처명 > 상세 데이터
   const groupedData: GroupedData[] = [];
   if (data?.settlements) {
@@ -448,9 +454,9 @@ export default function DashboardPage() {
                             ))}
                             {/* 거래처별 소계 */}
                             <tr className="bg-gray-100 font-medium" key={`subtotal-${csoGroup.csoName}-${customer.customerName}`}>
-                              {displayColumns.map((col) => (
+                              {displayColumns.map((col, colIdx) => (
                                 <td key={col.column_key} className={typeof customer.subtotal[col.column_key as keyof typeof customer.subtotal] === 'number' ? 'text-right' : ''}>
-                                  {col.column_key === '거래처명' ? (
+                                  {colIdx === subtotalLabelIndex ? (
                                     <span className="text-gray-600">{customer.customerName} 합계</span>
                                   ) : col.column_key === '수량' ? (
                                     formatNumber(customer.subtotal.수량)
@@ -466,9 +472,9 @@ export default function DashboardPage() {
                         ))}
                         {/* CSO관리업체 총합계 */}
                         <tr className="bg-blue-50 font-bold border-b-2 border-blue-200" key={`total-${csoGroup.csoName}`}>
-                          {displayColumns.map((col) => (
+                          {displayColumns.map((col, colIdx) => (
                             <td key={col.column_key} className={typeof csoGroup.total[col.column_key as keyof typeof csoGroup.total] === 'number' ? 'text-right' : ''}>
-                              {col.column_key === '거래처명' ? (
+                              {colIdx === totalLabelIndex ? (
                                 <span className="text-blue-700">{csoGroup.csoName} 총합계</span>
                               ) : col.column_key === '수량' ? (
                                 formatNumber(csoGroup.total.수량)

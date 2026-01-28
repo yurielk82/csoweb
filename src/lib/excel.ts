@@ -144,6 +144,12 @@ export function exportToExcel(
   // Header row
   wsData.push(columns.map(col => col.name));
   
+  // 소계/총합계를 표시할 컬럼 인덱스 찾기
+  const customerColumnIndex = columns.findIndex(c => c.key === '거래처명');  // 소계용 (B열)
+  const csoColumnIndex = columns.findIndex(c => c.key === 'CSO관리업체');     // 총합계용 (A열)
+  const subtotalLabelIndex = customerColumnIndex >= 0 ? customerColumnIndex : 0;  // 소계는 거래처명 열
+  const totalLabelIndex = csoColumnIndex >= 0 ? csoColumnIndex : 0;               // 총합계는 CSO관리업체 열
+  
   // 피벗 데이터 생성: CSO관리업체 > 거래처명 > 상세 데이터
   const csoMap = new Map<string, Map<string, Settlement[]>>();
   
@@ -179,9 +185,9 @@ export function exportToExcel(
         제약수수료_합계: rows.reduce((sum, r) => sum + (Number(r.제약수수료_합계) || 0), 0),
       };
       
-      // 거래처 소계 행 - 거래처명 열에 표시
-      const subtotalRow = columns.map((col) => {
-        if (col.key === '거래처명') return `${customerName} 합계`;
+      // 거래처 소계 행 - 거래처명 열에 표시 (없으면 대체 컬럼)
+      const subtotalRow = columns.map((col, idx) => {
+        if (idx === subtotalLabelIndex) return `${customerName} 합계`;
         if (col.key === '수량') return subtotal.수량;
         if (col.key === '금액') return subtotal.금액;
         if (col.key === '제약수수료_합계') return subtotal.제약수수료_합계;
@@ -195,9 +201,9 @@ export function exportToExcel(
       csoTotal.제약수수료_합계 += subtotal.제약수수료_합계;
     }
     
-    // CSO관리업체 총합계 행 - 거래처명 열에 표시
-    const csoTotalRow = columns.map((col) => {
-      if (col.key === '거래처명') return `${csoName} 총합계`;
+    // CSO관리업체 총합계 행 - CSO관리업체 열(A열)에 표시
+    const csoTotalRow = columns.map((col, idx) => {
+      if (idx === totalLabelIndex) return `${csoName} 총합계`;
       if (col.key === '수량') return csoTotal.수량;
       if (col.key === '금액') return csoTotal.금액;
       if (col.key === '제약수수료_합계') return csoTotal.제약수수료_합계;
