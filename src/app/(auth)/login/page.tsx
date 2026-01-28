@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FileSpreadsheet, Loader2 } from 'lucide-react';
@@ -10,19 +10,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-interface CompanyInfo {
-  company_name: string;
-  ceo_name: string;
-  business_number: string;
-  address: string;
-  phone: string;
-  fax: string;
-  email: string;
-  website: string;
-  copyright: string;
-  additional_info: string;
-}
-
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -31,19 +18,6 @@ export default function LoginPage() {
     business_number: '',
     password: '',
   });
-  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
-
-  useEffect(() => {
-    // 회사 정보 로드
-    fetch('/api/settings/company')
-      .then(res => res.json())
-      .then(result => {
-        if (result.success && result.data) {
-          setCompanyInfo(result.data);
-        }
-      })
-      .catch(console.error);
-  }, []);
 
   const formatBusinessNumber = (value: string) => {
     const digits = value.replace(/\D/g, '');
@@ -83,13 +57,6 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
-
-  const hasCompanyInfo = companyInfo && (
-    companyInfo.company_name || 
-    companyInfo.copyright || 
-    companyInfo.address ||
-    companyInfo.phone
-  );
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -154,58 +121,12 @@ export default function LoginPage() {
         </Card>
       </div>
 
-      {/* Footer with Company Info - Compact Single Line */}
-      {hasCompanyInfo && (
-        <footer className="bg-white/50 border-t py-2 px-4">
-          <div className="max-w-6xl mx-auto text-xs text-muted-foreground">
-            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5">
-              {companyInfo.company_name && (
-                <span className="font-medium text-foreground">{companyInfo.company_name}</span>
-              )}
-              {companyInfo.company_name && (companyInfo.ceo_name || companyInfo.business_number || companyInfo.address || companyInfo.phone) && (
-                <span className="text-muted-foreground/50">|</span>
-              )}
-              {companyInfo.ceo_name && (
-                <span>대표: {companyInfo.ceo_name}</span>
-              )}
-              {companyInfo.business_number && (
-                <span>사업자: {companyInfo.business_number}</span>
-              )}
-              {companyInfo.address && (
-                <span>{companyInfo.address}</span>
-              )}
-              {companyInfo.phone && (
-                <span>TEL: {companyInfo.phone}</span>
-              )}
-              {companyInfo.fax && (
-                <span>FAX: {companyInfo.fax}</span>
-              )}
-              {companyInfo.email && (
-                <span>{companyInfo.email}</span>
-              )}
-              {companyInfo.website && (
-                <a 
-                  href={companyInfo.website} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  {companyInfo.website}
-                </a>
-              )}
-              {companyInfo.copyright && (
-                <>
-                  <span className="text-muted-foreground/50">|</span>
-                  <span>{companyInfo.copyright}</span>
-                </>
-              )}
-            </div>
-            {companyInfo.additional_info && (
-              <p className="text-center mt-1 text-muted-foreground/70">{companyInfo.additional_info}</p>
-            )}
-          </div>
-        </footer>
-      )}
+      {/* Footer */}
+      <footer className="bg-white/50 border-t py-2 px-4">
+        <div className="max-w-6xl mx-auto text-xs text-muted-foreground text-center">
+          © 2026 KDH | Sales Management Team. All rights reserved.
+        </div>
+      </footer>
     </div>
   );
 }
