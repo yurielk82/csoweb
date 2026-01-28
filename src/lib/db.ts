@@ -747,21 +747,36 @@ export async function getCompanyInfo(): Promise<CompanyInfo> {
 
 export async function updateCompanyInfo(data: Partial<CompanyInfo>): Promise<void> {
   // 기존 설정이 있는지 확인
-  const { data: existing } = await supabase
+  const { data: existing, error: selectError } = await supabase
     .from('company_settings')
     .select('id')
     .limit(1);
 
+  if (selectError) {
+    console.error('Company settings select error:', selectError);
+    throw new Error(selectError.message);
+  }
+
   if (existing && existing.length > 0) {
     // 업데이트
-    await supabase
+    const { error: updateError } = await supabase
       .from('company_settings')
       .update({ ...data, updated_at: new Date().toISOString() })
       .eq('id', existing[0].id);
+    
+    if (updateError) {
+      console.error('Company settings update error:', updateError);
+      throw new Error(updateError.message);
+    }
   } else {
     // 새로 생성
-    await supabase
+    const { error: insertError } = await supabase
       .from('company_settings')
       .insert({ ...data });
+    
+    if (insertError) {
+      console.error('Company settings insert error:', insertError);
+      throw new Error(insertError.message);
+    }
   }
 }

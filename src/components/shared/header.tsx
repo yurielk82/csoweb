@@ -56,7 +56,6 @@ export function Header({ user }: HeaderProps) {
     { href: '/admin/columns', label: '컬럼 설정', icon: Columns },
     { href: '/admin/emails', label: '이메일 이력', icon: Mail },
     { href: '/admin/mailmerge', label: '메일머지', icon: MailPlus },
-    { href: '/admin/settings', label: '사이트 설정', icon: Settings },
   ];
 
   const userMenuItems = [
@@ -113,6 +112,14 @@ export function Header({ user }: HeaderProps) {
                   내 정보 수정
                 </Link>
               </DropdownMenuItem>
+              {user.is_admin && (
+                <DropdownMenuItem asChild>
+                  <Link href="/admin/settings" className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    사이트 설정
+                  </Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem disabled className="text-muted-foreground">
                 <span className="mr-2 h-4 w-4" />
                 {user.is_admin ? '관리자' : '업체'} ({user.business_number})
@@ -158,6 +165,14 @@ export function Header({ user }: HeaderProps) {
               내 정보 수정
             </Button>
           </Link>
+          {user.is_admin && (
+            <Link href="/admin/settings" onClick={() => setMobileMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start gap-2">
+                <Settings className="h-4 w-4" />
+                사이트 설정
+              </Button>
+            </Link>
+          )}
         </nav>
       )}
     </header>
