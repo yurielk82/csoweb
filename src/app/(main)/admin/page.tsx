@@ -210,15 +210,15 @@ export default function AdminDashboardPage() {
             </div>
             <div className="flex justify-between py-2 border-b">
               <span className="text-muted-foreground">데이터베이스</span>
-              <Badge variant="outline">In-Memory (Demo)</Badge>
+              <Badge variant="default" className="bg-green-600">Supabase 연결됨</Badge>
             </div>
             <div className="flex justify-between py-2 border-b">
               <span className="text-muted-foreground">이메일 서비스</span>
-              <Badge variant="outline">Resend (Demo)</Badge>
+              <Badge variant="default" className="bg-green-600">Resend 연결됨</Badge>
             </div>
             <div className="flex justify-between py-2">
               <span className="text-muted-foreground">환경</span>
-              <Badge>Development</Badge>
+              <Badge>Production</Badge>
             </div>
           </div>
         </CardContent>
