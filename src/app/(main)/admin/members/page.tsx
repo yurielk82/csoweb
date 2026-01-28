@@ -52,7 +52,7 @@ export default function MembersPage() {
   
   // Edit dialog
   const [editUser, setEditUser] = useState<User | null>(null);
-  const [editForm, setEditForm] = useState({ email: '', is_admin: false, is_approved: false });
+  const [editForm, setEditForm] = useState({ company_name: '', email: '', is_admin: false, is_approved: false });
   const [saving, setSaving] = useState(false);
   
   // Delete dialog
@@ -81,6 +81,7 @@ export default function MembersPage() {
   const handleEdit = (user: User) => {
     setEditUser(user);
     setEditForm({
+      company_name: user.company_name,
       email: user.email,
       is_admin: user.is_admin,
       is_approved: user.is_approved,
@@ -355,6 +356,13 @@ export default function MembersPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>업체명</Label>
+              <Input
+                value={editForm.company_name}
+                onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })}
+              />
+            </div>
             <div className="space-y-2">
               <Label>이메일</Label>
               <Input

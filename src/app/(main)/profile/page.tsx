@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Lock, Mail, Save, Loader2, CheckCircle } from 'lucide-react';
+import { User, Lock, Mail, Save, Loader2, CheckCircle, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,6 +24,9 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   
+  // 업체명 변경
+  const [newCompanyName, setNewCompanyName] = useState('');
+  
   // 이메일 변경
   const [newEmail, setNewEmail] = useState('');
   
@@ -39,11 +42,49 @@ export default function ProfilePage() {
       .then(result => {
         if (result.success && result.data) {
           setProfile(result.data);
+          setNewCompanyName(result.data.company_name);
           setNewEmail(result.data.email);
         }
       })
       .finally(() => setLoading(false));
   }, []);
+
+  const handleUpdateCompanyName = async () => {
+    if (!newCompanyName || newCompanyName === profile?.company_name) return;
+    
+    setSaving(true);
+    try {
+      const res = await fetch('/api/users/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company_name: newCompanyName }),
+      });
+      
+      const result = await res.json();
+      
+      if (result.success) {
+        setProfile(prev => prev ? { ...prev, company_name: newCompanyName } : null);
+        toast({
+          title: '업체명 변경 완료',
+          description: '업체명이 성공적으로 변경되었습니다.',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: '변경 실패',
+          description: result.error,
+        });
+      }
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: '오류',
+        description: '업체명 변경 중 오류가 발생했습니다.',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleUpdateEmail = async () => {
     if (!newEmail || newEmail === profile?.email) return;
@@ -167,16 +208,45 @@ export default function ProfilePage() {
               <p className="font-medium">{profile?.is_admin ? '관리자' : '일반 업체'}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground">업체명</Label>
-              <p className="font-medium">{profile?.company_name}</p>
-            </div>
-            <div>
               <Label className="text-muted-foreground">가입일</Label>
               <p className="font-medium">
                 {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('ko-KR') : '-'}
               </p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Company Name Change */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            업체명 변경
+          </CardTitle>
+          <CardDescription>표시되는 업체명을 변경합니다.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="companyName">업체명</Label>
+            <Input
+              id="companyName"
+              value={newCompanyName}
+              onChange={(e) => setNewCompanyName(e.target.value)}
+              placeholder="업체명 입력"
+            />
+          </div>
+          <Button 
+            onClick={handleUpdateCompanyName} 
+            disabled={saving || newCompanyName === profile?.company_name || !newCompanyName}
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            업체명 변경
+          </Button>
         </CardContent>
       </Card>
 

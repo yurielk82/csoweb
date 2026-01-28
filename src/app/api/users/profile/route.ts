@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, hashPassword, verifyPassword } from '@/lib/auth';
-import { getUserByBusinessNumber, updateUserEmail, updateUserPassword } from '@/lib/db';
+import { getUserByBusinessNumber, updateUserEmail, updateUserPassword, updateUser } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +15,7 @@ export async function PUT(request: NextRequest) {
       );
     }
     
-    const { email, current_password, new_password } = await request.json();
+    const { company_name, email, current_password, new_password } = await request.json();
     
     const user = await getUserByBusinessNumber(session.business_number);
     if (!user) {
@@ -23,6 +23,22 @@ export async function PUT(request: NextRequest) {
         { success: false, error: '사용자를 찾을 수 없습니다.' },
         { status: 404 }
       );
+    }
+    
+    // 업체명 변경
+    if (company_name && company_name !== user.company_name) {
+      const success = await updateUser(session.business_number, { company_name });
+      if (success) {
+        return NextResponse.json({
+          success: true,
+          message: '업체명이 변경되었습니다.',
+        });
+      } else {
+        return NextResponse.json(
+          { success: false, error: '업체명 변경에 실패했습니다.' },
+          { status: 400 }
+        );
+      }
     }
     
     // 이메일 변경

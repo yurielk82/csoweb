@@ -136,6 +136,7 @@ export async function updateUserEmail(businessNumber: string, email: string): Pr
 }
 
 export async function updateUser(businessNumber: string, data: {
+  company_name?: string;
   email?: string;
   is_admin?: boolean;
   is_approved?: boolean;
