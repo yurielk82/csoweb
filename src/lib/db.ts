@@ -265,45 +265,82 @@ export async function getSettlementsByBusinessNumber(
   businessNumber: string,
   settlementMonth?: string
 ): Promise<Settlement[]> {
-  let query = supabase
-    .from('settlements')
-    .select('*')
-    .eq('business_number', businessNumber);
-
-  if (settlementMonth) {
-    query = query.eq('정산월', settlementMonth);
-  }
-
-  const { data, error } = await query.order('id', { ascending: true });
+  // 모든 데이터 페이지네이션으로 가져오기
+  const allRows: Settlement[] = [];
+  const pageSize = 1000;
+  let page = 0;
   
-  if (error || !data) return [];
-  return data as Settlement[];
+  while (true) {
+    let query = supabase
+      .from('settlements')
+      .select('*')
+      .eq('business_number', businessNumber);
+
+    if (settlementMonth) {
+      query = query.eq('정산월', settlementMonth);
+    }
+
+    const { data, error } = await query
+      .order('id', { ascending: true })
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+    
+    if (error || !data || data.length === 0) break;
+    allRows.push(...(data as Settlement[]));
+    if (data.length < pageSize) break;
+    page++;
+  }
+  
+  return allRows;
 }
 
 export async function getAllSettlements(settlementMonth?: string): Promise<Settlement[]> {
-  let query = supabase.from('settlements').select('*');
-
-  if (settlementMonth) {
-    query = query.eq('정산월', settlementMonth);
-  }
-
-  const { data, error } = await query.order('id', { ascending: true });
+  // 모든 데이터 페이지네이션으로 가져오기
+  const allRows: Settlement[] = [];
+  const pageSize = 1000;
+  let page = 0;
   
-  if (error || !data) return [];
-  return data as Settlement[];
+  while (true) {
+    let query = supabase.from('settlements').select('*');
+    
+    if (settlementMonth) {
+      query = query.eq('정산월', settlementMonth);
+    }
+    
+    const { data, error } = await query
+      .order('id', { ascending: true })
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+    
+    if (error || !data || data.length === 0) break;
+    allRows.push(...(data as Settlement[]));
+    if (data.length < pageSize) break;
+    page++;
+  }
+  
+  return allRows;
 }
 
 // 정산월 목록 조회
 export async function getAvailableSettlementMonths(): Promise<string[]> {
-  const { data, error } = await supabase
-    .from('settlements')
-    .select('정산월')
-    .not('정산월', 'is', null);
-
-  if (error || !data) return [];
+  // 모든 정산월 페이지네이션으로 가져오기
+  const allMonths: string[] = [];
+  const pageSize = 1000;
+  let page = 0;
   
-  const rows = data as unknown as { 정산월: string }[];
-  const months = [...new Set(rows.map(d => d.정산월))].filter(Boolean);
+  while (true) {
+    const { data, error } = await supabase
+      .from('settlements')
+      .select('정산월')
+      .not('정산월', 'is', null)
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+    
+    if (error || !data || data.length === 0) break;
+    const rows = data as unknown as { 정산월: string }[];
+    allMonths.push(...rows.map(d => d.정산월));
+    if (data.length < pageSize) break;
+    page++;
+  }
+  
+  const months = [...new Set(allMonths)].filter(Boolean);
   return months.sort().reverse();
 }
 
@@ -350,21 +387,33 @@ export async function getSettlementStats(): Promise<{
   settlementMonths: { month: string; count: number }[];
   businessCount: number;
 }> {
-  const { data, error } = await supabase
+  // 전체 개수 먼저 조회
+  const { count: totalCount } = await supabase
     .from('settlements')
-    .select('정산월, business_number');
+    .select('*', { count: 'exact', head: true });
 
-  if (error || !data) {
-    return { totalRows: 0, settlementMonths: [], businessCount: 0 };
+  // 모든 데이터 페이지네이션으로 가져오기
+  const allRows: { 정산월: string | null; business_number: string }[] = [];
+  const pageSize = 1000;
+  let page = 0;
+  
+  while (true) {
+    const { data, error } = await supabase
+      .from('settlements')
+      .select('정산월, business_number')
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+    
+    if (error || !data || data.length === 0) break;
+    const rows = data as unknown as { 정산월: string | null; business_number: string }[];
+    allRows.push(...rows);
+    if (data.length < pageSize) break;
+    page++;
   }
 
-  type StatsRow = { 정산월: string | null; business_number: string };
-  const rows = data as unknown as StatsRow[];
-  
   const monthCounts = new Map<string, number>();
   const businessNumbers = new Set<string>();
 
-  for (const s of rows) {
+  for (const s of allRows) {
     if (s.정산월) {
       monthCounts.set(s.정산월, (monthCounts.get(s.정산월) || 0) + 1);
     }
@@ -376,7 +425,7 @@ export async function getSettlementStats(): Promise<{
     .sort((a, b) => b.month.localeCompare(a.month));
 
   return {
-    totalRows: rows.length,
+    totalRows: totalCount || allRows.length,
     settlementMonths,
     businessCount: businessNumbers.size,
   };
@@ -388,21 +437,34 @@ export async function getSettlementStatsByMonth(): Promise<{
   totalBusinesses: number;
   months: { month: string; count: number; businessCount: number; totalAmount: number }[];
 }> {
-  const { data, error } = await supabase
+  // 전체 개수 먼저 조회
+  const { count: totalCount } = await supabase
     .from('settlements')
-    .select('정산월, business_number, 금액');
+    .select('*', { count: 'exact', head: true });
 
-  if (error || !data) {
-    return { totalRows: 0, totalBusinesses: 0, months: [] };
+  // 모든 데이터 페이지네이션으로 가져오기
+  type MonthRow = { 정산월: string | null; business_number: string; 금액: number | null };
+  const allRows: MonthRow[] = [];
+  const pageSize = 1000;
+  let page = 0;
+  
+  while (true) {
+    const { data, error } = await supabase
+      .from('settlements')
+      .select('정산월, business_number, 금액')
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+    
+    if (error || !data || data.length === 0) break;
+    const rows = data as unknown as MonthRow[];
+    allRows.push(...rows);
+    if (data.length < pageSize) break;
+    page++;
   }
 
-  type MonthRow = { 정산월: string | null; business_number: string; 금액: number | null };
-  const rows = data as unknown as MonthRow[];
-  
   const monthData = new Map<string, { count: number; businesses: Set<string>; amount: number }>();
   const allBusinesses = new Set<string>();
 
-  for (const s of rows) {
+  for (const s of allRows) {
     if (s.정산월) {
       const existing = monthData.get(s.정산월) || { count: 0, businesses: new Set<string>(), amount: 0 };
       existing.count++;
@@ -423,7 +485,7 @@ export async function getSettlementStatsByMonth(): Promise<{
     .sort((a, b) => b.month.localeCompare(a.month));
 
   return {
-    totalRows: rows.length,
+    totalRows: totalCount || allRows.length,
     totalBusinesses: allBusinesses.size,
     months,
   };
