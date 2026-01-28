@@ -54,12 +54,7 @@ interface GroupedData {
 }
 
 interface NoticeSettings {
-  notice_tax_deadline: string;
-  notice_tax_due: string;
-  notice_tax_email: string;
-  notice_item_name: string;
-  notice_ceo_name: string;
-  notice_edi_deadline: string;
+  notice_content: string;
   ceo_name: string;
 }
 
@@ -207,7 +202,7 @@ export default function DashboardPage() {
     const nextMonthStr = `${nextMonth}월`;
     
     // 대표자명
-    const ceoName = noticeSettings?.ceo_name || noticeSettings?.notice_ceo_name || '대표자';
+    const ceoName = noticeSettings?.ceo_name || '대표자';
     
     return text
       .replace(/{{정산월}}/g, settlementMonth)
@@ -267,28 +262,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Notice Section */}
-      {noticeSettings && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2 text-amber-800">
-              <AlertCircle className="h-4 w-4" />
-              Notice
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-amber-900">
-            <ol className="list-decimal list-inside space-y-1">
-              <li><strong>세금계산서 작성일자:</strong> {replaceNoticeVars(noticeSettings.notice_tax_deadline)}</li>
-              <li><strong>세금계산서 취합 마감일:</strong> {replaceNoticeVars(noticeSettings.notice_tax_due)}</li>
-              <li><strong>세금계산서 메일 주소:</strong> <a href={`mailto:${noticeSettings.notice_tax_email}`} className="text-blue-600 underline">{noticeSettings.notice_tax_email}</a></li>
-              <li><strong>품목명:</strong> {replaceNoticeVars(noticeSettings.notice_item_name)}</li>
-              <li><strong>대표자:</strong> {noticeSettings.ceo_name || '(미설정)'}</li>
-              <li><strong>다음달 EDI 입력 마감일:</strong> {replaceNoticeVars(noticeSettings.notice_edi_deadline)}</li>
-            </ol>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div>
@@ -382,6 +355,23 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Notice Section - 조회 조건 아래 */}
+      {noticeSettings?.notice_content && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2 text-amber-800">
+              <AlertCircle className="h-4 w-4" />
+              Notice
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-amber-900">
+            <div className="whitespace-pre-line">
+              {replaceNoticeVars(noticeSettings.notice_content)}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary */}
       {data && (

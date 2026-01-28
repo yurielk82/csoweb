@@ -21,14 +21,16 @@ interface CompanyInfo {
   website: string;
   copyright: string;
   additional_info: string;
-  // Notice 영역 설정
-  notice_tax_deadline: string;
-  notice_tax_due: string;
-  notice_tax_email: string;
-  notice_item_name: string;
-  notice_ceo_name: string;
-  notice_edi_deadline: string;
+  // Notice 영역 설정 (하나의 텍스트로 통합)
+  notice_content: string;
 }
+
+const DEFAULT_NOTICE = `1. 세금계산서 작성일자: {{정산월}} 29일 이내
+2. 세금계산서 취합 마감일: {{정산월}} 29일 (기간내 미발행 할 경우 무통보 이월)
+3. 세금계산서 메일 주소: unioncsosale@ukp.co.kr
+4. 품목명: "마케팅 용역 수수료" 또는 "판매대행 수수료" ('00월'표기 금지)
+5. 대표자: {{대표자명}}
+6. 다음달 EDI 입력 마감일: {{정산월+1}} 11일 (수)까지 (설 연휴 등으로 일자변경 가능)`;
 
 const defaultCompanyInfo: CompanyInfo = {
   company_name: '',
@@ -41,12 +43,7 @@ const defaultCompanyInfo: CompanyInfo = {
   website: '',
   copyright: '',
   additional_info: '',
-  notice_tax_deadline: '{{정산월}} 29일 이내',
-  notice_tax_due: '{{정산월}} 29일 (기간내 미발행 할 경우 무통보 이월)',
-  notice_tax_email: 'unioncsosale@ukp.co.kr',
-  notice_item_name: '"마케팅 용역 수수료" 또는 "판매대행 수수료" (\'00월\'표기 금지)',
-  notice_ceo_name: '{{대표자명}}',
-  notice_edi_deadline: '{{정산월+1}} 11일 (수)까지 (설 연휴 등으로 일자변경 가능)',
+  notice_content: DEFAULT_NOTICE,
 };
 
 export default function SettingsPage() {
@@ -284,62 +281,37 @@ export default function SettingsPage() {
             정산서 Notice 설정
           </CardTitle>
           <CardDescription>
-            정산서 조회 페이지 상단에 표시될 안내사항입니다. {'{{정산월}}'}, {'{{정산월+1}}'}, {'{{대표자명}}'} 등의 변수를 사용할 수 있습니다.
+            정산서 조회 페이지 &apos;조회 조건&apos; 아래에 표시될 안내사항입니다.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="notice_tax_deadline">1. 세금계산서 작성일자</Label>
-            <Input
-              id="notice_tax_deadline"
-              value={formData.notice_tax_deadline}
-              onChange={(e) => handleChange('notice_tax_deadline', e.target.value)}
-              placeholder="{{정산월}} 29일 이내"
+            <Label htmlFor="notice_content">Notice 내용</Label>
+            <Textarea
+              id="notice_content"
+              value={formData.notice_content}
+              onChange={(e) => handleChange('notice_content', e.target.value)}
+              placeholder={DEFAULT_NOTICE}
+              rows={8}
+              className="font-mono text-sm"
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="notice_tax_due">2. 세금계산서 취합 마감일</Label>
-            <Input
-              id="notice_tax_due"
-              value={formData.notice_tax_due}
-              onChange={(e) => handleChange('notice_tax_due', e.target.value)}
-              placeholder="{{정산월}} 29일 (기간내 미발행 할 경우 무통보 이월)"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="notice_tax_email">3. 세금계산서 메일 주소</Label>
-            <Input
-              id="notice_tax_email"
-              value={formData.notice_tax_email}
-              onChange={(e) => handleChange('notice_tax_email', e.target.value)}
-              placeholder="unioncsosale@ukp.co.kr"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="notice_item_name">4. 품목명</Label>
-            <Input
-              id="notice_item_name"
-              value={formData.notice_item_name}
-              onChange={(e) => handleChange('notice_item_name', e.target.value)}
-              placeholder='"마케팅 용역 수수료" 또는 "판매대행 수수료"'
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>5. 대표자</Label>
-            <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted">
-              <span className="text-sm">{formData.ceo_name || '(기본 정보에서 대표자명을 입력하세요)'}</span>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p><strong>사용 가능한 변수:</strong></p>
+              <ul className="list-disc list-inside ml-2">
+                <li>{`{{정산월}}`} - 현재 조회 중인 정산월 (예: 1월)</li>
+                <li>{`{{정산월+1}}`} - 다음달 (예: 2월)</li>
+                <li>{`{{대표자명}}`} - 기본 정보의 대표자명</li>
+              </ul>
             </div>
-            <p className="text-xs text-muted-foreground">기본 정보의 대표자명이 자동으로 표시됩니다.</p>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="notice_edi_deadline">6. 다음달 EDI 입력 마감일</Label>
-            <Input
-              id="notice_edi_deadline"
-              value={formData.notice_edi_deadline}
-              onChange={(e) => handleChange('notice_edi_deadline', e.target.value)}
-              placeholder="{{정산월+1}} 11일 (수)까지"
-            />
-          </div>
+          <Button 
+            type="button" 
+            variant="outline" 
+            size="sm"
+            onClick={() => handleChange('notice_content', DEFAULT_NOTICE)}
+          >
+            기본값으로 초기화
+          </Button>
         </CardContent>
       </Card>
 

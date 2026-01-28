@@ -696,6 +696,13 @@ export async function getEmailStats(): Promise<{
 // Company Settings Operations
 // ============================================
 
+const DEFAULT_NOTICE_CONTENT = `1. 세금계산서 작성일자: {{정산월}} 29일 이내
+2. 세금계산서 취합 마감일: {{정산월}} 29일 (기간내 미발행 할 경우 무통보 이월)
+3. 세금계산서 메일 주소: unioncsosale@ukp.co.kr
+4. 품목명: "마케팅 용역 수수료" 또는 "판매대행 수수료" ('00월'표기 금지)
+5. 대표자: {{대표자명}}
+6. 다음달 EDI 입력 마감일: {{정산월+1}} 11일 (수)까지 (설 연휴 등으로 일자변경 가능)`;
+
 interface CompanyInfo {
   company_name: string;
   ceo_name: string;
@@ -707,13 +714,8 @@ interface CompanyInfo {
   website: string;
   copyright: string;
   additional_info: string;
-  // Notice 영역 설정
-  notice_tax_deadline: string;
-  notice_tax_due: string;
-  notice_tax_email: string;
-  notice_item_name: string;
-  notice_ceo_name: string;
-  notice_edi_deadline: string;
+  // Notice 영역 설정 (하나의 텍스트로 통합)
+  notice_content: string;
 }
 
 export async function getCompanyInfo(): Promise<CompanyInfo> {
@@ -735,12 +737,7 @@ export async function getCompanyInfo(): Promise<CompanyInfo> {
       website: '',
       copyright: '',
       additional_info: '',
-      notice_tax_deadline: '{{정산월}} 29일 이내',
-      notice_tax_due: '{{정산월}} 29일 (기간내 미발행 할 경우 무통보 이월)',
-      notice_tax_email: 'unioncsosale@ukp.co.kr',
-      notice_item_name: '"마케팅 용역 수수료" 또는 "판매대행 수수료" (\'00월\'표기 금지)',
-      notice_ceo_name: '{{대표자명}}',
-      notice_edi_deadline: '{{정산월+1}} 11일 (수)까지 (설 연휴 등으로 일자변경 가능)',
+      notice_content: DEFAULT_NOTICE_CONTENT,
     };
   }
 
@@ -755,12 +752,7 @@ export async function getCompanyInfo(): Promise<CompanyInfo> {
     website: data.website || '',
     copyright: data.copyright || '',
     additional_info: data.additional_info || '',
-    notice_tax_deadline: data.notice_tax_deadline || '{{정산월}} 29일 이내',
-    notice_tax_due: data.notice_tax_due || '{{정산월}} 29일 (기간내 미발행 할 경우 무통보 이월)',
-    notice_tax_email: data.notice_tax_email || 'unioncsosale@ukp.co.kr',
-    notice_item_name: data.notice_item_name || '"마케팅 용역 수수료" 또는 "판매대행 수수료" (\'00월\'표기 금지)',
-    notice_ceo_name: data.notice_ceo_name || '{{대표자명}}',
-    notice_edi_deadline: data.notice_edi_deadline || '{{정산월+1}} 11일 (수)까지 (설 연휴 등으로 일자변경 가능)',
+    notice_content: data.notice_content || DEFAULT_NOTICE_CONTENT,
   };
 }
 
