@@ -17,7 +17,8 @@ import {
   Mail,
   MailPlus,
   Database,
-  UserCog
+  UserCog,
+  Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -49,6 +50,7 @@ export function Header({ user }: HeaderProps) {
 
   const adminMenuItems = [
     { href: '/admin', label: '대시보드', icon: LayoutDashboard },
+    { href: '/admin/master', label: '정산서 마스터 조회', icon: Search },
     { href: '/admin/upload', label: '엑셀 업로드', icon: Upload },
     { href: '/admin/data', label: '데이터 관리', icon: Database },
     { href: '/admin/members', label: '회원 관리', icon: UserCog },

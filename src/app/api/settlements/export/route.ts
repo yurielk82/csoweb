@@ -17,11 +17,18 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const settlementMonth = searchParams.get('settlement_month') || searchParams.get('year_month') || undefined;
     const selectedColumns = searchParams.get('columns')?.split(',') || [];
+    // 관리자용: 특정 CSO의 business_number로 필터링
+    const filterBusinessNumber = searchParams.get('business_number') || undefined;
     
     let settlements;
     
     if (session.is_admin) {
-      settlements = await getAllSettlements(settlementMonth);
+      // 관리자가 특정 CSO를 선택한 경우 해당 업체의 데이터만 조회
+      if (filterBusinessNumber) {
+        settlements = await getSettlementsByBusinessNumber(filterBusinessNumber, settlementMonth);
+      } else {
+        settlements = await getAllSettlements(settlementMonth);
+      }
     } else {
       settlements = await getSettlementsByBusinessNumber(
         session.business_number,
