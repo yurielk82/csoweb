@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, Save, Loader2, Building2, Phone, Mail, Globe, MapPin, FileText } from 'lucide-react';
+import { Settings, Save, Loader2, Building2, Phone, Mail, Globe, MapPin, FileText, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,13 @@ interface CompanyInfo {
   website: string;
   copyright: string;
   additional_info: string;
+  // Notice 영역 설정
+  notice_tax_deadline: string;
+  notice_tax_due: string;
+  notice_tax_email: string;
+  notice_item_name: string;
+  notice_ceo_name: string;
+  notice_edi_deadline: string;
 }
 
 const defaultCompanyInfo: CompanyInfo = {
@@ -34,6 +41,12 @@ const defaultCompanyInfo: CompanyInfo = {
   website: '',
   copyright: '',
   additional_info: '',
+  notice_tax_deadline: '{{정산월}} 29일 이내',
+  notice_tax_due: '{{정산월}} 29일 (기간내 미발행 할 경우 무통보 이월)',
+  notice_tax_email: 'unioncsosale@ukp.co.kr',
+  notice_item_name: '"마케팅 용역 수수료" 또는 "판매대행 수수료" (\'00월\'표기 금지)',
+  notice_ceo_name: '{{대표자명}}',
+  notice_edi_deadline: '{{정산월+1}} 11일 (수)까지 (설 연휴 등으로 일자변경 가능)',
 };
 
 export default function SettingsPage() {
@@ -258,6 +271,75 @@ export default function SettingsPage() {
               onChange={(e) => handleChange('additional_info', e.target.value)}
               placeholder="추가로 표시할 정보를 입력하세요."
               rows={3}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Notice Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Bell className="h-4 w-4" />
+            정산서 Notice 설정
+          </CardTitle>
+          <CardDescription>
+            정산서 조회 페이지 상단에 표시될 안내사항입니다. {'{{정산월}}'}, {'{{정산월+1}}'}, {'{{대표자명}}'} 등의 변수를 사용할 수 있습니다.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="notice_tax_deadline">1. 세금계산서 작성일자</Label>
+            <Input
+              id="notice_tax_deadline"
+              value={formData.notice_tax_deadline}
+              onChange={(e) => handleChange('notice_tax_deadline', e.target.value)}
+              placeholder="{{정산월}} 29일 이내"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="notice_tax_due">2. 세금계산서 취합 마감일</Label>
+            <Input
+              id="notice_tax_due"
+              value={formData.notice_tax_due}
+              onChange={(e) => handleChange('notice_tax_due', e.target.value)}
+              placeholder="{{정산월}} 29일 (기간내 미발행 할 경우 무통보 이월)"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="notice_tax_email">3. 세금계산서 메일 주소</Label>
+            <Input
+              id="notice_tax_email"
+              value={formData.notice_tax_email}
+              onChange={(e) => handleChange('notice_tax_email', e.target.value)}
+              placeholder="unioncsosale@ukp.co.kr"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="notice_item_name">4. 품목명</Label>
+            <Input
+              id="notice_item_name"
+              value={formData.notice_item_name}
+              onChange={(e) => handleChange('notice_item_name', e.target.value)}
+              placeholder='"마케팅 용역 수수료" 또는 "판매대행 수수료"'
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="notice_ceo_name">5. 대표자</Label>
+            <Input
+              id="notice_ceo_name"
+              value={formData.notice_ceo_name}
+              onChange={(e) => handleChange('notice_ceo_name', e.target.value)}
+              placeholder="{{대표자명}}"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="notice_edi_deadline">6. 다음달 EDI 입력 마감일</Label>
+            <Input
+              id="notice_edi_deadline"
+              value={formData.notice_edi_deadline}
+              onChange={(e) => handleChange('notice_edi_deadline', e.target.value)}
+              placeholder="{{정산월+1}} 11일 (수)까지"
             />
           </div>
         </CardContent>

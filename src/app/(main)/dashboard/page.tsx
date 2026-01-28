@@ -8,7 +8,8 @@ import {
   ChevronLeft, 
   ChevronRight,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,6 +53,16 @@ interface GroupedData {
   total: { 수량: number; 금액: number; 제약수수료_합계: number };
 }
 
+interface NoticeSettings {
+  notice_tax_deadline: string;
+  notice_tax_due: string;
+  notice_tax_email: string;
+  notice_item_name: string;
+  notice_ceo_name: string;
+  notice_edi_deadline: string;
+  ceo_name: string;
+}
+
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
@@ -62,6 +73,7 @@ export default function DashboardPage() {
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [noticeSettings, setNoticeSettings] = useState<NoticeSettings | null>(null);
 
   // Fetch column settings
   useEffect(() => {
@@ -92,6 +104,18 @@ export default function DashboardPage() {
           }
         }
       });
+  }, []);
+
+  // Fetch notice settings
+  useEffect(() => {
+    fetch('/api/settings/company')
+      .then(res => res.json())
+      .then(result => {
+        if (result.success && result.data) {
+          setNoticeSettings(result.data);
+        }
+      })
+      .catch(console.error);
   }, []);
 
   // Fetch settlements
@@ -169,6 +193,28 @@ export default function DashboardPage() {
     return value.toLocaleString('ko-KR');
   };
 
+  // Notice 텍스트 변수 치환 함수
+  const replaceNoticeVars = (text: string) => {
+    if (!selectedMonth) return text;
+    
+    // 정산월 파싱 (YYYY-MM 형식)
+    const [, monthStr] = selectedMonth.split('-');
+    const month = Number(monthStr);
+    const settlementMonth = `${month}월`;
+    
+    // 다음달 계산
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextMonthStr = `${nextMonth}월`;
+    
+    // 대표자명
+    const ceoName = noticeSettings?.ceo_name || noticeSettings?.notice_ceo_name || '대표자';
+    
+    return text
+      .replace(/{{정산월}}/g, settlementMonth)
+      .replace(/{{정산월\+1}}/g, nextMonthStr)
+      .replace(/{{대표자명}}/g, ceoName);
+  };
+
   // Get display columns in order
   const displayColumns = columns
     .filter(c => selectedColumns.includes(c.column_key))
@@ -221,6 +267,28 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Notice Section */}
+      {noticeSettings && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2 text-amber-800">
+              <AlertCircle className="h-4 w-4" />
+              Notice
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-amber-900">
+            <ol className="list-decimal list-inside space-y-1">
+              <li><strong>세금계산서 작성일자:</strong> {replaceNoticeVars(noticeSettings.notice_tax_deadline)}</li>
+              <li><strong>세금계산서 취합 마감일:</strong> {replaceNoticeVars(noticeSettings.notice_tax_due)}</li>
+              <li><strong>세금계산서 메일 주소:</strong> <a href={`mailto:${noticeSettings.notice_tax_email}`} className="text-blue-600 underline">{noticeSettings.notice_tax_email}</a></li>
+              <li><strong>품목명:</strong> {replaceNoticeVars(noticeSettings.notice_item_name)}</li>
+              <li><strong>대표자:</strong> {replaceNoticeVars(noticeSettings.notice_ceo_name)}</li>
+              <li><strong>다음달 EDI 입력 마감일:</strong> {replaceNoticeVars(noticeSettings.notice_edi_deadline)}</li>
+            </ol>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div>
@@ -334,12 +402,15 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
           </Card>
-          <Card>
+          <Card className="border-blue-200 bg-blue-50">
             <CardHeader className="pb-2">
               <CardDescription>제약수수료 합계</CardDescription>
               <CardTitle className="text-2xl text-blue-600">
                 {formatNumber(data.totals.제약수수료_합계)}원
               </CardTitle>
+              <p className="text-xs text-blue-700 font-medium mt-1">
+                (세금계산서 발행 금액 / VAT 포함)
+              </p>
             </CardHeader>
           </Card>
         </div>
