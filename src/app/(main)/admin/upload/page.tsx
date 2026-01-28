@@ -178,7 +178,7 @@ export default function UploadPage() {
                 }
               `}
             >
-              <input {...getInputProps()} />
+              <input {...getInputProps()} accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" capture={undefined} />
               <FileSpreadsheet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               {isDragActive ? (
                 <p className="text-primary">파일을 여기에 놓으세요...</p>
