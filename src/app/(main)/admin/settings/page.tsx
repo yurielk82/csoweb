@@ -1,0 +1,310 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Settings, Save, Loader2, Building2, Phone, Mail, Globe, MapPin, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
+import { Loading } from '@/components/shared/loading';
+
+interface CompanyInfo {
+  company_name: string;
+  ceo_name: string;
+  business_number: string;
+  address: string;
+  phone: string;
+  fax: string;
+  email: string;
+  website: string;
+  copyright: string;
+  additional_info: string;
+}
+
+const defaultCompanyInfo: CompanyInfo = {
+  company_name: '',
+  ceo_name: '',
+  business_number: '',
+  address: '',
+  phone: '',
+  fax: '',
+  email: '',
+  website: '',
+  copyright: '',
+  additional_info: '',
+};
+
+export default function SettingsPage() {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState<CompanyInfo>(defaultCompanyInfo);
+
+  useEffect(() => {
+    fetch('/api/settings/company')
+      .then(res => res.json())
+      .then(result => {
+        if (result.success && result.data) {
+          setFormData({ ...defaultCompanyInfo, ...result.data });
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleChange = (field: keyof CompanyInfo, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/settings/company', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      
+      const result = await res.json();
+      
+      if (result.success) {
+        toast({
+          title: '저장 완료',
+          description: '회사 정보가 저장되었습니다.',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: '저장 실패',
+          description: result.error,
+        });
+      }
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: '오류',
+        description: '저장 중 오류가 발생했습니다.',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <Loading text="설정을 불러오는 중..." />;
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Settings className="h-6 w-6" />
+            사이트 설정
+          </h1>
+          <p className="text-muted-foreground">로그인 화면 푸터에 표시될 회사 정보를 설정합니다.</p>
+        </div>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          )}
+          저장
+        </Button>
+      </div>
+
+      {/* Company Basic Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            기본 정보
+          </CardTitle>
+          <CardDescription>회사의 기본 정보를 입력하세요.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="company_name">회사명</Label>
+              <Input
+                id="company_name"
+                value={formData.company_name}
+                onChange={(e) => handleChange('company_name', e.target.value)}
+                placeholder="(주)회사명"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ceo_name">대표자명</Label>
+              <Input
+                id="ceo_name"
+                value={formData.ceo_name}
+                onChange={(e) => handleChange('ceo_name', e.target.value)}
+                placeholder="홍길동"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="business_number">사업자등록번호</Label>
+            <Input
+              id="business_number"
+              value={formData.business_number}
+              onChange={(e) => handleChange('business_number', e.target.value)}
+              placeholder="000-00-00000"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="address" className="flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              주소
+            </Label>
+            <Input
+              id="address"
+              value={formData.address}
+              onChange={(e) => handleChange('address', e.target.value)}
+              placeholder="서울특별시 강남구 테헤란로 123"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Contact Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Phone className="h-4 w-4" />
+            연락처 정보
+          </CardTitle>
+          <CardDescription>연락처 정보를 입력하세요.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">전화번호</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => handleChange('phone', e.target.value)}
+                placeholder="02-1234-5678"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fax">팩스번호</Label>
+              <Input
+                id="fax"
+                value={formData.fax}
+                onChange={(e) => handleChange('fax', e.target.value)}
+                placeholder="02-1234-5679"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email" className="flex items-center gap-1">
+              <Mail className="h-3 w-3" />
+              이메일
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleChange('email', e.target.value)}
+              placeholder="info@company.com"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="website" className="flex items-center gap-1">
+              <Globe className="h-3 w-3" />
+              웹사이트
+            </Label>
+            <Input
+              id="website"
+              value={formData.website}
+              onChange={(e) => handleChange('website', e.target.value)}
+              placeholder="https://www.company.com"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Footer Text */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            푸터 텍스트
+          </CardTitle>
+          <CardDescription>로그인 화면 하단에 표시될 추가 텍스트를 입력하세요.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="copyright">저작권 문구</Label>
+            <Input
+              id="copyright"
+              value={formData.copyright}
+              onChange={(e) => handleChange('copyright', e.target.value)}
+              placeholder="© 2026 회사명. All rights reserved."
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="additional_info">추가 정보</Label>
+            <Textarea
+              id="additional_info"
+              value={formData.additional_info}
+              onChange={(e) => handleChange('additional_info', e.target.value)}
+              placeholder="추가로 표시할 정보를 입력하세요."
+              rows={3}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Preview */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">미리보기</CardTitle>
+          <CardDescription>로그인 화면 푸터에 표시될 내용입니다.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground space-y-2">
+            {formData.company_name && (
+              <p className="font-medium text-foreground">{formData.company_name}</p>
+            )}
+            <div className="space-y-1">
+              {formData.ceo_name && <p>대표: {formData.ceo_name}</p>}
+              {formData.business_number && <p>사업자등록번호: {formData.business_number}</p>}
+              {formData.address && <p>주소: {formData.address}</p>}
+              {(formData.phone || formData.fax) && (
+                <p>
+                  {formData.phone && `TEL: ${formData.phone}`}
+                  {formData.phone && formData.fax && ' | '}
+                  {formData.fax && `FAX: ${formData.fax}`}
+                </p>
+              )}
+              {formData.email && <p>이메일: {formData.email}</p>}
+              {formData.website && <p>웹사이트: {formData.website}</p>}
+            </div>
+            {formData.additional_info && (
+              <>
+                <Separator className="my-2" />
+                <p>{formData.additional_info}</p>
+              </>
+            )}
+            {formData.copyright && (
+              <>
+                <Separator className="my-2" />
+                <p className="text-xs">{formData.copyright}</p>
+              </>
+            )}
+            {!formData.company_name && !formData.copyright && (
+              <p className="text-center italic">표시할 정보가 없습니다.</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

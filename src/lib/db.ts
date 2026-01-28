@@ -496,3 +496,45 @@ export async function getEmailStats(): Promise<{
     pending: emailLogs.filter(l => l.status === 'pending').length,
   };
 }
+
+// ============================================
+// Company Settings Operations
+// ============================================
+
+interface CompanyInfo {
+  company_name: string;
+  ceo_name: string;
+  business_number: string;
+  address: string;
+  phone: string;
+  fax: string;
+  email: string;
+  website: string;
+  copyright: string;
+  additional_info: string;
+}
+
+// In-memory company settings
+let companyInfo: CompanyInfo = {
+  company_name: '한국유니온제약',
+  ceo_name: '',
+  business_number: '607-81-21765',
+  address: '',
+  phone: '',
+  fax: '',
+  email: 'admin@kup.co.kr',
+  website: '',
+  copyright: '© 2026 한국유니온제약. All rights reserved.',
+  additional_info: '',
+};
+
+export async function getCompanyInfo(): Promise<CompanyInfo> {
+  return { ...companyInfo };
+}
+
+export async function updateCompanyInfo(data: Partial<CompanyInfo>): Promise<void> {
+  companyInfo = {
+    ...companyInfo,
+    ...data,
+  };
+}

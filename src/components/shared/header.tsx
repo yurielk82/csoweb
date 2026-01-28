@@ -56,6 +56,7 @@ export function Header({ user }: HeaderProps) {
     { href: '/admin/columns', label: '컬럼 설정', icon: Columns },
     { href: '/admin/emails', label: '이메일 이력', icon: Mail },
     { href: '/admin/mailmerge', label: '메일머지', icon: MailPlus },
+    { href: '/admin/settings', label: '사이트 설정', icon: Settings },
   ];
 
   const userMenuItems = [
@@ -112,8 +113,8 @@ export function Header({ user }: HeaderProps) {
                   내 정보 수정
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem disabled>
-                <Settings className="mr-2 h-4 w-4" />
+              <DropdownMenuItem disabled className="text-muted-foreground">
+                <span className="mr-2 h-4 w-4" />
                 {user.is_admin ? '관리자' : '업체'} ({user.business_number})
               </DropdownMenuItem>
               <DropdownMenuSeparator />
