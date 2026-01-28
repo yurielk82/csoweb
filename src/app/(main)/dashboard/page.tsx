@@ -448,9 +448,9 @@ export default function DashboardPage() {
                             ))}
                             {/* 거래처별 소계 */}
                             <tr className="bg-gray-100 font-medium" key={`subtotal-${csoGroup.csoName}-${customer.customerName}`}>
-                              {displayColumns.map((col, colIdx) => (
+                              {displayColumns.map((col) => (
                                 <td key={col.column_key} className={typeof customer.subtotal[col.column_key as keyof typeof customer.subtotal] === 'number' ? 'text-right' : ''}>
-                                  {colIdx === 0 ? (
+                                  {col.column_key === '거래처명' ? (
                                     <span className="text-gray-600">{customer.customerName} 합계</span>
                                   ) : col.column_key === '수량' ? (
                                     formatNumber(customer.subtotal.수량)
@@ -466,9 +466,9 @@ export default function DashboardPage() {
                         ))}
                         {/* CSO관리업체 총합계 */}
                         <tr className="bg-blue-50 font-bold border-b-2 border-blue-200" key={`total-${csoGroup.csoName}`}>
-                          {displayColumns.map((col, colIdx) => (
+                          {displayColumns.map((col) => (
                             <td key={col.column_key} className={typeof csoGroup.total[col.column_key as keyof typeof csoGroup.total] === 'number' ? 'text-right' : ''}>
-                              {colIdx === 0 ? (
+                              {col.column_key === '거래처명' ? (
                                 <span className="text-blue-700">{csoGroup.csoName} 총합계</span>
                               ) : col.column_key === '수량' ? (
                                 formatNumber(csoGroup.total.수량)
