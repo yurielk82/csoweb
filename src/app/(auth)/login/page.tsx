@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 
 interface CompanyInfo {
   company_name: string;
@@ -155,28 +154,26 @@ export default function LoginPage() {
         </Card>
       </div>
 
-      {/* Footer with Company Info */}
+      {/* Footer with Company Info - Compact Single Line */}
       {hasCompanyInfo && (
-        <footer className="bg-white/70 backdrop-blur border-t py-6 px-4">
-          <div className="max-w-4xl mx-auto text-center text-sm text-muted-foreground space-y-2">
-            {companyInfo.company_name && (
-              <p className="font-medium text-foreground">{companyInfo.company_name}</p>
-            )}
-            
-            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
+        <footer className="bg-white/50 border-t py-2 px-4">
+          <div className="max-w-6xl mx-auto text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5">
+              {companyInfo.company_name && (
+                <span className="font-medium text-foreground">{companyInfo.company_name}</span>
+              )}
+              {companyInfo.company_name && (companyInfo.ceo_name || companyInfo.business_number || companyInfo.address || companyInfo.phone) && (
+                <span className="text-muted-foreground/50">|</span>
+              )}
               {companyInfo.ceo_name && (
                 <span>대표: {companyInfo.ceo_name}</span>
               )}
               {companyInfo.business_number && (
-                <span>사업자등록번호: {companyInfo.business_number}</span>
+                <span>사업자: {companyInfo.business_number}</span>
               )}
-            </div>
-
-            {companyInfo.address && (
-              <p>주소: {companyInfo.address}</p>
-            )}
-
-            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
+              {companyInfo.address && (
+                <span>{companyInfo.address}</span>
+              )}
               {companyInfo.phone && (
                 <span>TEL: {companyInfo.phone}</span>
               )}
@@ -184,12 +181,9 @@ export default function LoginPage() {
                 <span>FAX: {companyInfo.fax}</span>
               )}
               {companyInfo.email && (
-                <span>Email: {companyInfo.email}</span>
+                <span>{companyInfo.email}</span>
               )}
-            </div>
-
-            {companyInfo.website && (
-              <p>
+              {companyInfo.website && (
                 <a 
                   href={companyInfo.website} 
                   target="_blank" 
@@ -198,21 +192,16 @@ export default function LoginPage() {
                 >
                   {companyInfo.website}
                 </a>
-              </p>
-            )}
-
+              )}
+              {companyInfo.copyright && (
+                <>
+                  <span className="text-muted-foreground/50">|</span>
+                  <span>{companyInfo.copyright}</span>
+                </>
+              )}
+            </div>
             {companyInfo.additional_info && (
-              <>
-                <Separator className="my-2 max-w-md mx-auto" />
-                <p className="max-w-2xl mx-auto">{companyInfo.additional_info}</p>
-              </>
-            )}
-
-            {companyInfo.copyright && (
-              <>
-                <Separator className="my-2 max-w-md mx-auto" />
-                <p className="text-xs">{companyInfo.copyright}</p>
-              </>
+              <p className="text-center mt-1 text-muted-foreground/70">{companyInfo.additional_info}</p>
             )}
           </div>
         </footer>

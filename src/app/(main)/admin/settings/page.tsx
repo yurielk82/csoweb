@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Loading } from '@/components/shared/loading';
 
@@ -266,38 +265,33 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">미리보기</CardTitle>
-          <CardDescription>로그인 화면 푸터에 표시될 내용입니다.</CardDescription>
+          <CardDescription>로그인 화면 푸터에 한 줄로 표시됩니다.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground space-y-2">
-            {formData.company_name && (
-              <p className="font-medium text-foreground">{formData.company_name}</p>
-            )}
-            <div className="space-y-1">
-              {formData.ceo_name && <p>대표: {formData.ceo_name}</p>}
-              {formData.business_number && <p>사업자등록번호: {formData.business_number}</p>}
-              {formData.address && <p>주소: {formData.address}</p>}
-              {(formData.phone || formData.fax) && (
-                <p>
-                  {formData.phone && `TEL: ${formData.phone}`}
-                  {formData.phone && formData.fax && ' | '}
-                  {formData.fax && `FAX: ${formData.fax}`}
-                </p>
+          <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5">
+              {formData.company_name && (
+                <span className="font-medium text-foreground">{formData.company_name}</span>
               )}
-              {formData.email && <p>이메일: {formData.email}</p>}
-              {formData.website && <p>웹사이트: {formData.website}</p>}
+              {formData.company_name && (formData.ceo_name || formData.business_number) && (
+                <span className="text-muted-foreground/50">|</span>
+              )}
+              {formData.ceo_name && <span>대표: {formData.ceo_name}</span>}
+              {formData.business_number && <span>사업자: {formData.business_number}</span>}
+              {formData.address && <span>{formData.address}</span>}
+              {formData.phone && <span>TEL: {formData.phone}</span>}
+              {formData.fax && <span>FAX: {formData.fax}</span>}
+              {formData.email && <span>{formData.email}</span>}
+              {formData.website && <span className="text-primary">{formData.website}</span>}
+              {formData.copyright && (
+                <>
+                  <span className="text-muted-foreground/50">|</span>
+                  <span>{formData.copyright}</span>
+                </>
+              )}
             </div>
             {formData.additional_info && (
-              <>
-                <Separator className="my-2" />
-                <p>{formData.additional_info}</p>
-              </>
-            )}
-            {formData.copyright && (
-              <>
-                <Separator className="my-2" />
-                <p className="text-xs">{formData.copyright}</p>
-              </>
+              <p className="text-center mt-1 text-muted-foreground/70">{formData.additional_info}</p>
             )}
             {!formData.company_name && !formData.copyright && (
               <p className="text-center italic">표시할 정보가 없습니다.</p>
