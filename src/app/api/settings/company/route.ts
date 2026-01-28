@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth';
 import { getCompanyInfo, updateCompanyInfo } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // 회사 정보 조회 (로그인 필요 없음 - 로그인 화면에서 사용)
 export async function GET() {
@@ -11,9 +12,16 @@ export async function GET() {
     
     console.log('GET /api/settings/company - Retrieved data:', JSON.stringify(companyInfo, null, 2));
     
+    // 캐시 비활성화 헤더 추가
     return NextResponse.json({
       success: true,
       data: companyInfo,
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
     });
   } catch (error) {
     console.error('Get company info error:', error);
