@@ -93,7 +93,7 @@ function SortableColumn({
 
       {/* Display Name Input */}
       <Input
-        value={column.display_name}
+        value={column.column_name}
         onChange={(e) => onChangeName(column.column_key, e.target.value)}
         className="flex-1 max-w-xs"
         placeholder="표시명"
@@ -198,7 +198,7 @@ export default function ColumnsPage() {
   const changeName = (key: string, name: string) => {
     setColumns(prev => prev.map(col => {
       if (col.column_key === key) {
-        return { ...col, display_name: name };
+        return { ...col, column_name: name };
       }
       return col;
     }));

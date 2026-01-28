@@ -40,13 +40,13 @@ export async function GET(request: NextRequest) {
       exportColumns = selectedColumns
         .map(key => {
           const setting = columnSettings.find(c => c.column_key === key);
-          return setting ? { key: setting.column_key, name: setting.display_name } : null;
+          return setting ? { key: setting.column_key, name: setting.column_name } : null;
         })
         .filter((c): c is { key: string; name: string } => c !== null);
     } else {
       exportColumns = visibleColumns.map(c => ({
         key: c.column_key,
-        name: c.display_name,
+        name: c.column_name,
       }));
     }
     

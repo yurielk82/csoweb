@@ -1,8 +1,8 @@
 // ============================================
-// Database Operations (In-Memory for Demo)
-// In production, replace with Supabase queries
+// Database Operations (Supabase)
 // ============================================
 
+import { supabase, DbUser } from './supabase';
 import type { 
   User, 
   Settlement, 
@@ -12,54 +12,6 @@ import type {
   EmailStatus,
   DEFAULT_COLUMN_SETTINGS
 } from '@/types';
-import { hashPassword } from './auth';
-
-// In-memory storage (replace with Supabase in production)
-const users: Map<string, User> = new Map();
-const settlements: Settlement[] = [];
-const columnSettings: Map<string, ColumnSetting> = new Map();
-const emailLogs: EmailLog[] = [];
-
-// Initialize with default admins
-async function initializeAdmin() {
-  if (users.size === 0) {
-    const now = new Date().toISOString();
-    const passwordHash = await hashPassword('admin123');
-    
-    // 기본 관리자
-    const adminUser: User = {
-      id: 'admin-001',
-      business_number: '0000000000',
-      company_name: '관리자',
-      email: 'admin@cso-portal.com',
-      email_verified: true,
-      password_hash: passwordHash,
-      is_admin: true,
-      is_approved: true,
-      created_at: now,
-      updated_at: now,
-    };
-    users.set(adminUser.business_number, adminUser);
-    
-    // 한국유니온제약 관리자
-    const unionAdmin: User = {
-      id: 'admin-002',
-      business_number: '6078121765',
-      company_name: '한국유니온제약',
-      email: 'admin@kup.co.kr',
-      email_verified: true,
-      password_hash: passwordHash,
-      is_admin: true,
-      is_approved: true,
-      created_at: now,
-      updated_at: now,
-    };
-    users.set(unionAdmin.business_number, unionAdmin);
-  }
-}
-
-// Initialize admin on module load
-initializeAdmin();
 
 // ============================================
 // User Operations
@@ -71,87 +23,116 @@ export async function createUser(data: {
   email: string;
   password_hash: string;
 }): Promise<User> {
-  const now = new Date().toISOString();
-  const user: User = {
-    id: `user-${Date.now()}`,
-    business_number: data.business_number,
-    company_name: data.company_name,
-    email: data.email,
-    email_verified: false,
-    password_hash: data.password_hash,
-    is_admin: false,
-    is_approved: false,
-    created_at: now,
-    updated_at: now,
-  };
-  
-  users.set(user.business_number, user);
-  return user;
+  const { data: user, error } = await supabase
+    .from('users')
+    .insert({
+      business_number: data.business_number,
+      company_name: data.company_name,
+      email: data.email,
+      password_hash: data.password_hash,
+      is_admin: false,
+      is_approved: false,
+      email_verified: false,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return mapDbUserToUser(user);
 }
 
 export async function getUserByBusinessNumber(businessNumber: string): Promise<User | null> {
-  await initializeAdmin();
-  return users.get(businessNumber) || null;
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('business_number', businessNumber)
+    .single();
+
+  if (error || !user) return null;
+  return mapDbUserToUser(user);
 }
 
 export async function getUserByEmail(email: string): Promise<User | null> {
-  await initializeAdmin();
-  for (const user of users.values()) {
-    if (user.email === email) return user;
-  }
-  return null;
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', email)
+    .single();
+
+  if (error || !user) return null;
+  return mapDbUserToUser(user);
 }
 
 export async function getUserById(id: string): Promise<User | null> {
-  await initializeAdmin();
-  for (const user of users.values()) {
-    if (user.id === id) return user;
-  }
-  return null;
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error || !user) return null;
+  return mapDbUserToUser(user);
 }
 
 export async function getAllUsers(): Promise<User[]> {
-  await initializeAdmin();
-  return Array.from(users.values());
+  const { data: users, error } = await supabase
+    .from('users')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error || !users) return [];
+  return users.map(mapDbUserToUser);
 }
 
 export async function getPendingUsers(): Promise<User[]> {
-  await initializeAdmin();
-  return Array.from(users.values()).filter(u => !u.is_approved && !u.is_admin);
+  const { data: users, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('is_approved', false)
+    .eq('is_admin', false)
+    .order('created_at', { ascending: false });
+
+  if (error || !users) return [];
+  return users.map(mapDbUserToUser);
 }
 
 export async function approveUser(businessNumber: string): Promise<User | null> {
-  const user = users.get(businessNumber);
-  if (user) {
-    user.is_approved = true;
-    user.updated_at = new Date().toISOString();
-    return user;
-  }
-  return null;
+  const { data: user, error } = await supabase
+    .from('users')
+    .update({ is_approved: true, updated_at: new Date().toISOString() })
+    .eq('business_number', businessNumber)
+    .select()
+    .single();
+
+  if (error || !user) return null;
+  return mapDbUserToUser(user);
 }
 
 export async function rejectUser(businessNumber: string): Promise<boolean> {
-  return users.delete(businessNumber);
+  const { error } = await supabase
+    .from('users')
+    .delete()
+    .eq('business_number', businessNumber);
+
+  return !error;
 }
 
 export async function updateUserPassword(businessNumber: string, passwordHash: string): Promise<boolean> {
-  const user = users.get(businessNumber);
-  if (user) {
-    user.password_hash = passwordHash;
-    user.updated_at = new Date().toISOString();
-    return true;
-  }
-  return false;
+  const { error } = await supabase
+    .from('users')
+    .update({ password_hash: passwordHash, updated_at: new Date().toISOString() })
+    .eq('business_number', businessNumber);
+
+  return !error;
 }
 
 export async function updateUserEmail(businessNumber: string, email: string): Promise<boolean> {
-  const user = users.get(businessNumber);
-  if (user) {
-    user.email = email;
-    user.updated_at = new Date().toISOString();
-    return true;
-  }
-  return false;
+  const { error } = await supabase
+    .from('users')
+    .update({ email, updated_at: new Date().toISOString() })
+    .eq('business_number', businessNumber);
+
+  return !error;
 }
 
 export async function updateUser(businessNumber: string, data: {
@@ -159,19 +140,36 @@ export async function updateUser(businessNumber: string, data: {
   is_admin?: boolean;
   is_approved?: boolean;
 }): Promise<boolean> {
-  const user = users.get(businessNumber);
-  if (user) {
-    if (data.email !== undefined) user.email = data.email;
-    if (data.is_admin !== undefined) user.is_admin = data.is_admin;
-    if (data.is_approved !== undefined) user.is_approved = data.is_approved;
-    user.updated_at = new Date().toISOString();
-    return true;
-  }
-  return false;
+  const { error } = await supabase
+    .from('users')
+    .update({ ...data, updated_at: new Date().toISOString() })
+    .eq('business_number', businessNumber);
+
+  return !error;
 }
 
 export async function deleteUser(businessNumber: string): Promise<boolean> {
-  return users.delete(businessNumber);
+  const { error } = await supabase
+    .from('users')
+    .delete()
+    .eq('business_number', businessNumber);
+
+  return !error;
+}
+
+function mapDbUserToUser(dbUser: DbUser): User {
+  return {
+    id: dbUser.id,
+    business_number: dbUser.business_number,
+    company_name: dbUser.company_name,
+    email: dbUser.email,
+    email_verified: dbUser.email_verified,
+    password_hash: dbUser.password_hash,
+    is_admin: dbUser.is_admin,
+    is_approved: dbUser.is_approved,
+    created_at: dbUser.created_at,
+    updated_at: dbUser.updated_at,
+  };
 }
 
 // ============================================
@@ -190,24 +188,23 @@ export async function insertSettlements(data: Partial<Settlement>[]): Promise<{
     }
   }
   const settlementMonths = Array.from(settlementMonthsSet).sort().reverse();
-  
+
   // 해당 정산월의 기존 데이터 삭제
   for (const month of settlementMonths) {
-    const filtered = settlements.filter(s => s.정산월 !== month);
-    settlements.length = 0;
-    settlements.push(...filtered);
+    await supabase
+      .from('settlements')
+      .delete()
+      .eq('정산월', month);
   }
+
+  // 새 데이터 삽입 (배치로 처리)
+  const validData = data.filter(d => d.정산월);
+  const batchSize = 500;
   
-  const now = new Date().toISOString();
-  let id = settlements.length > 0 ? Math.max(...settlements.map(s => s.id)) + 1 : 1;
-  
-  for (const row of data) {
-    if (!row.정산월) continue; // 정산월이 없는 데이터는 무시
-    
-    settlements.push({
-      id: id++,
+  for (let i = 0; i < validData.length; i += batchSize) {
+    const batch = validData.slice(i, i + batchSize).map(row => ({
       business_number: row.business_number || '',
-      처방월: row.처방월 || '',
+      처방월: row.처방월 || null,
       정산월: row.정산월 || '',
       웹코드: row.웹코드 || null,
       거래처명: row.거래처명 || null,
@@ -249,12 +246,17 @@ export async function insertSettlements(data: Partial<Settlement>[]): Promise<{
       제품_비고_2: row.제품_비고_2 || null,
       수정일시: row.수정일시 || null,
       수정자: row.수정자 || null,
-      upload_date: now,
-    } as Settlement);
+    }));
+
+    const { error } = await supabase.from('settlements').insert(batch);
+    if (error) {
+      console.error('Settlement insert error:', error);
+      throw new Error(error.message);
+    }
   }
-  
+
   return {
-    rowCount: data.filter(d => d.정산월).length,
+    rowCount: validData.length,
     settlementMonths,
   };
 }
@@ -263,34 +265,58 @@ export async function getSettlementsByBusinessNumber(
   businessNumber: string,
   settlementMonth?: string
 ): Promise<Settlement[]> {
-  let result = settlements.filter(s => s.business_number === businessNumber);
+  let query = supabase
+    .from('settlements')
+    .select('*')
+    .eq('business_number', businessNumber);
+
   if (settlementMonth) {
-    result = result.filter(s => s.정산월 === settlementMonth);
+    query = query.eq('정산월', settlementMonth);
   }
-  return result;
+
+  const { data, error } = await query.order('id', { ascending: true });
+  
+  if (error || !data) return [];
+  return data as Settlement[];
 }
 
 export async function getAllSettlements(settlementMonth?: string): Promise<Settlement[]> {
+  let query = supabase.from('settlements').select('*');
+
   if (settlementMonth) {
-    return settlements.filter(s => s.정산월 === settlementMonth);
+    query = query.eq('정산월', settlementMonth);
   }
-  return [...settlements];
+
+  const { data, error } = await query.order('id', { ascending: true });
+  
+  if (error || !data) return [];
+  return data as Settlement[];
 }
 
-// 정산월 목록 조회 (엑셀 데이터의 정산월 컬럼 기준)
+// 정산월 목록 조회
 export async function getAvailableSettlementMonths(): Promise<string[]> {
-  const months = new Set(settlements.map(s => s.정산월).filter(Boolean));
-  return Array.from(months).sort().reverse();
+  const { data, error } = await supabase
+    .from('settlements')
+    .select('정산월')
+    .not('정산월', 'is', null);
+
+  if (error || !data) return [];
+  
+  const rows = data as unknown as { 정산월: string }[];
+  const months = [...new Set(rows.map(d => d.정산월))].filter(Boolean);
+  return months.sort().reverse();
 }
 
 // 특정 정산월의 사업자번호 목록
 export async function getBusinessNumbersForSettlementMonth(settlementMonth: string): Promise<string[]> {
-  const businessNumbers = new Set(
-    settlements
-      .filter(s => s.정산월 === settlementMonth)
-      .map(s => s.business_number)
-  );
-  return Array.from(businessNumbers);
+  const { data, error } = await supabase
+    .from('settlements')
+    .select('business_number')
+    .eq('정산월', settlementMonth);
+
+  if (error || !data) return [];
+  
+  return [...new Set(data.map(d => d.business_number))];
 }
 
 export async function getSettlementSummary(businessNumber: string, settlementMonth: string): Promise<{
@@ -298,13 +324,22 @@ export async function getSettlementSummary(businessNumber: string, settlementMon
   총_수수료: number;
   데이터_건수: number;
 }> {
-  const data = settlements.filter(
-    s => s.business_number === businessNumber && s.정산월 === settlementMonth
-  );
+  const { data, error } = await supabase
+    .from('settlements')
+    .select('금액, 제약수수료_합계, 담당수수료_합계')
+    .eq('business_number', businessNumber)
+    .eq('정산월', settlementMonth);
+
+  if (error || !data) {
+    return { 총_금액: 0, 총_수수료: 0, 데이터_건수: 0 };
+  }
+
+  type SummaryRow = { 금액: number | null; 제약수수료_합계: number | null; 담당수수료_합계: number | null };
+  const rows = data as unknown as SummaryRow[];
   
   return {
-    총_금액: data.reduce((sum, s) => sum + (s.금액 || 0), 0),
-    총_수수료: data.reduce((sum, s) => sum + (s.제약수수료_합계 || 0) + (s.담당수수료_합계 || 0), 0),
+    총_금액: rows.reduce((sum, s) => sum + (Number(s.금액) || 0), 0),
+    총_수수료: rows.reduce((sum, s) => sum + (Number(s.제약수수료_합계) || 0) + (Number(s.담당수수료_합계) || 0), 0),
     데이터_건수: data.length,
   };
 }
@@ -315,22 +350,33 @@ export async function getSettlementStats(): Promise<{
   settlementMonths: { month: string; count: number }[];
   businessCount: number;
 }> {
+  const { data, error } = await supabase
+    .from('settlements')
+    .select('정산월, business_number');
+
+  if (error || !data) {
+    return { totalRows: 0, settlementMonths: [], businessCount: 0 };
+  }
+
+  type StatsRow = { 정산월: string | null; business_number: string };
+  const rows = data as unknown as StatsRow[];
+  
   const monthCounts = new Map<string, number>();
   const businessNumbers = new Set<string>();
-  
-  for (const s of settlements) {
+
+  for (const s of rows) {
     if (s.정산월) {
       monthCounts.set(s.정산월, (monthCounts.get(s.정산월) || 0) + 1);
     }
     businessNumbers.add(s.business_number);
   }
-  
+
   const settlementMonths = Array.from(monthCounts.entries())
     .map(([month, count]) => ({ month, count }))
     .sort((a, b) => b.month.localeCompare(a.month));
-  
+
   return {
-    totalRows: settlements.length,
+    totalRows: rows.length,
     settlementMonths,
     businessCount: businessNumbers.size,
   };
@@ -342,31 +388,42 @@ export async function getSettlementStatsByMonth(): Promise<{
   totalBusinesses: number;
   months: { month: string; count: number; businessCount: number; totalAmount: number }[];
 }> {
+  const { data, error } = await supabase
+    .from('settlements')
+    .select('정산월, business_number, 금액');
+
+  if (error || !data) {
+    return { totalRows: 0, totalBusinesses: 0, months: [] };
+  }
+
+  type MonthRow = { 정산월: string | null; business_number: string; 금액: number | null };
+  const rows = data as unknown as MonthRow[];
+  
   const monthData = new Map<string, { count: number; businesses: Set<string>; amount: number }>();
   const allBusinesses = new Set<string>();
-  
-  for (const s of settlements) {
+
+  for (const s of rows) {
     if (s.정산월) {
       const existing = monthData.get(s.정산월) || { count: 0, businesses: new Set<string>(), amount: 0 };
       existing.count++;
       existing.businesses.add(s.business_number);
-      existing.amount += s.금액 || 0;
+      existing.amount += Number(s.금액) || 0;
       monthData.set(s.정산월, existing);
     }
     allBusinesses.add(s.business_number);
   }
-  
+
   const months = Array.from(monthData.entries())
-    .map(([month, data]) => ({
+    .map(([month, d]) => ({
       month,
-      count: data.count,
-      businessCount: data.businesses.size,
-      totalAmount: data.amount,
+      count: d.count,
+      businessCount: d.businesses.size,
+      totalAmount: d.amount,
     }))
     .sort((a, b) => b.month.localeCompare(a.month));
-  
+
   return {
-    totalRows: settlements.length,
+    totalRows: rows.length,
     totalBusinesses: allBusinesses.size,
     months,
   };
@@ -374,11 +431,20 @@ export async function getSettlementStatsByMonth(): Promise<{
 
 // 특정 정산월 데이터 삭제
 export async function deleteSettlementsByMonth(month: string): Promise<number> {
-  const beforeCount = settlements.length;
-  const filtered = settlements.filter(s => s.정산월 !== month);
-  settlements.length = 0;
-  settlements.push(...filtered);
-  return beforeCount - settlements.length;
+  // 먼저 개수 조회
+  const { count } = await supabase
+    .from('settlements')
+    .select('*', { count: 'exact', head: true })
+    .eq('정산월', month);
+
+  // 삭제
+  const { error } = await supabase
+    .from('settlements')
+    .delete()
+    .eq('정산월', month);
+
+  if (error) return 0;
+  return count || 0;
 }
 
 // ============================================
@@ -386,36 +452,48 @@ export async function deleteSettlementsByMonth(month: string): Promise<number> {
 // ============================================
 
 export async function initializeColumnSettings(defaults: typeof DEFAULT_COLUMN_SETTINGS): Promise<void> {
-  if (columnSettings.size === 0) {
-    const now = new Date().toISOString();
-    for (const setting of defaults) {
-      const id = `col-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      columnSettings.set(setting.column_key, {
-        id,
-        ...setting,
-        created_at: now,
-        updated_at: now,
-      });
-    }
-  }
+  // 기존 설정이 있는지 확인
+  const { data: existing } = await supabase
+    .from('column_settings')
+    .select('id')
+    .limit(1);
+
+  if (existing && existing.length > 0) return;
+
+  // 기본 설정 삽입
+  const settings = defaults.map(s => ({
+    column_key: s.column_key,
+    column_name: s.column_name,
+    is_visible: s.is_visible,
+    is_required: s.is_required,
+    display_order: s.display_order,
+  }));
+
+  await supabase.from('column_settings').insert(settings);
 }
 
 export async function getColumnSettings(): Promise<ColumnSetting[]> {
-  return Array.from(columnSettings.values()).sort((a, b) => a.display_order - b.display_order);
+  const { data, error } = await supabase
+    .from('column_settings')
+    .select('*')
+    .order('display_order', { ascending: true });
+
+  if (error || !data) return [];
+  return data as ColumnSetting[];
 }
 
 export async function updateColumnSettings(settings: Partial<ColumnSetting>[]): Promise<void> {
-  const now = new Date().toISOString();
   for (const setting of settings) {
     if (setting.column_key) {
-      const existing = columnSettings.get(setting.column_key);
-      if (existing) {
-        columnSettings.set(setting.column_key, {
-          ...existing,
-          ...setting,
-          updated_at: now,
-        });
-      }
+      await supabase
+        .from('column_settings')
+        .update({
+          is_visible: setting.is_visible,
+          is_required: setting.is_required,
+          display_order: setting.display_order,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('column_key', setting.column_key);
     }
   }
 }
@@ -429,35 +507,38 @@ export async function createEmailLog(data: {
   subject: string;
   template_type: EmailTemplateType;
 }): Promise<EmailLog> {
-  const log: EmailLog = {
-    id: `email-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    recipient_email: data.recipient_email,
-    subject: data.subject,
-    template_type: data.template_type,
-    status: 'pending',
-    error_message: null,
-    sent_at: null,
-    created_at: new Date().toISOString(),
-  };
-  
-  emailLogs.push(log);
-  return log;
+  const { data: log, error } = await supabase
+    .from('email_logs')
+    .insert({
+      recipient_email: data.recipient_email,
+      subject: data.subject,
+      template_type: data.template_type,
+      status: 'pending',
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return log as EmailLog;
 }
 
 export async function updateEmailLog(id: string, data: {
   status: EmailStatus;
   error_message?: string;
 }): Promise<void> {
-  const log = emailLogs.find(l => l.id === id);
-  if (log) {
-    log.status = data.status;
-    if (data.status === 'sent') {
-      log.sent_at = new Date().toISOString();
-    }
-    if (data.error_message) {
-      log.error_message = data.error_message;
-    }
+  const updateData: Record<string, unknown> = { status: data.status };
+  
+  if (data.status === 'sent') {
+    updateData.sent_at = new Date().toISOString();
   }
+  if (data.error_message) {
+    updateData.error_message = data.error_message;
+  }
+
+  await supabase
+    .from('email_logs')
+    .update(updateData)
+    .eq('id', id);
 }
 
 export async function getEmailLogs(filter?: {
@@ -465,22 +546,25 @@ export async function getEmailLogs(filter?: {
   status?: EmailStatus;
   limit?: number;
 }): Promise<EmailLog[]> {
-  let result = [...emailLogs];
-  
+  let query = supabase
+    .from('email_logs')
+    .select('*')
+    .order('created_at', { ascending: false });
+
   if (filter?.template_type) {
-    result = result.filter(l => l.template_type === filter.template_type);
+    query = query.eq('template_type', filter.template_type);
   }
   if (filter?.status) {
-    result = result.filter(l => l.status === filter.status);
+    query = query.eq('status', filter.status);
   }
-  
-  result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  
   if (filter?.limit) {
-    result = result.slice(0, filter.limit);
+    query = query.limit(filter.limit);
   }
+
+  const { data, error } = await query;
   
-  return result;
+  if (error || !data) return [];
+  return data as EmailLog[];
 }
 
 export async function getEmailStats(): Promise<{
@@ -489,11 +573,19 @@ export async function getEmailStats(): Promise<{
   failed: number;
   pending: number;
 }> {
+  const { data, error } = await supabase
+    .from('email_logs')
+    .select('status');
+
+  if (error || !data) {
+    return { total: 0, sent: 0, failed: 0, pending: 0 };
+  }
+
   return {
-    total: emailLogs.length,
-    sent: emailLogs.filter(l => l.status === 'sent').length,
-    failed: emailLogs.filter(l => l.status === 'failed').length,
-    pending: emailLogs.filter(l => l.status === 'pending').length,
+    total: data.length,
+    sent: data.filter(l => l.status === 'sent').length,
+    failed: data.filter(l => l.status === 'failed').length,
+    pending: data.filter(l => l.status === 'pending').length,
   };
 }
 
@@ -514,27 +606,59 @@ interface CompanyInfo {
   additional_info: string;
 }
 
-// In-memory company settings
-let companyInfo: CompanyInfo = {
-  company_name: '한국유니온제약',
-  ceo_name: '',
-  business_number: '607-81-21765',
-  address: '',
-  phone: '',
-  fax: '',
-  email: 'admin@kup.co.kr',
-  website: '',
-  copyright: '© 2026 한국유니온제약. All rights reserved.',
-  additional_info: '',
-};
-
 export async function getCompanyInfo(): Promise<CompanyInfo> {
-  return { ...companyInfo };
+  const { data, error } = await supabase
+    .from('company_settings')
+    .select('*')
+    .limit(1)
+    .single();
+
+  if (error || !data) {
+    return {
+      company_name: '',
+      ceo_name: '',
+      business_number: '',
+      address: '',
+      phone: '',
+      fax: '',
+      email: '',
+      website: '',
+      copyright: '',
+      additional_info: '',
+    };
+  }
+
+  return {
+    company_name: data.company_name || '',
+    ceo_name: data.ceo_name || '',
+    business_number: data.business_number || '',
+    address: data.address || '',
+    phone: data.phone || '',
+    fax: data.fax || '',
+    email: data.email || '',
+    website: data.website || '',
+    copyright: data.copyright || '',
+    additional_info: data.additional_info || '',
+  };
 }
 
 export async function updateCompanyInfo(data: Partial<CompanyInfo>): Promise<void> {
-  companyInfo = {
-    ...companyInfo,
-    ...data,
-  };
+  // 기존 설정이 있는지 확인
+  const { data: existing } = await supabase
+    .from('company_settings')
+    .select('id')
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    // 업데이트
+    await supabase
+      .from('company_settings')
+      .update({ ...data, updated_at: new Date().toISOString() })
+      .eq('id', existing[0].id);
+  } else {
+    // 새로 생성
+    await supabase
+      .from('company_settings')
+      .insert({ ...data });
+  }
 }

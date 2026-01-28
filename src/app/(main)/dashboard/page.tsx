@@ -251,7 +251,7 @@ export default function DashboardPage() {
                     htmlFor={col.column_key}
                     className="text-sm cursor-pointer flex items-center gap-1"
                   >
-                    {col.display_name}
+                    {col.column_name}
                     {col.is_required && (
                       <Badge variant="secondary" className="text-xs">필수</Badge>
                     )}
@@ -301,7 +301,7 @@ export default function DashboardPage() {
               <thead>
                 <tr>
                   {displayColumns.map(col => (
-                    <th key={col.column_key}>{col.display_name}</th>
+                    <th key={col.column_key}>{col.column_name}</th>
                   ))}
                 </tr>
               </thead>
