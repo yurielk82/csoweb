@@ -52,10 +52,10 @@ export function Header({ user }: HeaderProps) {
     { href: '/admin', label: '대시보드', icon: LayoutDashboard },
     { href: '/admin/master', label: '정산서 마스터 조회', icon: Search },
     { href: '/admin/upload', label: '엑셀 업로드', icon: Upload },
-    { href: '/admin/data', label: '데이터 관리', icon: Database },
-    { href: '/admin/members', label: '회원 관리', icon: UserCog },
-    { href: '/admin/approvals', label: '회원 승인', icon: Users },
     { href: '/admin/columns', label: '컬럼 설정', icon: Columns },
+    { href: '/admin/data', label: '데이터 관리', icon: Database },
+    { href: '/admin/approvals', label: '회원 승인', icon: Users },
+    { href: '/admin/members', label: '회원 관리', icon: UserCog },
     { href: '/admin/emails', label: '이메일 이력', icon: Mail },
     { href: '/admin/mailmerge', label: '메일머지', icon: MailPlus },
   ];
