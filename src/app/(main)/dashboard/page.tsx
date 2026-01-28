@@ -390,7 +390,7 @@ export default function DashboardPage() {
                               {displayColumns.map((col, colIdx) => (
                                 <td key={col.column_key} className={typeof customer.subtotal[col.column_key as keyof typeof customer.subtotal] === 'number' ? 'text-right' : ''}>
                                   {colIdx === 0 ? (
-                                    <span className="text-gray-600">└ {customer.customerName} 소계</span>
+                                    <span className="text-gray-600">{customer.customerName} 합계</span>
                                   ) : col.column_key === '수량' ? (
                                     formatNumber(customer.subtotal.수량)
                                   ) : col.column_key === '금액' ? (
@@ -408,7 +408,7 @@ export default function DashboardPage() {
                           {displayColumns.map((col, colIdx) => (
                             <td key={col.column_key} className={typeof csoGroup.total[col.column_key as keyof typeof csoGroup.total] === 'number' ? 'text-right' : ''}>
                               {colIdx === 0 ? (
-                                <span className="text-blue-700">■ {csoGroup.csoName} 총합계</span>
+                                <span className="text-blue-700">{csoGroup.csoName} 총합계</span>
                               ) : col.column_key === '수량' ? (
                                 formatNumber(csoGroup.total.수량)
                               ) : col.column_key === '금액' ? (
@@ -421,22 +421,6 @@ export default function DashboardPage() {
                         </tr>
                       </>
                     ))}
-                    {/* 전체 총합계 */}
-                    <tr className="bg-gray-800 text-white font-bold">
-                      {displayColumns.map((col, colIdx) => (
-                        <td key={col.column_key} className={colIdx > 0 ? 'text-right' : ''}>
-                          {colIdx === 0 ? (
-                            '★ 전체 총합계'
-                          ) : col.column_key === '수량' ? (
-                            formatNumber(data?.totals.수량 || 0)
-                          ) : col.column_key === '금액' ? (
-                            formatNumber(data?.totals.금액 || 0)
-                          ) : col.column_key === '제약수수료_합계' ? (
-                            formatNumber(data?.totals.제약수수료_합계 || 0)
-                          ) : ''}
-                        </td>
-                      ))}
-                    </tr>
                   </>
                 ) : (
                   <tr>

@@ -133,6 +133,7 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<{
 }
 
 // Export settlements to Excel (using SheetJS for speed)
+// 피벗 형태로 내보내기: 거래처명별 소계 + CSO관리업체 총합계 포함
 export function exportToExcel(
   data: Settlement[],
   columns: { key: string; name: string }[]
@@ -143,9 +144,66 @@ export function exportToExcel(
   // Header row
   wsData.push(columns.map(col => col.name));
   
-  // Data rows
+  // 피벗 데이터 생성: CSO관리업체 > 거래처명 > 상세 데이터
+  const csoMap = new Map<string, Map<string, Settlement[]>>();
+  
   for (const row of data) {
-    wsData.push(columns.map(col => row[col.key] ?? ''));
+    const csoName = row.CSO관리업체 || '(미지정)';
+    const customerName = row.거래처명 || '(미지정)';
+    
+    if (!csoMap.has(csoName)) {
+      csoMap.set(csoName, new Map());
+    }
+    const customerMap = csoMap.get(csoName)!;
+    if (!customerMap.has(customerName)) {
+      customerMap.set(customerName, []);
+    }
+    customerMap.get(customerName)!.push(row);
+  }
+  
+  // 정렬된 CSO관리업체 순회
+  for (const [csoName, customerMap] of Array.from(csoMap.entries()).sort((a, b) => a[0].localeCompare(b[0]))) {
+    const csoTotal = { 수량: 0, 금액: 0, 제약수수료_합계: 0 };
+    
+    // 정렬된 거래처 순회
+    for (const [customerName, rows] of Array.from(customerMap.entries()).sort((a, b) => a[0].localeCompare(b[0]))) {
+      // 상세 데이터 행
+      for (const row of rows) {
+        wsData.push(columns.map(col => row[col.key] ?? ''));
+      }
+      
+      // 거래처별 소계 계산
+      const subtotal = {
+        수량: rows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
+        금액: rows.reduce((sum, r) => sum + (Number(r.금액) || 0), 0),
+        제약수수료_합계: rows.reduce((sum, r) => sum + (Number(r.제약수수료_합계) || 0), 0),
+      };
+      
+      // 거래처 소계 행
+      const subtotalRow = columns.map((col, idx) => {
+        if (idx === 0) return `${customerName} 합계`;
+        if (col.key === '수량') return subtotal.수량;
+        if (col.key === '금액') return subtotal.금액;
+        if (col.key === '제약수수료_합계') return subtotal.제약수수료_합계;
+        return '';
+      });
+      wsData.push(subtotalRow);
+      
+      // CSO 총합계에 누적
+      csoTotal.수량 += subtotal.수량;
+      csoTotal.금액 += subtotal.금액;
+      csoTotal.제약수수료_합계 += subtotal.제약수수료_합계;
+    }
+    
+    // CSO관리업체 총합계 행
+    const csoTotalRow = columns.map((col, idx) => {
+      if (idx === 0) return `${csoName} 총합계`;
+      if (col.key === '수량') return csoTotal.수량;
+      if (col.key === '금액') return csoTotal.금액;
+      if (col.key === '제약수수료_합계') return csoTotal.제약수수료_합계;
+      return '';
+    });
+    wsData.push(csoTotalRow);
   }
   
   // Create worksheet and workbook
@@ -155,7 +213,7 @@ export function exportToExcel(
   
   // Set column widths
   const colWidths = columns.map(col => ({
-    wch: Math.max(col.name.length * 2, 10)
+    wch: Math.max(col.name.length * 2, 12)
   }));
   ws['!cols'] = colWidths;
   
