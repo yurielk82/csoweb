@@ -325,13 +325,11 @@ export default function SettingsPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="notice_ceo_name">5. 대표자</Label>
-            <Input
-              id="notice_ceo_name"
-              value={formData.notice_ceo_name}
-              onChange={(e) => handleChange('notice_ceo_name', e.target.value)}
-              placeholder="{{대표자명}}"
-            />
+            <Label>5. 대표자</Label>
+            <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted">
+              <span className="text-sm">{formData.ceo_name || '(기본 정보에서 대표자명을 입력하세요)'}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">기본 정보의 대표자명이 자동으로 표시됩니다.</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="notice_edi_deadline">6. 다음달 EDI 입력 마감일</Label>

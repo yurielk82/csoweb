@@ -282,7 +282,7 @@ export default function DashboardPage() {
               <li><strong>세금계산서 취합 마감일:</strong> {replaceNoticeVars(noticeSettings.notice_tax_due)}</li>
               <li><strong>세금계산서 메일 주소:</strong> <a href={`mailto:${noticeSettings.notice_tax_email}`} className="text-blue-600 underline">{noticeSettings.notice_tax_email}</a></li>
               <li><strong>품목명:</strong> {replaceNoticeVars(noticeSettings.notice_item_name)}</li>
-              <li><strong>대표자:</strong> {replaceNoticeVars(noticeSettings.notice_ceo_name)}</li>
+              <li><strong>대표자:</strong> {noticeSettings.ceo_name || '(미설정)'}</li>
               <li><strong>다음달 EDI 입력 마감일:</strong> {replaceNoticeVars(noticeSettings.notice_edi_deadline)}</li>
             </ol>
           </CardContent>
