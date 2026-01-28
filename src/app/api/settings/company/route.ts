@@ -9,6 +9,8 @@ export async function GET() {
   try {
     const companyInfo = await getCompanyInfo();
     
+    console.log('GET /api/settings/company - Retrieved data:', JSON.stringify(companyInfo, null, 2));
+    
     return NextResponse.json({
       success: true,
       data: companyInfo,
@@ -36,7 +38,13 @@ export async function PUT(request: NextRequest) {
     
     const data = await request.json();
     
+    console.log('PUT /api/settings/company - Saving data:', JSON.stringify(data, null, 2));
+    
     await updateCompanyInfo(data);
+    
+    // 저장 후 다시 조회해서 확인
+    const savedData = await getCompanyInfo();
+    console.log('PUT /api/settings/company - After save:', JSON.stringify(savedData, null, 2));
     
     return NextResponse.json({
       success: true,

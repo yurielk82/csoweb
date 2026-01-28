@@ -725,7 +725,15 @@ export async function getCompanyInfo(): Promise<CompanyInfo> {
     .limit(1)
     .single();
 
+  if (error) {
+    console.log('getCompanyInfo error:', error.message, error.code);
+  }
+  if (data) {
+    console.log('getCompanyInfo raw data from DB:', JSON.stringify(data, null, 2));
+  }
+
   if (error || !data) {
+    console.log('getCompanyInfo returning defaults due to error or no data');
     return {
       company_name: '',
       ceo_name: '',
