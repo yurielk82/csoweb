@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, Search, Edit, Trash2, Shield, ShieldOff, Loader2, UserCheck, UserX } from 'lucide-react';
+import { Users, Search, Edit, Trash2, Shield, ShieldOff, Loader2, UserCheck, UserX, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -73,6 +73,30 @@ export default function MembersPage() {
   // Delete dialog
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  // 전화번호 포맷 함수 (00-0000-0000, 000-0000-0000 모두 지원)
+  const formatPhoneNumber = (phone: string) => {
+    if (!phone) return '-';
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length === 8) {
+      // 00-0000-0000 형태 (지역번호 없는 경우)
+      return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+    } else if (digits.length === 9) {
+      // 00-000-0000 형태
+      return `${digits.slice(0, 2)}-${digits.slice(2, 5)}-${digits.slice(5)}`;
+    } else if (digits.length === 10) {
+      // 00-0000-0000 또는 000-000-0000 형태
+      if (digits.startsWith('02')) {
+        return `${digits.slice(0, 2)}-${digits.slice(2, 6)}-${digits.slice(6)}`;
+      }
+      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+    } else if (digits.length === 11) {
+      // 000-0000-0000 형태
+      return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+    }
+    return phone; // 원본 반환
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -143,6 +167,68 @@ export default function MembersPage() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  // 엑셀 다운로드
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      // 동적으로 xlsx 라이브러리 로드
+      const XLSX = await import('xlsx');
+      
+      // 엑셀 데이터 준비
+      const exportData = filteredUsers.map(user => ({
+        '업체명': user.company_name,
+        '대표자명': user.ceo_name || '',
+        '사업자번호': user.business_number,
+        '주소': user.address || '',
+        '연락처1': user.phone1 || '',
+        '연락처2': user.phone2 || '',
+        '이메일': user.email,
+        '이메일2': user.email2 || '',
+        '상태': user.is_admin ? '관리자' : (user.is_approved ? '승인됨' : '대기중'),
+        '가입일': new Date(user.created_at).toLocaleDateString('ko-KR'),
+      }));
+      
+      // 워크시트 생성
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      
+      // 컬럼 너비 설정
+      ws['!cols'] = [
+        { wch: 20 }, // 업체명
+        { wch: 10 }, // 대표자명
+        { wch: 15 }, // 사업자번호
+        { wch: 40 }, // 주소
+        { wch: 15 }, // 연락처1
+        { wch: 15 }, // 연락처2
+        { wch: 25 }, // 이메일
+        { wch: 25 }, // 이메일2
+        { wch: 10 }, // 상태
+        { wch: 12 }, // 가입일
+      ];
+      
+      // 워크북 생성
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, '회원목록');
+      
+      // 파일 다운로드
+      const today = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `회원목록_${today}.xlsx`);
+      
+      toast({
+        title: '다운로드 완료',
+        description: `${filteredUsers.length}명의 회원 정보가 다운로드되었습니다.`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        variant: 'destructive',
+        title: '다운로드 실패',
+        description: '엑셀 파일 생성 중 오류가 발생했습니다.',
+      });
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -284,6 +370,18 @@ export default function MembersPage() {
                 <SelectItem value="pending">대기중</SelectItem>
               </SelectContent>
             </Select>
+            <Button 
+              variant="outline" 
+              onClick={handleExportExcel}
+              disabled={exporting || filteredUsers.length === 0}
+            >
+              {exporting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              엑셀 다운로드
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -310,7 +408,7 @@ export default function MembersPage() {
                   <TableCell className="font-medium">{user.company_name}</TableCell>
                   <TableCell>{user.ceo_name || '-'}</TableCell>
                   <TableCell>{user.business_number}</TableCell>
-                  <TableCell>{user.phone1 || '-'}</TableCell>
+                  <TableCell>{formatPhoneNumber(user.phone1)}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
