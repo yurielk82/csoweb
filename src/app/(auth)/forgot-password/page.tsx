@@ -152,11 +152,11 @@ export default function ForgotPasswordPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">이메일</Label>
+              <Label htmlFor="email">가입 시 등록한 이메일</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="가입 시 등록한 이메일"
+                placeholder="example@email.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required

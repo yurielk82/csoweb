@@ -18,7 +18,8 @@ import {
   MailPlus,
   Database,
   UserCog,
-  Search
+  Search,
+  Calculator
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -62,6 +63,7 @@ export function Header({ user }: HeaderProps) {
 
   const userMenuItems = [
     { href: '/dashboard', label: '정산서 조회', icon: FileSpreadsheet },
+    { href: '/monthly-summary', label: '월별 합계', icon: Calculator },
   ];
 
   const menuItems = user.is_admin ? adminMenuItems : userMenuItems;

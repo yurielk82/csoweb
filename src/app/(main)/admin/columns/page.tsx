@@ -18,7 +18,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Columns, GripVertical, Save, RotateCcw, Loader2 } from 'lucide-react';
+import { Columns, GripVertical, Save, RotateCcw, Loader2, Calculator, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -27,11 +27,13 @@ import { Label } from '@/components/ui/label';
 import { Loading } from '@/components/shared/loading';
 import { useToast } from '@/hooks/use-toast';
 import type { ColumnSetting } from '@/types';
+import { NUMERIC_COLUMN_KEYS } from '@/types';
 
 interface SortableColumnProps {
   column: ColumnSetting;
   onToggleVisible: (key: string) => void;
   onToggleRequired: (key: string) => void;
+  onToggleSummary: (key: string) => void;
   onChangeName: (key: string, name: string) => void;
 }
 
@@ -39,8 +41,10 @@ function SortableColumn({
   column, 
   onToggleVisible, 
   onToggleRequired, 
+  onToggleSummary,
   onChangeName 
 }: SortableColumnProps) {
+  const isNumericColumn = NUMERIC_COLUMN_KEYS.includes(column.column_key);
   const {
     attributes,
     listeners,
@@ -112,6 +116,22 @@ function SortableColumn({
           className="text-sm text-muted-foreground"
         >
           필수
+        </Label>
+      </div>
+
+      {/* Summary Checkbox (숫자형 컬럼만) */}
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id={`summary-${column.column_key}`}
+          checked={column.is_summary || false}
+          onCheckedChange={() => onToggleSummary(column.column_key)}
+          disabled={!isNumericColumn}
+        />
+        <Label 
+          htmlFor={`summary-${column.column_key}`}
+          className={`text-sm ${isNumericColumn ? 'text-blue-600' : 'text-muted-foreground'}`}
+        >
+          합계
         </Label>
       </div>
     </div>
@@ -189,6 +209,19 @@ export default function ColumnsPage() {
     setColumns(prev => prev.map(col => {
       if (col.column_key === key && col.is_visible) {
         return { ...col, is_required: !col.is_required };
+      }
+      return col;
+    }));
+    setHasChanges(true);
+  };
+
+  const toggleSummary = (key: string) => {
+    // 숫자형 컬럼만 합계 설정 가능
+    if (!NUMERIC_COLUMN_KEYS.includes(key)) return;
+    
+    setColumns(prev => prev.map(col => {
+      if (col.column_key === key) {
+        return { ...col, is_summary: !col.is_summary };
       }
       return col;
     }));
@@ -278,6 +311,7 @@ export default function ColumnsPage() {
 
   const visibleCount = columns.filter(c => c.is_visible).length;
   const requiredCount = columns.filter(c => c.is_required).length;
+  const summaryCount = columns.filter(c => c.is_summary).length;
 
   return (
     <div className="space-y-6">
@@ -314,7 +348,29 @@ export default function ColumnsPage() {
         <span className="text-muted-foreground">
           필수: <strong>{requiredCount}</strong>개
         </span>
+        <span className="text-blue-600">
+          합계: <strong>{summaryCount}</strong>개
+        </span>
       </div>
+
+      {/* Summary Info */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2 text-blue-700">
+            <Calculator className="h-4 w-4" />
+            월별 합계 설정
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-blue-600">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            <p>
+              <strong>합계</strong> 체크된 컬럼은 사용자의 &quot;월별 합계&quot; 페이지에서 정산월 별로 합산되어 표시됩니다.
+              숫자형 컬럼(수량, 금액, 수수료 등)만 합계 설정이 가능합니다.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Actions */}
       <Card>
@@ -346,6 +402,7 @@ export default function ColumnsPage() {
             <span className="w-32">컬럼 키</span>
             <span className="flex-1 max-w-xs">표시명</span>
             <span>필수</span>
+            <span className="text-blue-600">합계</span>
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -364,6 +421,7 @@ export default function ColumnsPage() {
                   column={column}
                   onToggleVisible={toggleVisible}
                   onToggleRequired={toggleRequired}
+                  onToggleSummary={toggleSummary}
                   onChangeName={changeName}
                 />
               ))}

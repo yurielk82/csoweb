@@ -109,6 +109,7 @@ export interface DbColumnSetting {
   column_name: string;
   is_visible: boolean;
   is_required: boolean;
+  is_summary: boolean;
   display_order: number;
   created_at: string;
   updated_at: string;

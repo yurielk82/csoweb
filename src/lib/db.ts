@@ -651,6 +651,7 @@ export async function initializeColumnSettings(defaults: typeof DEFAULT_COLUMN_S
     column_name: s.column_name,
     is_visible: s.is_visible,
     is_required: s.is_required,
+    is_summary: s.is_summary || false,
     display_order: s.display_order,
   }));
 
@@ -673,14 +674,97 @@ export async function updateColumnSettings(settings: Partial<ColumnSetting>[]): 
       await supabase
         .from('column_settings')
         .update({
+          column_name: setting.column_name,
           is_visible: setting.is_visible,
           is_required: setting.is_required,
+          is_summary: setting.is_summary ?? false,
           display_order: setting.display_order,
           updated_at: new Date().toISOString(),
         })
         .eq('column_key', setting.column_key);
     }
   }
+}
+
+// 월별 수수료 합계 조회 (is_summary가 true인 컬럼만)
+export async function getMonthlySummaryByBusinessNumber(
+  businessNumber: string
+): Promise<{
+  months: Array<{
+    settlement_month: string;
+    summaries: Record<string, number>;
+    row_count: number;
+  }>;
+  summary_columns: ColumnSetting[];
+}> {
+  // 1. is_summary가 true인 컬럼 조회
+  const { data: columnData } = await supabase
+    .from('column_settings')
+    .select('*')
+    .eq('is_summary', true)
+    .order('display_order', { ascending: true });
+  
+  const summaryColumns = (columnData || []) as ColumnSetting[];
+  const summaryColumnKeys = summaryColumns.map(c => c.column_key);
+  
+  if (summaryColumnKeys.length === 0) {
+    return { months: [], summary_columns: [] };
+  }
+
+  // 2. 해당 사업자의 모든 정산월 데이터 조회
+  const allRows: Array<Record<string, unknown>> = [];
+  const pageSize = 1000;
+  let page = 0;
+  
+  // 동적으로 select 컬럼 구성
+  const selectColumns = ['정산월', ...summaryColumnKeys].join(', ');
+  
+  while (true) {
+    const { data, error } = await supabase
+      .from('settlements')
+      .select(selectColumns)
+      .eq('business_number', businessNumber)
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+    
+    if (error || !data || data.length === 0) break;
+    allRows.push(...(data as unknown as Array<Record<string, unknown>>));
+    if (data.length < pageSize) break;
+    page++;
+  }
+
+  // 3. 정산월별로 그룹핑하여 합계 계산
+  const monthlyData = new Map<string, { summaries: Record<string, number>; count: number }>();
+  
+  for (const row of allRows) {
+    const month = row.정산월 as string;
+    if (!month) continue;
+    
+    if (!monthlyData.has(month)) {
+      monthlyData.set(month, { 
+        summaries: Object.fromEntries(summaryColumnKeys.map(k => [k, 0])),
+        count: 0 
+      });
+    }
+    
+    const data = monthlyData.get(month)!;
+    data.count++;
+    
+    for (const key of summaryColumnKeys) {
+      const value = Number(row[key]) || 0;
+      data.summaries[key] += value;
+    }
+  }
+
+  // 4. 정산월 기준 내림차순 정렬
+  const months = Array.from(monthlyData.entries())
+    .map(([month, data]) => ({
+      settlement_month: month,
+      summaries: data.summaries,
+      row_count: data.count,
+    }))
+    .sort((a, b) => b.settlement_month.localeCompare(a.settlement_month));
+
+  return { months, summary_columns: summaryColumns };
 }
 
 // ============================================
