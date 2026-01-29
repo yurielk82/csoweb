@@ -69,11 +69,21 @@ export async function POST(request: NextRequest) {
     }
     
     // 토큰 생성 (제한 없음)
-    const token = await createPasswordResetToken(
-      user.id,
-      normalizedBN,
-      normalizedEmail
-    );
+    let token;
+    try {
+      token = await createPasswordResetToken(
+        user.id,
+        normalizedBN,
+        normalizedEmail
+      );
+    } catch (tokenError) {
+      console.error('[Password Reset] Token creation failed:', tokenError);
+      const tokenErrorMsg = tokenError instanceof Error ? tokenError.message : '토큰 생성 실패';
+      return NextResponse.json(
+        { success: false, error: `토큰 생성에 실패했습니다: ${tokenErrorMsg}. 관리자에게 문의해주세요.` },
+        { status: 500 }
+      );
+    }
     
     // 이메일 발송
     const emailResult = await sendEmail(normalizedEmail, 'password_reset', {
@@ -86,7 +96,7 @@ export async function POST(request: NextRequest) {
     if (!emailResult.success) {
       console.error('[Password Reset] Email send failed:', emailResult.error);
       return NextResponse.json(
-        { success: false, error: '이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.' },
+        { success: false, error: `이메일 발송에 실패했습니다: ${emailResult.error}` },
         { status: 500 }
       );
     }
