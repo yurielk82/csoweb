@@ -23,6 +23,8 @@ declare global {
 
 interface DaumPostcodeData {
   address: string;
+  roadAddress: string;
+  jibunAddress: string;
   addressType: string;
   bname: string;
   buildingName: string;
@@ -95,14 +97,16 @@ export default function RegisterPage() {
     setFormData({ ...formData, [field]: formatted });
   };
 
-  // 다음 주소 검색
+  // 다음 주소 검색 (도로명 주소 우선)
   const handleAddressSearch = () => {
     if (typeof window !== 'undefined' && window.daum) {
       new window.daum.Postcode({
         oncomplete: (data: DaumPostcodeData) => {
+          // 도로명 주소 우선 사용
+          const roadAddr = data.roadAddress || data.address;
           setFormData({ 
             ...formData, 
-            address: data.address,
+            address: roadAddr,
             address_detail: ''
           });
         },
