@@ -86,22 +86,7 @@ export async function PUT(request: NextRequest) {
     if (email !== undefined && email !== user.email) updateData.email = email;
     if (email2 !== undefined && email2 !== user.email2) updateData.email2 = email2;
     
-    if (Object.keys(updateData).length > 0) {
-      const success = await updateUser(session.business_number, updateData);
-      if (success) {
-        return NextResponse.json({
-          success: true,
-          message: '정보가 변경되었습니다.',
-        });
-      } else {
-        return NextResponse.json(
-          { success: false, error: '정보 변경에 실패했습니다.' },
-          { status: 400 }
-        );
-      }
-    }
-    
-    // 비밀번호 변경
+    // 비밀번호 변경 (별도 처리)
     if (current_password && new_password) {
       // 현재 비밀번호 확인
       const isValid = await verifyPassword(current_password, user.password_hash);
@@ -124,6 +109,22 @@ export async function PUT(request: NextRequest) {
       } else {
         return NextResponse.json(
           { success: false, error: '비밀번호 변경에 실패했습니다.' },
+          { status: 400 }
+        );
+      }
+    }
+    
+    // 기본 정보 변경
+    if (Object.keys(updateData).length > 0) {
+      const success = await updateUser(session.business_number, updateData);
+      if (success) {
+        return NextResponse.json({
+          success: true,
+          message: '정보가 변경되었습니다.',
+        });
+      } else {
+        return NextResponse.json(
+          { success: false, error: '정보 변경에 실패했습니다.' },
           { status: 400 }
         );
       }
