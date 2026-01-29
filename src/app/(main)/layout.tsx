@@ -17,6 +17,11 @@ export default async function MainLayout({
     redirect('/login');
   }
   
+  // 비밀번호 변경이 필요한 경우 강제 리다이렉트
+  if (session.must_change_password) {
+    redirect('/change-password');
+  }
+  
   return (
     <div className="min-h-screen bg-gray-50">
       <Header user={session} />
