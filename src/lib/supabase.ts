@@ -38,7 +38,9 @@ export interface DbUser {
   business_number: string;
   company_name: string;
   ceo_name: string | null;
-  address: string | null;
+  zipcode: string | null;
+  address1: string | null;
+  address2: string | null;
   phone1: string | null;
   phone2: string | null;
   email: string;

@@ -19,7 +19,9 @@ export async function POST(request: NextRequest) {
       business_number, 
       company_name, 
       ceo_name,
-      address,
+      zipcode,
+      address1,
+      address2,
       phone1,
       phone2,
       email, 
@@ -28,7 +30,7 @@ export async function POST(request: NextRequest) {
     } = await request.json();
     
     // Validation
-    if (!business_number || !company_name || !ceo_name || !address || !phone1 || !email || !password) {
+    if (!business_number || !company_name || !ceo_name || !zipcode || !address1 || !phone1 || !email || !password) {
       return NextResponse.json(
         { success: false, error: '필수 항목을 모두 입력해주세요.' },
         { status: 400 }
@@ -82,7 +84,9 @@ export async function POST(request: NextRequest) {
       business_number: normalizedBN,
       company_name,
       ceo_name,
-      address,
+      zipcode,
+      address1,
+      address2: address2 || undefined,
       phone1,
       phone2: phone2 || undefined,
       email,
@@ -91,11 +95,12 @@ export async function POST(request: NextRequest) {
     });
     
     // Notify admin about new registration
+    const fullAddress = address2 ? `${address1} ${address2}` : address1;
     await notifyAdmin('registration_request', {
       business_number: normalizedBN,
       company_name,
       ceo_name,
-      address,
+      address: `(${zipcode}) ${fullAddress}`,
       phone1,
       email,
       created_at: user.created_at,

@@ -38,7 +38,9 @@ interface User {
   business_number: string;
   company_name: string;
   ceo_name: string;
-  address: string;
+  zipcode: string;
+  address1: string;
+  address2?: string;
   phone1: string;
   phone2?: string;
   email: string;
@@ -60,7 +62,9 @@ export default function MembersPage() {
   const [editForm, setEditForm] = useState({ 
     company_name: '', 
     ceo_name: '',
-    address: '',
+    zipcode: '',
+    address1: '',
+    address2: '',
     phone1: '',
     phone2: '',
     email: '', 
@@ -68,6 +72,17 @@ export default function MembersPage() {
     is_admin: false, 
     is_approved: false 
   });
+
+  // 주소 포맷 함수 (엑셀 다운로드용)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const formatAddress = (user: User) => {
+    if (!user.zipcode && !user.address1) return '-';
+    const parts = [];
+    if (user.zipcode) parts.push(`(${user.zipcode})`);
+    if (user.address1) parts.push(user.address1);
+    if (user.address2) parts.push(user.address2);
+    return parts.join(' ');
+  };
   const [saving, setSaving] = useState(false);
   
   // Delete dialog
@@ -122,7 +137,9 @@ export default function MembersPage() {
     setEditForm({
       company_name: user.company_name,
       ceo_name: user.ceo_name || '',
-      address: user.address || '',
+      zipcode: user.zipcode || '',
+      address1: user.address1 || '',
+      address2: user.address2 || '',
       phone1: user.phone1 || '',
       phone2: user.phone2 || '',
       email: user.email,
@@ -182,7 +199,9 @@ export default function MembersPage() {
         '업체명': user.company_name,
         '대표자명': user.ceo_name || '',
         '사업자번호': user.business_number,
-        '주소': user.address || '',
+        '우편번호': user.zipcode || '',
+        '주소': user.address1 || '',
+        '상세주소': user.address2 || '',
         '연락처1': user.phone1 || '',
         '연락처2': user.phone2 || '',
         '이메일': user.email,
@@ -199,7 +218,9 @@ export default function MembersPage() {
         { wch: 20 }, // 업체명
         { wch: 10 }, // 대표자명
         { wch: 15 }, // 사업자번호
-        { wch: 40 }, // 주소
+        { wch: 8 },  // 우편번호
+        { wch: 35 }, // 주소
+        { wch: 20 }, // 상세주소
         { wch: 15 }, // 연락처1
         { wch: 15 }, // 연락처2
         { wch: 25 }, // 이메일
@@ -496,9 +517,23 @@ export default function MembersPage() {
             </div>
             <div className="space-y-2">
               <Label>주소</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={editForm.zipcode}
+                  onChange={(e) => setEditForm({ ...editForm, zipcode: e.target.value })}
+                  placeholder="우편번호"
+                  className="w-28"
+                />
+              </div>
               <Input
-                value={editForm.address}
-                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                value={editForm.address1}
+                onChange={(e) => setEditForm({ ...editForm, address1: e.target.value })}
+                placeholder="도로명 주소"
+              />
+              <Input
+                value={editForm.address2}
+                onChange={(e) => setEditForm({ ...editForm, address2: e.target.value })}
+                placeholder="상세 주소"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">

@@ -8,7 +8,9 @@ export interface User {
   business_number: string;
   company_name: string;
   ceo_name: string;
-  address: string;
+  zipcode: string;
+  address1: string;
+  address2?: string;
   phone1: string;
   phone2?: string;
   email: string;

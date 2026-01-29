@@ -55,7 +55,9 @@ export async function PUT(request: NextRequest) {
     const { 
       company_name, 
       ceo_name,
-      address,
+      zipcode,
+      address1,
+      address2,
       phone1,
       phone2,
       email, 
@@ -76,7 +78,9 @@ export async function PUT(request: NextRequest) {
     const updateData: Record<string, string | undefined> = {};
     if (company_name !== undefined && company_name !== user.company_name) updateData.company_name = company_name;
     if (ceo_name !== undefined && ceo_name !== user.ceo_name) updateData.ceo_name = ceo_name;
-    if (address !== undefined && address !== user.address) updateData.address = address;
+    if (zipcode !== undefined && zipcode !== user.zipcode) updateData.zipcode = zipcode;
+    if (address1 !== undefined && address1 !== user.address1) updateData.address1 = address1;
+    if (address2 !== undefined && address2 !== user.address2) updateData.address2 = address2;
     if (phone1 !== undefined && phone1 !== user.phone1) updateData.phone1 = phone1;
     if (phone2 !== undefined && phone2 !== user.phone2) updateData.phone2 = phone2;
     if (email !== undefined && email !== user.email) updateData.email = email;

@@ -20,7 +20,19 @@ export async function PUT(
     }
     
     const { businessNumber } = params;
-    const { company_name, email, is_admin, is_approved } = await request.json();
+    const { 
+      company_name, 
+      ceo_name,
+      zipcode,
+      address1,
+      address2,
+      phone1,
+      phone2,
+      email, 
+      email2,
+      is_admin, 
+      is_approved 
+    } = await request.json();
     
     const user = await getUserByBusinessNumber(businessNumber);
     if (!user) {
@@ -32,7 +44,14 @@ export async function PUT(
     
     const success = await updateUser(businessNumber, {
       company_name,
+      ceo_name,
+      zipcode,
+      address1,
+      address2,
+      phone1,
+      phone2,
       email,
+      email2,
       is_admin,
       is_approved,
     });

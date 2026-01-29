@@ -10,11 +10,20 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 
+interface DaumPostcodeData {
+  address: string;
+  roadAddress: string;
+  jibunAddress: string;
+  zonecode: string;
+}
+
 interface UserProfile {
   business_number: string;
   company_name: string;
   ceo_name: string;
-  address: string;
+  zipcode: string;
+  address1: string;
+  address2?: string;
   phone1: string;
   phone2?: string;
   email: string;
@@ -32,7 +41,9 @@ export default function ProfilePage() {
   // 기본 정보 변경
   const [newCompanyName, setNewCompanyName] = useState('');
   const [newCeoName, setNewCeoName] = useState('');
-  const [newAddress, setNewAddress] = useState('');
+  const [newZipcode, setNewZipcode] = useState('');
+  const [newAddress1, setNewAddress1] = useState('');
+  const [newAddress2, setNewAddress2] = useState('');
   const [newPhone1, setNewPhone1] = useState('');
   const [newPhone2, setNewPhone2] = useState('');
   
@@ -54,7 +65,9 @@ export default function ProfilePage() {
           setProfile(result.data);
           setNewCompanyName(result.data.company_name || '');
           setNewCeoName(result.data.ceo_name || '');
-          setNewAddress(result.data.address || '');
+          setNewZipcode(result.data.zipcode || '');
+          setNewAddress1(result.data.address1 || '');
+          setNewAddress2(result.data.address2 || '');
           setNewPhone1(result.data.phone1 || '');
           setNewPhone2(result.data.phone2 || '');
           setNewEmail(result.data.email || '');
@@ -66,10 +79,14 @@ export default function ProfilePage() {
 
   // 다음 주소 검색 함수
   const openAddressSearch = () => {
-    if (typeof window !== 'undefined' && (window as unknown as { daum?: { Postcode: new (config: { oncomplete: (data: { address: string; roadAddress: string; jibunAddress: string }) => void }) => { open: () => void } } }).daum) {
-      new (window as unknown as { daum: { Postcode: new (config: { oncomplete: (data: { address: string; roadAddress: string; jibunAddress: string }) => void }) => { open: () => void } } }).daum.Postcode({
-        oncomplete: (data: { address: string; roadAddress: string; jibunAddress: string }) => {
-          setNewAddress(data.roadAddress || data.jibunAddress || data.address);
+    const win = window as Window & { daum?: { Postcode: new (options: { oncomplete: (data: DaumPostcodeData) => void }) => { open: () => void } } };
+    if (typeof window !== 'undefined' && win.daum) {
+      new win.daum.Postcode({
+        oncomplete: (data: DaumPostcodeData) => {
+          const roadAddr = data.roadAddress || data.address;
+          setNewZipcode(data.zonecode);
+          setNewAddress1(roadAddr);
+          setNewAddress2('');
         }
       }).open();
     } else {
@@ -122,20 +139,24 @@ export default function ProfilePage() {
   };
 
   const handleUpdateAddress = async () => {
-    if (newAddress === profile?.address) return;
+    if (newZipcode === profile?.zipcode && newAddress1 === profile?.address1 && newAddress2 === (profile?.address2 || '')) return;
     
     setSaving(true);
     try {
       const res = await fetch('/api/users/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: newAddress }),
+        body: JSON.stringify({ 
+          zipcode: newZipcode,
+          address1: newAddress1,
+          address2: newAddress2,
+        }),
       });
       
       const result = await res.json();
       
       if (result.success) {
-        setProfile(prev => prev ? { ...prev, address: newAddress } : null);
+        setProfile(prev => prev ? { ...prev, zipcode: newZipcode, address1: newAddress1, address2: newAddress2 } : null);
         toast({
           title: '주소 변경 완료',
           description: '주소가 성공적으로 변경되었습니다.',
@@ -287,6 +308,16 @@ export default function ProfilePage() {
     }
   };
 
+  // 주소 포맷팅 함수
+  const formatAddress = () => {
+    if (!profile?.zipcode && !profile?.address1) return '-';
+    const parts = [];
+    if (profile?.zipcode) parts.push(`(${profile.zipcode})`);
+    if (profile?.address1) parts.push(profile.address1);
+    if (profile?.address2) parts.push(profile.address2);
+    return parts.join(' ');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -332,7 +363,7 @@ export default function ProfilePage() {
             </div>
             <div className="col-span-2">
               <Label className="text-muted-foreground">주소</Label>
-              <p className="font-medium">{profile?.address || '-'}</p>
+              <p className="font-medium">{formatAddress()}</p>
             </div>
             <div>
               <Label className="text-muted-foreground">연락처1</Label>
@@ -415,14 +446,13 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="address">주소</Label>
+            <Label>주소</Label>
             <div className="flex gap-2">
               <Input
-                id="address"
-                value={newAddress}
-                onChange={(e) => setNewAddress(e.target.value)}
-                placeholder="주소 입력"
-                className="flex-1"
+                value={newZipcode}
+                readOnly
+                placeholder="우편번호"
+                className="w-28"
               />
               <Button 
                 type="button" 
@@ -433,10 +463,20 @@ export default function ProfilePage() {
                 주소 검색
               </Button>
             </div>
+            <Input
+              value={newAddress1}
+              readOnly
+              placeholder="도로명 주소"
+            />
+            <Input
+              value={newAddress2}
+              onChange={(e) => setNewAddress2(e.target.value)}
+              placeholder="상세 주소를 입력하세요"
+            />
           </div>
           <Button 
             onClick={handleUpdateAddress} 
-            disabled={saving || newAddress === profile?.address}
+            disabled={saving || (newZipcode === profile?.zipcode && newAddress1 === profile?.address1 && newAddress2 === (profile?.address2 || ''))}
           >
             {saving ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />

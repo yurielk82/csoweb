@@ -21,7 +21,9 @@ export async function createUser(data: {
   business_number: string;
   company_name: string;
   ceo_name: string;
-  address: string;
+  zipcode: string;
+  address1: string;
+  address2?: string;
   phone1: string;
   phone2?: string;
   email: string;
@@ -34,7 +36,9 @@ export async function createUser(data: {
       business_number: data.business_number,
       company_name: data.company_name,
       ceo_name: data.ceo_name,
-      address: data.address,
+      zipcode: data.zipcode,
+      address1: data.address1,
+      address2: data.address2 || null,
       phone1: data.phone1,
       phone2: data.phone2 || null,
       email: data.email,
@@ -148,7 +152,9 @@ export async function updateUserEmail(businessNumber: string, email: string): Pr
 export async function updateUser(businessNumber: string, data: {
   company_name?: string;
   ceo_name?: string;
-  address?: string;
+  zipcode?: string;
+  address1?: string;
+  address2?: string;
   phone1?: string;
   phone2?: string;
   email?: string;
@@ -179,7 +185,9 @@ function mapDbUserToUser(dbUser: DbUser): User {
     business_number: dbUser.business_number,
     company_name: dbUser.company_name,
     ceo_name: dbUser.ceo_name || '',
-    address: dbUser.address || '',
+    zipcode: dbUser.zipcode || '',
+    address1: dbUser.address1 || '',
+    address2: dbUser.address2 || undefined,
     phone1: dbUser.phone1 || '',
     phone2: dbUser.phone2 || undefined,
     email: dbUser.email,

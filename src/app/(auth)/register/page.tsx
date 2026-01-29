@@ -40,8 +40,9 @@ export default function RegisterPage() {
     business_number: '',
     company_name: '',
     ceo_name: '',
-    address: '',
-    address_detail: '',
+    zipcode: '',
+    address1: '',
+    address2: '',
     phone1: '',
     phone2: '',
     email: '',
@@ -106,8 +107,9 @@ export default function RegisterPage() {
           const roadAddr = data.roadAddress || data.address;
           setFormData({ 
             ...formData, 
-            address: roadAddr,
-            address_detail: ''
+            zipcode: data.zonecode,
+            address1: roadAddr,
+            address2: ''
           });
         },
       }).open();
@@ -135,10 +137,6 @@ export default function RegisterPage() {
     }
 
     try {
-      const fullAddress = formData.address_detail 
-        ? `${formData.address} ${formData.address_detail}`
-        : formData.address;
-
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -146,7 +144,9 @@ export default function RegisterPage() {
           business_number: formData.business_number,
           company_name: formData.company_name,
           ceo_name: formData.ceo_name,
-          address: fullAddress,
+          zipcode: formData.zipcode,
+          address1: formData.address1,
+          address2: formData.address2 || undefined,
           phone1: formData.phone1,
           phone2: formData.phone2 || undefined,
           email: formData.email,
@@ -264,17 +264,17 @@ export default function RegisterPage() {
 
             {/* 주소 */}
             <div className="space-y-2">
-              <Label htmlFor="address">주소 *</Label>
+              <Label htmlFor="address1">주소 *</Label>
               <div className="flex gap-2">
                 <Input
-                  id="address"
+                  id="zipcode"
                   type="text"
-                  placeholder="주소 검색을 클릭하세요"
-                  value={formData.address}
+                  placeholder="우편번호"
+                  value={formData.zipcode}
                   readOnly
                   required
                   disabled={loading}
-                  className="flex-1"
+                  className="w-28"
                 />
                 <Button 
                   type="button" 
@@ -283,14 +283,24 @@ export default function RegisterPage() {
                   disabled={loading}
                 >
                   <Search className="h-4 w-4 mr-1" />
-                  검색
+                  주소 검색
                 </Button>
               </div>
               <Input
+                id="address1"
+                type="text"
+                placeholder="도로명 주소"
+                value={formData.address1}
+                readOnly
+                required
+                disabled={loading}
+              />
+              <Input
+                id="address2"
                 type="text"
                 placeholder="상세 주소를 입력하세요"
-                value={formData.address_detail}
-                onChange={(e) => setFormData({ ...formData, address_detail: e.target.value })}
+                value={formData.address2}
+                onChange={(e) => setFormData({ ...formData, address2: e.target.value })}
                 disabled={loading}
               />
             </div>
