@@ -118,26 +118,150 @@ function getSettlementUploadedEmail(data: {
 
 function getPasswordResetEmail(data: {
   company_name: string;
+  business_number: string;
   reset_token: string;
+  expires_in_minutes: number;
 }) {
+  const resetUrl = `${BASE_URL}/reset-password?token=${data.reset_token}`;
+  const currentYear = new Date().getFullYear();
+  
   return {
-    subject: '🔑 비밀번호 재설정 요청',
+    subject: '🔐 [CSO 정산서 포털] 비밀번호 재설정 요청',
     html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1f2937;">비밀번호 재설정</h2>
-        <p>${data.company_name}님,</p>
-        <p>비밀번호 재설정 요청이 접수되었습니다.</p>
-        <p>아래 버튼을 클릭하여 새 비밀번호를 설정해 주세요.</p>
-        <a href="${BASE_URL}/reset-password?token=${data.reset_token}" 
-           style="display: inline-block; background: #3b82f6; color: white; 
-                  padding: 12px 24px; border-radius: 6px; text-decoration: none; margin: 20px 0;">
-          비밀번호 재설정
-        </a>
-        <p style="color: #6b7280; font-size: 14px;">
-          이 링크는 1시간 동안만 유효합니다.<br>
-          본인이 요청하지 않았다면 이 메일을 무시해 주세요.
-        </p>
-      </div>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>비밀번호 재설정</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f7fa; font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', '맑은 고딕', sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f4f7fa;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 32px 40px; text-align: center;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td>
+                    <div style="display: inline-block; background: rgba(255,255,255,0.2); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;">
+                      <span style="font-size: 32px;">🔐</span>
+                    </div>
+                    <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">
+                      비밀번호 재설정 요청
+                    </h1>
+                    <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">
+                      CSO 정산서 포털
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <!-- Greeting -->
+              <p style="color: #1f2937; font-size: 18px; font-weight: 600; margin: 0 0 8px;">
+                안녕하세요, <span style="color: #3b82f6;">${data.company_name}</span>님
+              </p>
+              <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px;">
+                사업자번호: ${data.business_number}
+              </p>
+              
+              <!-- Notice Box -->
+              <div style="background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                <p style="color: #1e40af; font-size: 14px; margin: 0; line-height: 1.6;">
+                  비밀번호 재설정 요청이 접수되었습니다.<br>
+                  아래 버튼을 클릭하여 새 비밀번호를 설정해 주세요.
+                </p>
+              </div>
+              
+              <!-- CTA Button -->
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${resetUrl}" 
+                   style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); 
+                          color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; 
+                          font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+                          transition: all 0.2s ease;">
+                  🔑 비밀번호 재설정하기
+                </a>
+              </div>
+              
+              <!-- URL Fallback -->
+              <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                <p style="color: #6b7280; font-size: 12px; margin: 0 0 8px;">
+                  버튼이 작동하지 않으면 아래 링크를 복사하여 브라우저에 붙여넣으세요:
+                </p>
+                <p style="color: #3b82f6; font-size: 12px; margin: 0; word-break: break-all;">
+                  ${resetUrl}
+                </p>
+              </div>
+              
+              <!-- Warning Box -->
+              <div style="background: #fef3c7; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td width="32" valign="top">
+                      <span style="font-size: 20px;">⚠️</span>
+                    </td>
+                    <td>
+                      <p style="color: #92400e; font-size: 13px; margin: 0; font-weight: 600;">
+                        보안 안내
+                      </p>
+                      <ul style="color: #a16207; font-size: 12px; margin: 8px 0 0; padding-left: 16px; line-height: 1.8;">
+                        <li>이 링크는 <strong>${data.expires_in_minutes}분</strong> 동안만 유효합니다.</li>
+                        <li>링크는 <strong>1회만</strong> 사용 가능합니다.</li>
+                        <li>본인이 요청하지 않았다면 이 메일을 무시해 주세요.</li>
+                        <li>타인에게 이 링크를 절대 공유하지 마세요.</li>
+                      </ul>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+              
+              <!-- Security Tips -->
+              <div style="border-top: 1px solid #e5e7eb; padding-top: 24px;">
+                <p style="color: #374151; font-size: 13px; font-weight: 600; margin: 0 0 12px;">
+                  🛡️ 안전한 비밀번호 설정 팁
+                </p>
+                <ul style="color: #6b7280; font-size: 12px; margin: 0; padding-left: 20px; line-height: 2;">
+                  <li>최소 8자 이상, 영문 대/소문자, 숫자, 특수문자 조합 권장</li>
+                  <li>다른 사이트와 동일한 비밀번호 사용 금지</li>
+                  <li>개인정보(생년월일, 전화번호 등) 포함 금지</li>
+                </ul>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background: #f9fafb; padding: 24px 40px; border-top: 1px solid #e5e7eb;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="text-align: center;">
+                    <p style="color: #9ca3af; font-size: 11px; margin: 0 0 8px;">
+                      본 메일은 발신 전용입니다. 문의사항은 관리자에게 연락해 주세요.
+                    </p>
+                    <p style="color: #9ca3af; font-size: 11px; margin: 0;">
+                      © ${currentYear} CSO 정산서 포털. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
     `,
   };
 }

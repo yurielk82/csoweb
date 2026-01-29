@@ -2,7 +2,7 @@
 // Database Operations (Supabase)
 // ============================================
 
-import { supabase, DbUser } from './supabase';
+import { supabase, DbUser, DbPasswordResetToken } from './supabase';
 import type { 
   User, 
   Settlement, 
@@ -885,4 +885,148 @@ export async function updateCompanyInfo(data: Partial<CompanyInfo>): Promise<voi
       throw new Error(insertError.message);
     }
   }
+}
+
+// ============================================
+// Password Reset Token Operations
+// ============================================
+
+export interface PasswordResetToken {
+  id: string;
+  user_id: string;
+  business_number: string;
+  email: string;
+  token: string;
+  expires_at: string;
+  used_at: string | null;
+  created_at: string;
+}
+
+/**
+ * 비밀번호 재설정 토큰 생성
+ * - UUID 기반 토큰 생성
+ * - 30분 유효 기간 설정
+ * - 기존 미사용 토큰은 무효화
+ */
+export async function createPasswordResetToken(
+  userId: string,
+  businessNumber: string,
+  email: string
+): Promise<PasswordResetToken> {
+  // 기존 미사용 토큰 무효화 (삭제)
+  await supabase
+    .from('password_reset_tokens')
+    .delete()
+    .eq('user_id', userId)
+    .is('used_at', null);
+
+  // UUID 생성
+  const token = crypto.randomUUID();
+  
+  // 30분 후 만료
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
+    .from('password_reset_tokens')
+    .insert({
+      user_id: userId,
+      business_number: businessNumber,
+      email: email.toLowerCase().trim(),
+      token,
+      expires_at: expiresAt,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Create password reset token error:', error);
+    throw new Error('토큰 생성에 실패했습니다.');
+  }
+
+  return mapDbTokenToToken(data);
+}
+
+/**
+ * 토큰으로 비밀번호 재설정 정보 조회
+ * - 토큰 유효성 검증 (만료 여부, 사용 여부)
+ */
+export async function getPasswordResetToken(token: string): Promise<PasswordResetToken | null> {
+  const { data, error } = await supabase
+    .from('password_reset_tokens')
+    .select('*')
+    .eq('token', token)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return mapDbTokenToToken(data);
+}
+
+/**
+ * 토큰 유효성 검증
+ * - 존재 여부, 만료 여부, 사용 여부 체크
+ */
+export async function validatePasswordResetToken(token: string): Promise<{
+  valid: boolean;
+  token?: PasswordResetToken;
+  error?: string;
+}> {
+  const tokenData = await getPasswordResetToken(token);
+
+  if (!tokenData) {
+    return { valid: false, error: '유효하지 않은 토큰입니다.' };
+  }
+
+  // 이미 사용된 토큰
+  if (tokenData.used_at) {
+    return { valid: false, error: '이미 사용된 토큰입니다.' };
+  }
+
+  // 만료된 토큰
+  if (new Date(tokenData.expires_at) < new Date()) {
+    return { valid: false, error: '만료된 토큰입니다. 비밀번호 재설정을 다시 요청해주세요.' };
+  }
+
+  return { valid: true, token: tokenData };
+}
+
+/**
+ * 토큰 사용 처리 (만료)
+ */
+export async function markTokenAsUsed(token: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('password_reset_tokens')
+    .update({ used_at: new Date().toISOString() })
+    .eq('token', token);
+
+  return !error;
+}
+
+/**
+ * 만료된 토큰 정리 (선택적 정리 작업용)
+ */
+export async function cleanupExpiredTokens(): Promise<number> {
+  const { data, error } = await supabase
+    .from('password_reset_tokens')
+    .delete()
+    .lt('expires_at', new Date().toISOString())
+    .select();
+
+  if (error) return 0;
+  return data?.length || 0;
+}
+
+function mapDbTokenToToken(dbToken: DbPasswordResetToken): PasswordResetToken {
+  return {
+    id: dbToken.id,
+    user_id: dbToken.user_id,
+    business_number: dbToken.business_number,
+    email: dbToken.email,
+    token: dbToken.token,
+    expires_at: dbToken.expires_at,
+    used_at: dbToken.used_at,
+    created_at: dbToken.created_at,
+  };
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Loader2, CheckCircle, KeyRound } from 'lucide-react';
+import { Loader2, CheckCircle, KeyRound, Mail, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,7 +36,7 @@ export default function ForgotPasswordPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
+      const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -48,13 +48,13 @@ export default function ForgotPasswordPage() {
       const result = await response.json();
 
       if (!result.success) {
-        setError(result.error || '비밀번호 초기화에 실패했습니다.');
+        setError(result.error || '비밀번호 재설정 요청에 실패했습니다.');
         return;
       }
 
       setSuccess(true);
     } catch {
-      setError('비밀번호 초기화 중 오류가 발생했습니다.');
+      setError('비밀번호 재설정 요청 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -67,24 +67,41 @@ export default function ForgotPasswordPage() {
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <div className="p-3 bg-green-100 rounded-full">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+                <Mail className="h-8 w-8 text-green-600" />
               </div>
             </div>
-            <CardTitle className="text-2xl">비밀번호 초기화 완료</CardTitle>
-            <CardDescription className="space-y-2">
-              <p>비밀번호가 사업자번호 조합으로 초기화되었습니다.</p>
-              <p className="font-semibold text-foreground">
-                새 비밀번호: u + 사업자번호(숫자만)
-              </p>
-              <p className="text-xs text-muted-foreground">
-                예: 123-45-67890 → u1234567890
-              </p>
-              <p className="text-destructive text-sm mt-4">
-                ⚠️ 로그인 후 반드시 비밀번호를 변경해주세요.
+            <CardTitle className="text-2xl">이메일을 확인해주세요</CardTitle>
+            <CardDescription className="space-y-3 mt-2">
+              <p>
+                <span className="font-semibold text-foreground">{formData.email}</span>
+                <br />
+                으로 비밀번호 재설정 링크를 발송했습니다.
               </p>
             </CardDescription>
           </CardHeader>
-          <CardFooter>
+          <CardContent className="space-y-4">
+            <Alert>
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-sm">
+                <ul className="list-disc list-inside space-y-1 mt-1">
+                  <li>이메일의 비밀번호 재설정 버튼을 클릭하세요.</li>
+                  <li>링크는 <strong>30분</strong> 동안만 유효합니다.</li>
+                  <li>이메일이 오지 않으면 스팸함을 확인해주세요.</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-3">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => {
+                setSuccess(false);
+                setFormData({ business_number: '', email: '' });
+              }}
+            >
+              다시 요청하기
+            </Button>
             <Link href="/login" className="w-full">
               <Button className="w-full">
                 로그인 페이지로 이동
@@ -108,6 +125,8 @@ export default function ForgotPasswordPage() {
           <CardTitle className="text-2xl">비밀번호 찾기</CardTitle>
           <CardDescription>
             가입 시 등록한 사업자번호와 이메일을 입력하세요.
+            <br />
+            비밀번호 재설정 링크를 이메일로 발송해 드립니다.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -145,18 +164,25 @@ export default function ForgotPasswordPage() {
               />
             </div>
 
-            <Alert>
-              <AlertDescription className="text-sm">
-                확인 후 비밀번호가 <strong>u + 사업자번호</strong> 조합으로 초기화됩니다.
+            <Alert className="bg-blue-50 border-blue-200">
+              <Send className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-sm text-blue-800">
+                입력하신 이메일로 비밀번호 재설정 링크가 발송됩니다.
                 <br />
-                예: 123-45-67890 → u1234567890
+                <span className="text-xs text-blue-600">
+                  * 링크는 30분 동안 유효하며, 1회만 사용 가능합니다.
+                </span>
               </AlertDescription>
             </Alert>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              비밀번호 초기화
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="mr-2 h-4 w-4" />
+              )}
+              재설정 링크 발송
             </Button>
             <p className="text-sm text-center text-muted-foreground">
               <Link href="/login" className="text-primary hover:underline">

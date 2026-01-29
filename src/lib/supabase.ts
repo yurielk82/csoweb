@@ -139,3 +139,15 @@ export interface DbCompanySettings {
   additional_info: string | null;
   updated_at: string;
 }
+
+// 비밀번호 재설정 토큰 테이블
+export interface DbPasswordResetToken {
+  id: string;
+  user_id: string;
+  business_number: string;
+  email: string;
+  token: string;
+  expires_at: string;
+  used_at: string | null;
+  created_at: string;
+}
