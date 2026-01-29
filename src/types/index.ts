@@ -7,7 +7,12 @@ export interface User {
   id: string;
   business_number: string;
   company_name: string;
+  ceo_name: string;
+  address: string;
+  phone1: string;
+  phone2?: string;
   email: string;
+  email2?: string;
   email_verified: boolean;
   password_hash: string;
   is_admin: boolean;

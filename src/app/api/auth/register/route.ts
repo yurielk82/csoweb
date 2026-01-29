@@ -15,12 +15,22 @@ import { notifyAdmin } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
-    const { business_number, company_name, email, password } = await request.json();
+    const { 
+      business_number, 
+      company_name, 
+      ceo_name,
+      address,
+      phone1,
+      phone2,
+      email, 
+      email2,
+      password 
+    } = await request.json();
     
     // Validation
-    if (!business_number || !company_name || !email || !password) {
+    if (!business_number || !company_name || !ceo_name || !address || !phone1 || !email || !password) {
       return NextResponse.json(
-        { success: false, error: '모든 필드를 입력해주세요.' },
+        { success: false, error: '필수 항목을 모두 입력해주세요.' },
         { status: 400 }
       );
     }
@@ -71,7 +81,12 @@ export async function POST(request: NextRequest) {
     const user = await createUser({
       business_number: normalizedBN,
       company_name,
+      ceo_name,
+      address,
+      phone1,
+      phone2: phone2 || undefined,
       email,
+      email2: email2 || undefined,
       password_hash: passwordHash,
     });
     
@@ -79,6 +94,9 @@ export async function POST(request: NextRequest) {
     await notifyAdmin('registration_request', {
       business_number: normalizedBN,
       company_name,
+      ceo_name,
+      address,
+      phone1,
       email,
       created_at: user.created_at,
     });

@@ -37,7 +37,12 @@ export interface DbUser {
   id: string;
   business_number: string;
   company_name: string;
+  ceo_name: string | null;
+  address: string | null;
+  phone1: string | null;
+  phone2: string | null;
   email: string;
+  email2: string | null;
   email_verified: boolean;
   password_hash: string;
   is_admin: boolean;

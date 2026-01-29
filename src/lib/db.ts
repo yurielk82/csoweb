@@ -20,7 +20,12 @@ import type {
 export async function createUser(data: {
   business_number: string;
   company_name: string;
+  ceo_name: string;
+  address: string;
+  phone1: string;
+  phone2?: string;
   email: string;
+  email2?: string;
   password_hash: string;
 }): Promise<User> {
   const { data: user, error } = await supabase
@@ -28,7 +33,12 @@ export async function createUser(data: {
     .insert({
       business_number: data.business_number,
       company_name: data.company_name,
+      ceo_name: data.ceo_name,
+      address: data.address,
+      phone1: data.phone1,
+      phone2: data.phone2 || null,
       email: data.email,
+      email2: data.email2 || null,
       password_hash: data.password_hash,
       is_admin: false,
       is_approved: false,
@@ -137,7 +147,12 @@ export async function updateUserEmail(businessNumber: string, email: string): Pr
 
 export async function updateUser(businessNumber: string, data: {
   company_name?: string;
+  ceo_name?: string;
+  address?: string;
+  phone1?: string;
+  phone2?: string;
   email?: string;
+  email2?: string;
   is_admin?: boolean;
   is_approved?: boolean;
 }): Promise<boolean> {
@@ -163,7 +178,12 @@ function mapDbUserToUser(dbUser: DbUser): User {
     id: dbUser.id,
     business_number: dbUser.business_number,
     company_name: dbUser.company_name,
+    ceo_name: dbUser.ceo_name || '',
+    address: dbUser.address || '',
+    phone1: dbUser.phone1 || '',
+    phone2: dbUser.phone2 || undefined,
     email: dbUser.email,
+    email2: dbUser.email2 || undefined,
     email_verified: dbUser.email_verified,
     password_hash: dbUser.password_hash,
     is_admin: dbUser.is_admin,

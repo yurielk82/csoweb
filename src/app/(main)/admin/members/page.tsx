@@ -37,7 +37,12 @@ interface User {
   id: string;
   business_number: string;
   company_name: string;
+  ceo_name: string;
+  address: string;
+  phone1: string;
+  phone2?: string;
   email: string;
+  email2?: string;
   is_admin: boolean;
   is_approved: boolean;
   created_at: string;
@@ -52,7 +57,17 @@ export default function MembersPage() {
   
   // Edit dialog
   const [editUser, setEditUser] = useState<User | null>(null);
-  const [editForm, setEditForm] = useState({ company_name: '', email: '', is_admin: false, is_approved: false });
+  const [editForm, setEditForm] = useState({ 
+    company_name: '', 
+    ceo_name: '',
+    address: '',
+    phone1: '',
+    phone2: '',
+    email: '', 
+    email2: '',
+    is_admin: false, 
+    is_approved: false 
+  });
   const [saving, setSaving] = useState(false);
   
   // Delete dialog
@@ -82,7 +97,12 @@ export default function MembersPage() {
     setEditUser(user);
     setEditForm({
       company_name: user.company_name,
+      ceo_name: user.ceo_name || '',
+      address: user.address || '',
+      phone1: user.phone1 || '',
+      phone2: user.phone2 || '',
       email: user.email,
+      email2: user.email2 || '',
       is_admin: user.is_admin,
       is_approved: user.is_approved,
     });
@@ -275,7 +295,9 @@ export default function MembersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>업체명</TableHead>
+                <TableHead>대표자</TableHead>
                 <TableHead>사업자번호</TableHead>
+                <TableHead>연락처</TableHead>
                 <TableHead>이메일</TableHead>
                 <TableHead>상태</TableHead>
                 <TableHead>가입일</TableHead>
@@ -286,7 +308,9 @@ export default function MembersPage() {
               {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.company_name}</TableCell>
+                  <TableCell>{user.ceo_name || '-'}</TableCell>
                   <TableCell>{user.business_number}</TableCell>
+                  <TableCell>{user.phone1 || '-'}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -336,7 +360,7 @@ export default function MembersPage() {
               ))}
               {filteredUsers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     회원이 없습니다.
                   </TableCell>
                 </TableRow>
@@ -348,7 +372,7 @@ export default function MembersPage() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editUser} onOpenChange={() => setEditUser(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>회원 정보 수정</DialogTitle>
             <DialogDescription>
@@ -356,19 +380,62 @@ export default function MembersPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>업체명</Label>
-              <Input
-                value={editForm.company_name}
-                onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>업체명</Label>
+                <Input
+                  value={editForm.company_name}
+                  onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>대표자명</Label>
+                <Input
+                  value={editForm.ceo_name}
+                  onChange={(e) => setEditForm({ ...editForm, ceo_name: e.target.value })}
+                />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label>이메일</Label>
+              <Label>주소</Label>
               <Input
-                value={editForm.email}
-                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                value={editForm.address}
+                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
               />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>연락처1</Label>
+                <Input
+                  value={editForm.phone1}
+                  onChange={(e) => setEditForm({ ...editForm, phone1: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>연락처2</Label>
+                <Input
+                  value={editForm.phone2}
+                  onChange={(e) => setEditForm({ ...editForm, phone2: e.target.value })}
+                  placeholder="선택사항"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>이메일</Label>
+                <Input
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>이메일2</Label>
+                <Input
+                  value={editForm.email2}
+                  onChange={(e) => setEditForm({ ...editForm, email2: e.target.value })}
+                  placeholder="선택사항"
+                />
+              </div>
             </div>
             <div className="flex items-center justify-between">
               <div>
