@@ -10,9 +10,19 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-const FROM_EMAIL = process.env.EMAIL_FROM || 'CSO Portal <noreply@cso-portal.com>';
+// 기본 발신 이메일 주소 (Resend 도메인 사용 시 onboarding@resend.dev 형태)
+const DEFAULT_FROM_EMAIL = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@cso-portal.com';
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
+// 발신자 이름을 회사명으로 설정하는 함수
+function getFromEmail(companyName: string): string {
+  const senderName = companyName || 'CSO 정산서 포털';
+  // 이메일 주소에서 이름 부분 추출 (예: "Name <email@domain.com>" -> "email@domain.com")
+  const emailMatch = DEFAULT_FROM_EMAIL.match(/<(.+)>/);
+  const emailAddress = emailMatch ? emailMatch[1] : DEFAULT_FROM_EMAIL;
+  return `${senderName} <${emailAddress}>`;
+}
 
 // 회사 정보 타입
 interface CompanyFooterInfo {
@@ -663,16 +673,19 @@ export async function sendEmail(
     template_type: templateType,
   });
   
+  // 발신자 이메일 (회사명 사용)
+  const fromEmail = getFromEmail(companyInfo.company_name);
+  
   // If Resend is not configured, simulate success for demo
   if (!resend) {
-    console.log(`[Email Demo] To: ${to}, Subject: ${emailContent.subject}`);
+    console.log(`[Email Demo] From: ${fromEmail}, To: ${to}, Subject: ${emailContent.subject}`);
     await updateEmailLog(log.id, { status: 'sent' });
     return { success: true };
   }
   
   try {
     await resend.emails.send({
-      from: FROM_EMAIL,
+      from: fromEmail,
       to,
       subject: emailContent.subject,
       html: emailContent.html,
@@ -682,6 +695,7 @@ export async function sendEmail(
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`[Email Error] From: ${fromEmail}, To: ${to}, Error: ${errorMessage}`);
     await updateEmailLog(log.id, { 
       status: 'failed', 
       error_message: errorMessage 

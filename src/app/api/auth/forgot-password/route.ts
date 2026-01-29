@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { normalizeBusinessNumber, isValidBusinessNumber, isValidEmail, formatBusinessNumber } from '@/lib/auth';
-import { getUserByBusinessNumberAndEmail, createPasswordResetToken } from '@/lib/db';
+import { getUserByBusinessNumber, getUserByBusinessNumberAndEmail, createPasswordResetToken } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
@@ -44,20 +44,31 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // 사업자번호 + 이메일로 사용자 조회
+    // 1단계: 사업자번호로 사용자 조회
+    const userByBN = await getUserByBusinessNumber(normalizedBN);
+    
+    if (!userByBN) {
+      // 사업자번호가 등록되지 않음
+      console.log(`[Password Reset] Business number not found: ${normalizedBN}`);
+      return NextResponse.json(
+        { success: false, error: '등록되지 않은 사업자번호입니다. 회원가입 여부를 확인해주세요.' },
+        { status: 404 }
+      );
+    }
+    
+    // 2단계: 사업자번호 + 이메일로 정확한 매칭 확인
     const user = await getUserByBusinessNumberAndEmail(normalizedBN, normalizedEmail);
     
     if (!user) {
-      // 보안: 존재 여부 노출 방지를 위해 성공 메시지 반환
-      // 실제로는 이메일이 발송되지 않음
-      console.log(`[Password Reset] User not found: ${normalizedBN}, ${normalizedEmail}`);
-      return NextResponse.json({
-        success: true,
-        message: '입력하신 이메일로 비밀번호 재설정 링크를 발송했습니다.',
-      });
+      // 사업자번호는 있지만 이메일이 일치하지 않음
+      console.log(`[Password Reset] Email mismatch for business number: ${normalizedBN}, input: ${normalizedEmail}`);
+      return NextResponse.json(
+        { success: false, error: '입력하신 이메일이 등록된 이메일과 일치하지 않습니다. 가입 시 등록한 이메일을 입력해주세요.' },
+        { status: 400 }
+      );
     }
     
-    // 토큰 생성
+    // 토큰 생성 (제한 없음)
     const token = await createPasswordResetToken(
       user.id,
       normalizedBN,
@@ -89,8 +100,9 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('Forgot password error:', error);
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
     return NextResponse.json(
-      { success: false, error: '비밀번호 재설정 요청 중 오류가 발생했습니다.' },
+      { success: false, error: `비밀번호 재설정 요청 중 오류가 발생했습니다: ${errorMessage}` },
       { status: 500 }
     );
   }
