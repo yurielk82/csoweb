@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, Search, Edit, Trash2, Shield, ShieldOff, Loader2, UserCheck, UserX, Download } from 'lucide-react';
+import { Users, Search, Edit, Trash2, Shield, ShieldOff, Loader2, UserCheck, UserX, Download, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -89,6 +89,10 @@ export default function MembersPage() {
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  
+  // Password reset dialog
+  const [resetUser, setResetUser] = useState<User | null>(null);
+  const [resetting, setResetting] = useState(false);
 
   // 전화번호 포맷 함수 (00-0000-0000, 000-0000-0000 모두 지원)
   const formatPhoneNumber = (phone: string) => {
@@ -289,6 +293,44 @@ export default function MembersPage() {
     }
   };
 
+  // 비밀번호 초기화
+  const handleResetPassword = async () => {
+    if (!resetUser) return;
+    
+    setResetting(true);
+    try {
+      const res = await fetch('/api/users/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_number: resetUser.business_number }),
+      });
+      
+      const result = await res.json();
+      
+      if (result.success) {
+        toast({
+          title: '비밀번호 초기화 완료',
+          description: `${result.data.company_name}의 비밀번호가 초기화되었습니다. (새 비밀번호: ${result.data.new_password_hint})`,
+        });
+        setResetUser(null);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: '초기화 실패',
+          description: result.error,
+        });
+      }
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: '오류',
+        description: '비밀번호 초기화 중 오류가 발생했습니다.',
+      });
+    } finally {
+      setResetting(false);
+    }
+  };
+
   // Filter users
   const filteredUsers = users.filter(user => {
     // Search filter
@@ -462,14 +504,25 @@ export default function MembersPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleEdit(user)}
+                        title="정보 수정"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => setResetUser(user)}
+                        title="비밀번호 초기화"
+                        className="text-yellow-600 hover:text-yellow-700"
+                      >
+                        <KeyRound className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => setDeleteUser(user)}
                         className="text-destructive hover:text-destructive"
+                        title="삭제"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -637,6 +690,38 @@ export default function MembersPage() {
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
               {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               삭제
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Reset Dialog */}
+      <Dialog open={!!resetUser} onOpenChange={() => setResetUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-yellow-600" />
+              비밀번호 초기화
+            </DialogTitle>
+            <DialogDescription className="space-y-2">
+              <p>
+                <strong>{resetUser?.company_name}</strong>의 비밀번호를 초기화하시겠습니까?
+              </p>
+              <p className="text-sm">
+                새 비밀번호: <code className="bg-muted px-2 py-1 rounded">u{resetUser?.business_number.replace(/-/g, '')}</code>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                ※ 사용자는 로그인 후 비밀번호를 반드시 변경해야 합니다.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetUser(null)}>
+              취소
+            </Button>
+            <Button onClick={handleResetPassword} disabled={resetting} className="bg-yellow-600 hover:bg-yellow-700">
+              {resetting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              초기화
             </Button>
           </DialogFooter>
         </DialogContent>

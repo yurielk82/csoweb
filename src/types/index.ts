@@ -19,6 +19,8 @@ export interface User {
   password_hash: string;
   is_admin: boolean;
   is_approved: boolean;
+  must_change_password: boolean;
+  password_changed_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -30,6 +32,7 @@ export interface UserSession {
   email: string;
   is_admin: boolean;
   is_approved: boolean;
+  must_change_password: boolean;
 }
 
 // Settlement Types

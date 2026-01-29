@@ -196,9 +196,53 @@ function mapDbUserToUser(dbUser: DbUser): User {
     password_hash: dbUser.password_hash,
     is_admin: dbUser.is_admin,
     is_approved: dbUser.is_approved,
+    must_change_password: dbUser.must_change_password || false,
+    password_changed_at: dbUser.password_changed_at || undefined,
     created_at: dbUser.created_at,
     updated_at: dbUser.updated_at,
   };
+}
+
+// 비밀번호 초기화 (u + 사업자번호)
+export async function resetPasswordToDefault(businessNumber: string, passwordHash: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('users')
+    .update({ 
+      password_hash: passwordHash,
+      must_change_password: true,
+      updated_at: new Date().toISOString()
+    })
+    .eq('business_number', businessNumber);
+
+  return !error;
+}
+
+// 비밀번호 변경 완료 처리
+export async function completePasswordChange(businessNumber: string, passwordHash: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('users')
+    .update({ 
+      password_hash: passwordHash,
+      must_change_password: false,
+      password_changed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('business_number', businessNumber);
+
+  return !error;
+}
+
+// 사업자번호 + 이메일로 사용자 조회
+export async function getUserByBusinessNumberAndEmail(businessNumber: string, email: string): Promise<User | null> {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('business_number', businessNumber)
+    .eq('email', email)
+    .single();
+
+  if (error || !user) return null;
+  return mapDbUserToUser(user);
 }
 
 // ============================================

@@ -47,15 +47,22 @@ export async function POST(request: NextRequest) {
       email: user.email,
       is_admin: user.is_admin,
       is_approved: user.is_approved,
+      must_change_password: user.must_change_password || false,
     };
     
     await setSession(session);
+    
+    // 비밀번호 변경 필요 시 강제 리다이렉트
+    const redirectUrl = user.must_change_password 
+      ? '/change-password' 
+      : (user.is_admin ? '/admin' : '/dashboard');
     
     return NextResponse.json({
       success: true,
       data: {
         user: session,
-        redirect: user.is_admin ? '/admin' : '/dashboard',
+        redirect: redirectUrl,
+        must_change_password: user.must_change_password || false,
       },
     });
   } catch (error) {

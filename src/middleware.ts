@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Routes that don't require authentication
-const publicRoutes = ['/login', '/register'];
+const publicRoutes = ['/login', '/register', '/forgot-password'];
+
+// Route for password change (accessible when must_change_password is true)
+const passwordChangeRoute = '/change-password';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -19,6 +22,27 @@ export function middleware(request: NextRequest) {
   if (!sessionCookie) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+  
+  // Parse session to check must_change_password
+  try {
+    const session = JSON.parse(sessionCookie.value);
+    
+    // If user must change password and not already on change-password page
+    if (session.must_change_password && !pathname.startsWith(passwordChangeRoute)) {
+      const changePasswordUrl = new URL(passwordChangeRoute, request.url);
+      return NextResponse.redirect(changePasswordUrl);
+    }
+    
+    // If user is on change-password page but doesn't need to change password
+    if (!session.must_change_password && pathname.startsWith(passwordChangeRoute)) {
+      const dashboardUrl = new URL('/dashboard', request.url);
+      return NextResponse.redirect(dashboardUrl);
+    }
+  } catch {
+    // Invalid session cookie, redirect to login
+    const loginUrl = new URL('/login', request.url);
     return NextResponse.redirect(loginUrl);
   }
   

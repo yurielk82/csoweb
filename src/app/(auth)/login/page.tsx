@@ -134,12 +134,19 @@ export default function LoginPage() {
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 로그인
               </Button>
-              <p className="text-sm text-center text-muted-foreground">
-                계정이 없으신가요?{' '}
-                <Link href="/register" className="text-primary hover:underline">
-                  회원가입
-                </Link>
-              </p>
+              <div className="text-sm text-center text-muted-foreground space-y-1">
+                <p>
+                  <Link href="/forgot-password" className="text-primary hover:underline">
+                    비밀번호를 잊으셨나요?
+                  </Link>
+                </p>
+                <p>
+                  계정이 없으신가요?{' '}
+                  <Link href="/register" className="text-primary hover:underline">
+                    회원가입
+                  </Link>
+                </p>
+              </div>
             </CardFooter>
           </form>
         </Card>
