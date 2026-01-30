@@ -39,9 +39,21 @@ export async function POST(request: NextRequest) {
     
     console.log(`Parsing Excel file: ${file.name}, size: ${fileSizeMB.toFixed(2)}MB`);
     
+    // 커스텀 매핑 파싱
+    const customMappingStr = formData.get('customMapping') as string | null;
+    let customMapping: Record<string, string> | undefined;
+    if (customMappingStr) {
+      try {
+        customMapping = JSON.parse(customMappingStr);
+        console.log('Using custom column mapping:', Object.keys(customMapping || {}).length, 'columns');
+      } catch {
+        console.warn('Invalid custom mapping JSON, ignoring');
+      }
+    }
+    
     // Parse Excel file (async)
     const buffer = await file.arrayBuffer();
-    const { data, errors } = await parseExcelFile(buffer);
+    const { data, errors } = await parseExcelFile(buffer, customMapping);
     
     console.log(`Parsed: ${data.length} rows, ${errors.length} errors`);
     

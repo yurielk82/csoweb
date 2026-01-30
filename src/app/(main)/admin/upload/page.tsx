@@ -2,7 +2,20 @@
 
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, X, Calendar, Mail, Send } from 'lucide-react';
+import { 
+  Upload, 
+  FileSpreadsheet, 
+  CheckCircle, 
+  AlertCircle, 
+  Loader2, 
+  X, 
+  Calendar, 
+  Mail, 
+  Send,
+  ArrowRight,
+  AlertTriangle,
+  Check
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -16,6 +29,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 
 interface UploadResult {
@@ -29,12 +58,35 @@ interface UploadResult {
   error?: string;
 }
 
+interface ColumnMapping {
+  excelColumn: string;
+  dbColumn: string | null;
+  score: number;
+  isRequired: boolean;
+}
+
+interface PreviewData {
+  fileName: string;
+  totalRows: number;
+  excelColumns: string[];
+  dbColumnOptions: string[];
+  mappings: ColumnMapping[];
+  sampleData: Record<string, unknown>[];
+  missingRequired: string[];
+}
+
 export default function UploadPage() {
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<UploadResult | null>(null);
+  
+  // 컬럼 매핑 미리보기 상태
+  const [previewData, setPreviewData] = useState<PreviewData | null>(null);
+  const [mappings, setMappings] = useState<ColumnMapping[]>([]);
+  const [showMappingDialog, setShowMappingDialog] = useState(false);
   
   // Email dialog state
   const [showEmailDialog, setShowEmailDialog] = useState(false);
@@ -44,6 +96,8 @@ export default function UploadPage() {
     if (acceptedFiles.length > 0) {
       setFile(acceptedFiles[0]);
       setResult(null);
+      setPreviewData(null);
+      setMappings([]);
     }
   }, []);
 
@@ -57,12 +111,61 @@ export default function UploadPage() {
     maxSize: 20 * 1024 * 1024, // 20MB
   });
 
+  // 컬럼 매핑 미리보기
+  const handlePreview = async () => {
+    if (!file) return;
+    
+    setPreviewing(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/upload/preview', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setPreviewData(data.data);
+        setMappings(data.data.mappings);
+        setShowMappingDialog(true);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: '미리보기 실패',
+          description: data.error,
+        });
+      }
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: '오류',
+        description: '파일 미리보기 중 오류가 발생했습니다.',
+      });
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
+  // 매핑 변경
+  const handleMappingChange = (excelColumn: string, newDbColumn: string) => {
+    setMappings(prev => prev.map(m => 
+      m.excelColumn === excelColumn 
+        ? { ...m, dbColumn: newDbColumn === '_none_' ? null : newDbColumn, score: newDbColumn === '_none_' ? 0 : 1 }
+        : m
+    ));
+  };
+
+  // 실제 업로드
   const handleUpload = async () => {
     if (!file) return;
 
     setUploading(true);
     setProgress(0);
     setResult(null);
+    setShowMappingDialog(false);
 
     try {
       // Simulate progress
@@ -72,6 +175,17 @@ export default function UploadPage() {
 
       const formData = new FormData();
       formData.append('file', file);
+      
+      // 커스텀 매핑 정보 추가
+      if (mappings.length > 0) {
+        const customMapping: Record<string, string> = {};
+        mappings.forEach(m => {
+          if (m.dbColumn) {
+            customMapping[m.excelColumn] = m.dbColumn;
+          }
+        });
+        formData.append('customMapping', JSON.stringify(customMapping));
+      }
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -86,6 +200,8 @@ export default function UploadPage() {
 
       if (data.success) {
         setFile(null);
+        setPreviewData(null);
+        setMappings([]);
         // 업로드 성공 시 이메일 발송 여부 묻기
         setShowEmailDialog(true);
       }
@@ -104,8 +220,7 @@ export default function UploadPage() {
     
     setSendingEmail(true);
     try {
-      // 각 정산월에 대해 메일머지 발송
-      const settlementMonth = result.data.settlementMonths[0]; // 첫 번째 정산월
+      const settlementMonth = result.data.settlementMonths[0];
       
       const res = await fetch('/api/email/mailmerge', {
         method: 'POST',
@@ -146,7 +261,15 @@ export default function UploadPage() {
   const removeFile = () => {
     setFile(null);
     setResult(null);
+    setPreviewData(null);
+    setMappings([]);
   };
+
+  // 필수 컬럼 매핑 여부 확인
+  const requiredColumnsMapped = mappings.length === 0 || 
+    ['사업자번호', '정산월'].every(req => 
+      mappings.some(m => m.dbColumn === req)
+    );
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -208,7 +331,7 @@ export default function UploadPage() {
                 variant="ghost" 
                 size="icon"
                 onClick={removeFile}
-                disabled={uploading}
+                disabled={uploading || previewing}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -226,25 +349,46 @@ export default function UploadPage() {
         </CardContent>
       </Card>
 
-      {/* Upload Button */}
-      <Button 
-        onClick={handleUpload} 
-        disabled={!file || uploading}
-        className="w-full"
-        size="lg"
-      >
-        {uploading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            업로드 중...
-          </>
-        ) : (
-          <>
-            <Upload className="mr-2 h-4 w-4" />
-            업로드
-          </>
-        )}
-      </Button>
+      {/* Action Buttons */}
+      <div className="flex gap-2">
+        <Button 
+          variant="outline"
+          onClick={handlePreview} 
+          disabled={!file || uploading || previewing}
+          className="flex-1"
+          size="lg"
+        >
+          {previewing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              분석 중...
+            </>
+          ) : (
+            <>
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              컬럼 매핑 확인
+            </>
+          )}
+        </Button>
+        <Button 
+          onClick={previewData ? () => setShowMappingDialog(true) : handleUpload} 
+          disabled={!file || uploading || previewing}
+          className="flex-1"
+          size="lg"
+        >
+          {uploading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              업로드 중...
+            </>
+          ) : (
+            <>
+              <Upload className="mr-2 h-4 w-4" />
+              {previewData ? '매핑 확인 후 업로드' : '바로 업로드'}
+            </>
+          )}
+        </Button>
+      </div>
 
       {/* Result */}
       {result && (
@@ -304,11 +448,158 @@ export default function UploadPage() {
         <CardContent className="text-sm text-muted-foreground space-y-2">
           <p>• 엑셀 파일의 첫 번째 시트 데이터만 업로드됩니다.</p>
           <p>• 필수 컬럼: <strong>사업자번호</strong>, <strong>정산월</strong></p>
-          <p>• 데이터는 <strong>정산월</strong> 컬럼 기준으로 자동 분류됩니다.</p>
+          <p>• <strong>컬럼 매핑 확인</strong>을 클릭하면 컬럼을 수동으로 매핑할 수 있습니다.</p>
+          <p>• 컬럼명이 다르더라도 자동으로 유사한 컬럼을 찾아 매핑합니다.</p>
           <p>• 같은 정산월 데이터를 다시 업로드하면 기존 데이터가 교체됩니다.</p>
-          <p>• 업로드 완료 후 이메일 발송 여부를 선택할 수 있습니다.</p>
         </CardContent>
       </Card>
+
+      {/* Column Mapping Dialog */}
+      <Dialog open={showMappingDialog} onOpenChange={setShowMappingDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              컬럼 매핑 확인
+            </DialogTitle>
+            <DialogDescription>
+              엑셀 컬럼을 DB 컬럼에 매핑합니다. 자동 매핑된 결과를 확인하고 필요시 수정하세요.
+              {previewData && (
+                <span className="block mt-1">
+                  파일: {previewData.fileName} ({previewData.totalRows.toLocaleString()}행)
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {previewData && (
+            <div className="space-y-4">
+              {/* 필수 컬럼 경고 */}
+              {!requiredColumnsMapped && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>필수 컬럼 누락</AlertTitle>
+                  <AlertDescription>
+                    사업자번호와 정산월 컬럼이 매핑되어야 합니다.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {/* 컬럼 매핑 테이블 */}
+              <ScrollArea className="h-[300px] border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[200px]">엑셀 컬럼</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                      <TableHead className="w-[200px]">DB 컬럼</TableHead>
+                      <TableHead className="w-[100px]">매칭율</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {mappings.map((mapping) => (
+                      <TableRow key={mapping.excelColumn}>
+                        <TableCell className="font-mono text-sm">
+                          {mapping.excelColumn.replace(/\n/g, ' ')}
+                        </TableCell>
+                        <TableCell>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={mapping.dbColumn || '_none_'}
+                            onValueChange={(value) => handleMappingChange(mapping.excelColumn, value)}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="_none_">
+                                <span className="text-muted-foreground">(매핑 안함)</span>
+                              </SelectItem>
+                              {previewData.dbColumnOptions.map(opt => (
+                                <SelectItem key={opt} value={opt}>
+                                  {opt}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          {mapping.dbColumn ? (
+                            <Badge 
+                              variant={mapping.score >= 0.9 ? 'default' : mapping.score >= 0.7 ? 'secondary' : 'outline'}
+                              className={mapping.score >= 0.9 ? 'bg-green-600' : ''}
+                            >
+                              {mapping.score >= 1 ? (
+                                <Check className="h-3 w-3 mr-1" />
+                              ) : null}
+                              {Math.round(mapping.score * 100)}%
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground">-</Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+              
+              {/* 샘플 데이터 미리보기 */}
+              {previewData.sampleData.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium mb-2">샘플 데이터 (처음 {previewData.sampleData.length}행)</h4>
+                  <ScrollArea className="h-[150px] border rounded-md">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {previewData.excelColumns.slice(0, 6).map(col => (
+                            <TableHead key={col} className="text-xs whitespace-nowrap">
+                              {col.replace(/\n/g, ' ').slice(0, 15)}
+                            </TableHead>
+                          ))}
+                          {previewData.excelColumns.length > 6 && (
+                            <TableHead className="text-xs">...</TableHead>
+                          )}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {previewData.sampleData.map((row, idx) => (
+                          <TableRow key={idx}>
+                            {previewData.excelColumns.slice(0, 6).map(col => (
+                              <TableCell key={col} className="text-xs">
+                                {String(row[col] || '').slice(0, 20)}
+                              </TableCell>
+                            ))}
+                            {previewData.excelColumns.length > 6 && (
+                              <TableCell className="text-xs text-muted-foreground">...</TableCell>
+                            )}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowMappingDialog(false)}>
+              취소
+            </Button>
+            <Button onClick={handleUpload} disabled={!requiredColumnsMapped || uploading}>
+              {uploading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4 mr-2" />
+              )}
+              업로드 진행
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Email Confirm Dialog */}
       <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>

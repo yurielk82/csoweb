@@ -8,7 +8,11 @@ import { EXCEL_COLUMN_MAP } from '@/types';
 import type { Settlement } from '@/types';
 
 // Parse Excel file and convert to settlement data (using ExcelJS)
-export async function parseExcelFile(buffer: ArrayBuffer): Promise<{
+// customMapping: 사용자가 수동으로 지정한 매핑 (엑셀컬럼명 -> DB컬럼명)
+export async function parseExcelFile(
+  buffer: ArrayBuffer,
+  customMapping?: Record<string, string>
+): Promise<{
   data: Partial<Settlement>[];
   errors: string[];
 }> {
@@ -43,16 +47,39 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<{
     
     for (let col = 1; col <= colCount; col++) {
       const cell = headerRow.getCell(col);
-      const value = cell.value ? String(cell.value).trim().replace(/\n/g, '') : '';
-      headers.push(value);
-      if (value) {
-        headerColMap[value] = col;
+      const rawValue = cell.value ? String(cell.value).trim() : '';
+      const cleanValue = rawValue.replace(/\n/g, '');
+      headers.push(rawValue);
+      if (rawValue) {
+        headerColMap[rawValue] = col;
+        if (rawValue !== cleanValue) {
+          headerColMap[cleanValue] = col;
+        }
       }
     }
 
     // 컬럼 매핑 인덱스 생성 (DB 컬럼명 -> 엑셀 컬럼 인덱스)
     const columnIndexMap: Record<string, number> = {};
+    
+    // 1. 커스텀 매핑이 있으면 우선 적용
+    if (customMapping) {
+      for (const [excelCol, dbCol] of Object.entries(customMapping)) {
+        const cleanExcelCol = excelCol.replace(/\n/g, '');
+        // EXCEL_COLUMN_MAP을 통해 DB 컬럼명으로 변환
+        const actualDbCol = EXCEL_COLUMN_MAP[dbCol] || dbCol;
+        
+        if (headerColMap[excelCol]) {
+          columnIndexMap[actualDbCol] = headerColMap[excelCol];
+        } else if (headerColMap[cleanExcelCol]) {
+          columnIndexMap[actualDbCol] = headerColMap[cleanExcelCol];
+        }
+      }
+    }
+    
+    // 2. 기본 EXCEL_COLUMN_MAP으로 나머지 매핑 (커스텀 매핑에 없는 것만)
     for (const [excelCol, dbCol] of Object.entries(EXCEL_COLUMN_MAP)) {
+      if (columnIndexMap[dbCol]) continue; // 이미 매핑됨
+      
       const cleanExcelCol = excelCol.replace(/\n/g, '');
       if (headerColMap[excelCol]) {
         columnIndexMap[dbCol] = headerColMap[excelCol];
@@ -63,7 +90,7 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<{
 
     // 사업자번호 컬럼이 있는지 확인
     if (!columnIndexMap['business_number']) {
-      errors.push('사업자번호 컬럼을 찾을 수 없습니다.');
+      errors.push('사업자번호 컬럼을 찾을 수 없습니다. 컬럼 매핑을 확인해주세요.');
       return { data, errors };
     }
 
