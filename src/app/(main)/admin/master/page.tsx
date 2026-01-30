@@ -160,7 +160,7 @@ export default function AdminMasterPage() {
 
   // Fetch notice settings
   useEffect(() => {
-    fetch('/api/settings/company')
+    fetch('/api/settings/company', { cache: 'no-store' })
       .then(res => res.json())
       .then(result => {
         if (result.success && result.data) {

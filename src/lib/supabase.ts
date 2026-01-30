@@ -138,6 +138,8 @@ export interface DbCompanySettings {
   website: string | null;
   copyright: string | null;
   additional_info: string | null;
+  notice_content: string | null;
+  created_at: string;
   updated_at: string;
 }
 
