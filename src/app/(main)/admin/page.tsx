@@ -242,7 +242,9 @@ export default function AdminDashboardPage() {
             </div>
             <div className="flex justify-between py-2">
               <span className="text-muted-foreground">환경</span>
-              <Badge variant="outline">{systemStatus.environment}</Badge>
+              <Badge className={systemStatus.environment === 'Production' ? 'bg-blue-600' : 'bg-yellow-500'}>
+                {systemStatus.environment}
+              </Badge>
             </div>
           </div>
         </CardContent>
