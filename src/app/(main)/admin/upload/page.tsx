@@ -202,8 +202,8 @@ export default function UploadPage() {
         setFile(null);
         setPreviewData(null);
         setMappings([]);
-        // 업로드 성공 시 이메일 발송 여부 묻기
-        setShowEmailDialog(true);
+        // 업로드 성공 시 이메일 발송 여부 묻기 - 주석 처리
+        // setShowEmailDialog(true);
       }
     } catch {
       setResult({
