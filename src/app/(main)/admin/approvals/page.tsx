@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, CheckCircle, XCircle, Loader2, RefreshCw, Clock } from 'lucide-react';
+import { Users, CheckCircle, XCircle, Loader2, RefreshCw, Clock, CheckSquare, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Loading } from '@/components/shared/loading';
 import { useToast } from '@/hooks/use-toast';
 
@@ -32,6 +33,8 @@ export default function ApprovalsPage() {
   const [loading, setLoading] = useState(true);
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [batchProcessing, setBatchProcessing] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [rejectDialog, setRejectDialog] = useState<{
     open: boolean;
     user: PendingUser | null;
@@ -58,6 +61,29 @@ export default function ApprovalsPage() {
     fetchPendingUsers();
   }, []);
 
+  // 체크박스 토글
+  const toggleSelect = (businessNumber: string) => {
+    setSelectedUsers(prev => {
+      const next = new Set(prev);
+      if (next.has(businessNumber)) {
+        next.delete(businessNumber);
+      } else {
+        next.add(businessNumber);
+      }
+      return next;
+    });
+  };
+
+  // 전체 선택/해제
+  const toggleSelectAll = () => {
+    if (selectedUsers.size === pendingUsers.length) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(pendingUsers.map(u => u.business_number)));
+    }
+  };
+
+  // 단일 승인
   const handleApprove = async (user: PendingUser) => {
     setProcessing(user.business_number);
     try {
@@ -75,6 +101,11 @@ export default function ApprovalsPage() {
           description: `${user.company_name}의 회원가입이 승인되었습니다.`,
         });
         setPendingUsers(prev => prev.filter(u => u.business_number !== user.business_number));
+        setSelectedUsers(prev => {
+          const next = new Set(prev);
+          next.delete(user.business_number);
+          return next;
+        });
       } else {
         toast({
           variant: 'destructive',
@@ -90,6 +121,62 @@ export default function ApprovalsPage() {
       });
     } finally {
       setProcessing(null);
+    }
+  };
+
+  // 일괄 승인
+  const handleBatchApprove = async () => {
+    if (selectedUsers.size === 0) {
+      toast({
+        variant: 'destructive',
+        title: '선택 필요',
+        description: '승인할 회원을 선택해주세요.',
+      });
+      return;
+    }
+
+    setBatchProcessing(true);
+    let successCount = 0;
+    let failCount = 0;
+    const approvedBusinessNumbers: string[] = [];
+
+    for (const businessNumber of selectedUsers) {
+      try {
+        const response = await fetch('/api/users/approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ business_number: businessNumber }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          successCount++;
+          approvedBusinessNumbers.push(businessNumber);
+        } else {
+          failCount++;
+        }
+      } catch {
+        failCount++;
+      }
+    }
+
+    // 승인된 회원 목록에서 제거
+    setPendingUsers(prev => prev.filter(u => !approvedBusinessNumbers.includes(u.business_number)));
+    setSelectedUsers(new Set());
+    setBatchProcessing(false);
+
+    if (successCount > 0) {
+      toast({
+        title: '일괄 승인 완료',
+        description: `${successCount}건 승인 완료${failCount > 0 ? `, ${failCount}건 실패` : ''}`,
+      });
+    } else {
+      toast({
+        variant: 'destructive',
+        title: '일괄 승인 실패',
+        description: '모든 승인 요청이 실패했습니다.',
+      });
     }
   };
 
@@ -159,20 +246,57 @@ export default function ApprovalsPage() {
           </h1>
           <p className="text-muted-foreground">회원가입 신청을 승인하거나 거부합니다.</p>
         </div>
-        <Button variant="outline" onClick={fetchPendingUsers}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          새로고침
-        </Button>
+        <div className="flex gap-2">
+          {pendingUsers.length > 0 && (
+            <Button 
+              onClick={handleBatchApprove} 
+              disabled={selectedUsers.size === 0 || batchProcessing}
+            >
+              {batchProcessing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <CheckSquare className="h-4 w-4 mr-2" />
+              )}
+              일괄 승인 ({selectedUsers.size})
+            </Button>
+          )}
+          <Button variant="outline" onClick={fetchPendingUsers}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            새로고침
+          </Button>
+        </div>
       </div>
 
       {/* Pending Count */}
       <Alert>
         <Clock className="h-4 w-4" />
-        <AlertDescription>
-          {pendingUsers.length > 0 
-            ? `${pendingUsers.length}건의 승인 대기 중인 신청이 있습니다.`
-            : '승인 대기 중인 신청이 없습니다.'
-          }
+        <AlertDescription className="flex items-center justify-between">
+          <span>
+            {pendingUsers.length > 0 
+              ? `${pendingUsers.length}건의 승인 대기 중인 신청이 있습니다.`
+              : '승인 대기 중인 신청이 없습니다.'
+            }
+          </span>
+          {pendingUsers.length > 1 && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={toggleSelectAll}
+              className="ml-2"
+            >
+              {selectedUsers.size === pendingUsers.length ? (
+                <>
+                  <CheckSquare className="h-4 w-4 mr-1" />
+                  전체 해제
+                </>
+              ) : (
+                <>
+                  <Square className="h-4 w-4 mr-1" />
+                  전체 선택
+                </>
+              )}
+            </Button>
+          )}
         </AlertDescription>
       </Alert>
 
@@ -180,14 +304,25 @@ export default function ApprovalsPage() {
       {pendingUsers.length > 0 ? (
         <div className="grid gap-4">
           {pendingUsers.map(user => (
-            <Card key={user.business_number}>
+            <Card 
+              key={user.business_number}
+              className={selectedUsers.has(user.business_number) ? 'ring-2 ring-primary' : ''}
+            >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{user.company_name}</CardTitle>
-                    <CardDescription className="mt-1">
-                      {formatBusinessNumber(user.business_number)}
-                    </CardDescription>
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      checked={selectedUsers.has(user.business_number)}
+                      onCheckedChange={() => toggleSelect(user.business_number)}
+                      disabled={batchProcessing}
+                      className="mt-1"
+                    />
+                    <div>
+                      <CardTitle className="text-lg">{user.company_name}</CardTitle>
+                      <CardDescription className="mt-1">
+                        {formatBusinessNumber(user.business_number)}
+                      </CardDescription>
+                    </div>
                   </div>
                   <Badge variant="secondary">
                     <Clock className="h-3 w-3 mr-1" />
@@ -197,7 +332,7 @@ export default function ApprovalsPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col sm:flex-row justify-between gap-4">
-                  <div className="text-sm text-muted-foreground space-y-1">
+                  <div className="text-sm text-muted-foreground space-y-1 ml-7">
                     <p>이메일: {user.email}</p>
                     <p>신청일: {new Date(user.created_at).toLocaleString('ko-KR')}</p>
                   </div>
@@ -206,7 +341,7 @@ export default function ApprovalsPage() {
                       variant="outline"
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                       onClick={() => setRejectDialog({ open: true, user })}
-                      disabled={processing === user.business_number}
+                      disabled={processing === user.business_number || batchProcessing}
                     >
                       {processing === user.business_number ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -217,7 +352,7 @@ export default function ApprovalsPage() {
                     </Button>
                     <Button
                       onClick={() => handleApprove(user)}
-                      disabled={processing === user.business_number}
+                      disabled={processing === user.business_number || batchProcessing}
                     >
                       {processing === user.business_number ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
