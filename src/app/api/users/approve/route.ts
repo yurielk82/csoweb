@@ -42,14 +42,22 @@ export async function POST(request: NextRequest) {
     }
     
     // Send approval notification email
-    await sendEmail(user.email, 'approval_complete', {
+    console.log(`[Approve] Sending email to: ${user.email}, company: ${user.company_name}`);
+    const emailResult = await sendEmail(user.email, 'approval_complete', {
       company_name: user.company_name,
       business_number: user.business_number,
     });
     
+    if (!emailResult.success) {
+      console.error(`[Approve] Email failed for ${user.email}: ${emailResult.error}`);
+    } else {
+      console.log(`[Approve] Email sent successfully to: ${user.email}`);
+    }
+    
     return NextResponse.json({
       success: true,
       message: `${user.company_name}의 회원가입이 승인되었습니다.`,
+      emailSent: emailResult.success,
     });
   } catch (error) {
     console.error('Approve user error:', error);

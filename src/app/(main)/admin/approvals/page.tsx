@@ -156,6 +156,9 @@ export default function ApprovalsPage() {
         } else {
           failCount++;
         }
+        
+        // Rate limit 방지: 요청 간 500ms 딜레이
+        await new Promise(resolve => setTimeout(resolve, 500));
       } catch {
         failCount++;
       }
