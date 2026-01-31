@@ -136,50 +136,46 @@ export default function ApprovalsPage() {
     }
 
     setBatchProcessing(true);
-    let successCount = 0;
-    let failCount = 0;
-    const approvedBusinessNumbers: string[] = [];
 
-    for (const businessNumber of selectedUsers) {
-      try {
-        const response = await fetch('/api/users/approve', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ business_number: businessNumber }),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          successCount++;
-          approvedBusinessNumbers.push(businessNumber);
-        } else {
-          failCount++;
-        }
-        
-        // Rate limit 방지: 요청 간 500ms 딜레이
-        await new Promise(resolve => setTimeout(resolve, 500));
-      } catch {
-        failCount++;
-      }
-    }
-
-    // 승인된 회원 목록에서 제거
-    setPendingUsers(prev => prev.filter(u => !approvedBusinessNumbers.includes(u.business_number)));
-    setSelectedUsers(new Set());
-    setBatchProcessing(false);
-
-    if (successCount > 0) {
-      toast({
-        title: '일괄 승인 완료',
-        description: `${successCount}건 승인 완료${failCount > 0 ? `, ${failCount}건 실패` : ''}`,
+    try {
+      const response = await fetch('/api/users/approve-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_numbers: Array.from(selectedUsers) }),
       });
-    } else {
+
+      const result = await response.json();
+
+      if (result.success) {
+        const { approved, failed, emailFailed } = result.data;
+        
+        // 승인된 회원 목록에서 제거
+        setPendingUsers(prev => prev.filter(u => !selectedUsers.has(u.business_number)));
+        setSelectedUsers(new Set());
+
+        let description = `${approved}건 승인 완료`;
+        if (failed > 0) description += `, ${failed}건 실패`;
+        if (emailFailed > 0) description += ` (이메일 ${emailFailed}건 발송 실패)`;
+
+        toast({
+          title: '일괄 승인 완료',
+          description,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: '일괄 승인 실패',
+          description: result.error || '처리 중 오류가 발생했습니다.',
+        });
+      }
+    } catch {
       toast({
         variant: 'destructive',
-        title: '일괄 승인 실패',
-        description: '모든 승인 요청이 실패했습니다.',
+        title: '오류',
+        description: '일괄 승인 처리 중 오류가 발생했습니다.',
       });
+    } finally {
+      setBatchProcessing(false);
     }
   };
 
