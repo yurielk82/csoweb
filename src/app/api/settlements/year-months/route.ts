@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getAvailableSettlementMonths } from '@/lib/db';
+import { 
+  getAvailableSettlementMonths,
+  getAvailableSettlementMonthsByCSOMatching 
+} from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +18,15 @@ export async function GET() {
       );
     }
     
-    const months = await getAvailableSettlementMonths();
+    let months: string[];
+    
+    if (session.is_admin) {
+      // 관리자: 전체 정산월 조회
+      months = await getAvailableSettlementMonths();
+    } else {
+      // 일반 회원: CSO매칭 테이블 기반으로 자신의 데이터가 있는 정산월만 조회
+      months = await getAvailableSettlementMonthsByCSOMatching(session.business_number);
+    }
     
     return NextResponse.json({
       success: true,

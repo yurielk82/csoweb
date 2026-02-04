@@ -1114,3 +1114,257 @@ function mapDbTokenToToken(dbToken: DbPasswordResetToken): PasswordResetToken {
     created_at: dbToken.created_at,
   };
 }
+
+// ============================================
+// CSO Matching 기반 정산서 조회
+// ============================================
+
+/**
+ * 사업자번호로 매칭된 CSO관리업체명 목록 조회
+ * - cso_matching 테이블에서 해당 사업자번호와 연결된 모든 ERP 업체명 반환
+ */
+export async function getMatchedCSOCompanyNames(businessNumber: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('cso_matching')
+    .select('cso_company_name')
+    .eq('business_number', businessNumber);
+
+  if (error) {
+    console.error('Get matched CSO names error:', error);
+    return [];
+  }
+
+  return (data || []).map(d => d.cso_company_name);
+}
+
+/**
+ * CSO관리업체명 기반 정산서 조회 (일반 회원용)
+ * - 로그인한 회원의 사업자번호로 cso_matching에서 매칭된 업체명 목록을 가져옴
+ * - 해당 업체명들과 일치하는 정산 데이터만 조회
+ */
+export async function getSettlementsByCSOMatching(
+  businessNumber: string,
+  settlementMonth?: string
+): Promise<Settlement[]> {
+  // 1. 매칭된 CSO관리업체명 목록 조회
+  const matchedNames = await getMatchedCSOCompanyNames(businessNumber);
+  
+  if (matchedNames.length === 0) {
+    console.log(`No matched CSO names found for business_number: ${businessNumber}`);
+    return [];
+  }
+
+  console.log(`Found ${matchedNames.length} matched CSO names for ${businessNumber}:`, matchedNames);
+
+  // 2. 해당 업체명들의 정산 데이터 조회
+  const allRows: Settlement[] = [];
+  const pageSize = 1000;
+  let page = 0;
+  
+  while (true) {
+    let query = supabase
+      .from('settlements')
+      .select('*')
+      .in('CSO관리업체', matchedNames);
+
+    if (settlementMonth) {
+      query = query.eq('정산월', settlementMonth);
+    }
+
+    const { data, error } = await query
+      .order('id', { ascending: true })
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+    
+    if (error) {
+      console.error('Get settlements by CSO matching error:', error);
+      break;
+    }
+    
+    if (!data || data.length === 0) break;
+    allRows.push(...(data as Settlement[]));
+    if (data.length < pageSize) break;
+    page++;
+  }
+  
+  return allRows;
+}
+
+/**
+ * CSO관리업체명 기반 사용 가능한 정산월 목록 조회 (일반 회원용)
+ * - 매칭된 업체명의 정산 데이터가 있는 월만 반환
+ */
+export async function getAvailableSettlementMonthsByCSOMatching(
+  businessNumber: string
+): Promise<string[]> {
+  // 1. 매칭된 CSO관리업체명 목록 조회
+  const matchedNames = await getMatchedCSOCompanyNames(businessNumber);
+  
+  if (matchedNames.length === 0) {
+    return [];
+  }
+
+  // 2. 해당 업체명들의 정산월 조회
+  const allMonths: string[] = [];
+  const pageSize = 1000;
+  let page = 0;
+  
+  while (true) {
+    const { data, error } = await supabase
+      .from('settlements')
+      .select('정산월')
+      .in('CSO관리업체', matchedNames)
+      .not('정산월', 'is', null)
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+    
+    if (error || !data || data.length === 0) break;
+    const rows = data as unknown as { 정산월: string }[];
+    allMonths.push(...rows.map(d => d.정산월));
+    if (data.length < pageSize) break;
+    page++;
+  }
+  
+  const months = [...new Set(allMonths)].filter(Boolean);
+  return months.sort().reverse();
+}
+
+/**
+ * CSO관리업체명 기반 정산 요약 조회 (일반 회원용)
+ */
+export async function getSettlementSummaryByCSOMatching(
+  businessNumber: string, 
+  settlementMonth: string
+): Promise<{
+  총_금액: number;
+  총_수수료: number;
+  제약수수료_합계: number;
+  담당수수료_합계: number;
+  데이터_건수: number;
+  총_수량: number;
+}> {
+  // 1. 매칭된 CSO관리업체명 목록 조회
+  const matchedNames = await getMatchedCSOCompanyNames(businessNumber);
+  
+  if (matchedNames.length === 0) {
+    return { 총_금액: 0, 총_수수료: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 데이터_건수: 0, 총_수량: 0 };
+  }
+
+  const { data, error } = await supabase
+    .from('settlements')
+    .select('금액, 수량, 제약수수료_합계, 담당수수료_합계')
+    .in('CSO관리업체', matchedNames)
+    .eq('정산월', settlementMonth);
+
+  if (error || !data) {
+    return { 총_금액: 0, 총_수수료: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 데이터_건수: 0, 총_수량: 0 };
+  }
+
+  type SummaryRow = { 금액: number | null; 수량: number | null; 제약수수료_합계: number | null; 담당수수료_합계: number | null };
+  const rows = data as unknown as SummaryRow[];
+  
+  const 제약수수료_합계 = rows.reduce((sum, s) => sum + (Number(s.제약수수료_합계) || 0), 0);
+  const 담당수수료_합계 = rows.reduce((sum, s) => sum + (Number(s.담당수수료_합계) || 0), 0);
+  
+  return {
+    총_금액: rows.reduce((sum, s) => sum + (Number(s.금액) || 0), 0),
+    총_수수료: 제약수수료_합계,
+    제약수수료_합계,
+    담당수수료_합계,
+    데이터_건수: data.length,
+    총_수량: rows.reduce((sum, s) => sum + (Number(s.수량) || 0), 0),
+  };
+}
+
+/**
+ * CSO관리업체명 기반 월별 수수료 합계 조회 (일반 회원용)
+ * - 로그인한 회원의 사업자번호로 cso_matching에서 연결된 CSO관리업체명을 찾고
+ * - 해당 업체명의 정산 데이터에서 월별 합계 계산
+ */
+export async function getMonthlySummaryByCSOMatching(
+  businessNumber: string
+): Promise<{
+  months: Array<{
+    settlement_month: string;
+    summaries: Record<string, number>;
+    row_count: number;
+  }>;
+  summary_columns: ColumnSetting[];
+}> {
+  // 1. is_summary가 true인 컬럼 조회
+  const { data: columnData } = await supabase
+    .from('column_settings')
+    .select('*')
+    .eq('is_summary', true)
+    .order('display_order', { ascending: true });
+  
+  const summaryColumns = (columnData || []) as ColumnSetting[];
+  const summaryColumnKeys = summaryColumns.map(c => c.column_key);
+  
+  if (summaryColumnKeys.length === 0) {
+    return { months: [], summary_columns: [] };
+  }
+
+  // 2. 매칭된 CSO관리업체명 목록 조회
+  const matchedNames = await getMatchedCSOCompanyNames(businessNumber);
+  
+  if (matchedNames.length === 0) {
+    console.log(`No matched CSO names found for business_number: ${businessNumber}`);
+    return { months: [], summary_columns: summaryColumns };
+  }
+
+  console.log(`Found ${matchedNames.length} matched CSO names for monthly summary:`, matchedNames);
+
+  // 3. 해당 업체명들의 정산 데이터 조회
+  const allRows: Array<Record<string, unknown>> = [];
+  const pageSize = 1000;
+  let page = 0;
+  
+  // 동적으로 select 컬럼 구성
+  const selectColumns = ['정산월', ...summaryColumnKeys].join(', ');
+  
+  while (true) {
+    const { data, error } = await supabase
+      .from('settlements')
+      .select(selectColumns)
+      .in('CSO관리업체', matchedNames)
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+    
+    if (error || !data || data.length === 0) break;
+    allRows.push(...(data as unknown as Array<Record<string, unknown>>));
+    if (data.length < pageSize) break;
+    page++;
+  }
+
+  // 4. 정산월별로 그룹핑하여 합계 계산
+  const monthlyData = new Map<string, { summaries: Record<string, number>; count: number }>();
+  
+  for (const row of allRows) {
+    const month = row.정산월 as string;
+    if (!month) continue;
+    
+    if (!monthlyData.has(month)) {
+      monthlyData.set(month, { 
+        summaries: Object.fromEntries(summaryColumnKeys.map(k => [k, 0])),
+        count: 0 
+      });
+    }
+    
+    const data = monthlyData.get(month)!;
+    data.count++;
+    
+    for (const key of summaryColumnKeys) {
+      const value = Number(row[key]) || 0;
+      data.summaries[key] += value;
+    }
+  }
+
+  // 5. 정산월 기준 내림차순 정렬
+  const months = Array.from(monthlyData.entries())
+    .map(([month, data]) => ({
+      settlement_month: month,
+      summaries: data.summaries,
+      row_count: data.count,
+    }))
+    .sort((a, b) => b.settlement_month.localeCompare(a.settlement_month));
+
+  return { months, summary_columns: summaryColumns };
+}

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { 
-  getSettlementsByBusinessNumber, 
   getAllSettlements, 
-  getAvailableSettlementMonths 
+  getAvailableSettlementMonths,
+  getSettlementsByCSOMatching
 } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -30,14 +30,19 @@ export async function GET(request: NextRequest) {
     let settlements;
     
     if (session.is_admin) {
-      // 관리자가 특정 CSO를 선택한 경우 해당 업체의 데이터만 조회
+      // 관리자가 특정 CSO를 선택한 경우 해당 업체의 매칭된 데이터 조회
       if (filterBusinessNumber) {
-        settlements = await getSettlementsByBusinessNumber(filterBusinessNumber, settlementMonth);
+        // CSO매칭 테이블 기반으로 해당 사업자번호에 매칭된 업체의 정산 데이터 조회
+        settlements = await getSettlementsByCSOMatching(filterBusinessNumber, settlementMonth);
       } else {
+        // 전체 데이터 조회 (관리자)
         settlements = await getAllSettlements(settlementMonth);
       }
     } else {
-      settlements = await getSettlementsByBusinessNumber(
+      // 일반 회원: CSO매칭 테이블 기반 조회
+      // 로그인한 회원의 사업자번호로 cso_matching에서 연결된 CSO관리업체명을 찾고
+      // 해당 업체명의 정산 데이터만 조회
+      settlements = await getSettlementsByCSOMatching(
         session.business_number,
         settlementMonth
       );
