@@ -20,6 +20,9 @@ import {
   Link2Off,
   Eye,
   EyeOff,
+  Pencil,
+  Trash2,
+  Save,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -144,6 +147,17 @@ export default function SettlementIntegrityManager() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadPreview, setUploadPreview] = useState<MatchingUploadItem[]>([]);
+
+  // Edit dialog state (직접 매칭 등록/수정)
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editTarget, setEditTarget] = useState<IntegrityCheckResult | null>(null);
+  const [editBusinessNumber, setEditBusinessNumber] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Delete dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<IntegrityCheckResult | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // ===========================================
   // Data Fetching
@@ -401,6 +415,138 @@ export default function SettlementIntegrityManager() {
   };
 
   // ===========================================
+  // 직접 매칭 등록/수정 핸들링
+  // ===========================================
+  const openEditDialog = (result: IntegrityCheckResult) => {
+    setEditTarget(result);
+    setEditBusinessNumber(result.business_number || '');
+    setShowEditDialog(true);
+  };
+
+  const closeEditDialog = () => {
+    setShowEditDialog(false);
+    setEditTarget(null);
+    setEditBusinessNumber('');
+  };
+
+  const handleSaveMatching = async () => {
+    if (!editTarget) return;
+
+    // 사업자번호 유효성 검사
+    const cleanedBizNum = editBusinessNumber.replace(/\D/g, '');
+    if (cleanedBizNum.length !== 10) {
+      toast({
+        variant: 'destructive',
+        title: '입력 오류',
+        description: '사업자번호는 10자리 숫자여야 합니다.',
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/cso-matching/upsert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{
+            cso_company_name: editTarget.cso_company_name,
+            business_number: cleanedBizNum,
+          }],
+        }),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        toast({
+          title: '매칭 저장 완료',
+          description: `"${editTarget.cso_company_name}"의 매칭 정보가 저장되었습니다.`,
+        });
+        closeEditDialog();
+        fetchIntegrityData();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: '저장 실패',
+          description: result.error,
+        });
+      }
+    } catch (error) {
+      console.error('Save matching error:', error);
+      toast({
+        variant: 'destructive',
+        title: '오류',
+        description: '매칭 정보 저장 중 오류가 발생했습니다.',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ===========================================
+  // 매칭 삭제 핸들링
+  // ===========================================
+  const openDeleteDialog = (result: IntegrityCheckResult) => {
+    setDeleteTarget(result);
+    setShowDeleteDialog(true);
+  };
+
+  const closeDeleteDialog = () => {
+    setShowDeleteDialog(false);
+    setDeleteTarget(null);
+  };
+
+  const handleDeleteMatching = async () => {
+    if (!deleteTarget) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/admin/cso-matching/upsert', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cso_company_name: deleteTarget.cso_company_name,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        toast({
+          title: '삭제 완료',
+          description: `"${deleteTarget.cso_company_name}"의 매칭 정보가 삭제되었습니다.`,
+        });
+        closeDeleteDialog();
+        fetchIntegrityData();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: '삭제 실패',
+          description: result.error,
+        });
+      }
+    } catch (error) {
+      console.error('Delete matching error:', error);
+      toast({
+        variant: 'destructive',
+        title: '오류',
+        description: '매칭 정보 삭제 중 오류가 발생했습니다.',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // 사업자번호 포맷팅 (입력 시)
+  const formatBusinessNumber = (value: string) => {
+    const numbers = value.replace(/\D/g, '').slice(0, 10);
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 5) return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 5)}-${numbers.slice(5)}`;
+  };
+
+  // ===========================================
   // Render
   // ===========================================
   return (
@@ -634,6 +780,7 @@ export default function SettlementIntegrityManager() {
                     <TableHead className="w-[200px]">ERP 등록명</TableHead>
                     <TableHead className="w-[100px]">마지막 정산월</TableHead>
                     <TableHead className="w-[80px] text-right">정산건수</TableHead>
+                    <TableHead className="w-[100px] text-center">관리</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -686,12 +833,36 @@ export default function SettlementIntegrityManager() {
                       <TableCell className="text-right font-medium">
                         {result.row_count.toLocaleString()}
                       </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openEditDialog(result)}
+                            title="매칭 등록/수정"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          {result.business_number && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100"
+                              onClick={() => openDeleteDialog(result)}
+                              title="매칭 삭제"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {filteredResults.length === 0 && (
                     <TableRow>
                       <TableCell
-                        colSpan={6}
+                        colSpan={7}
                         className="text-center py-12 text-muted-foreground"
                       >
                         {showIssuesOnly
@@ -853,6 +1024,149 @@ export default function SettlementIntegrityManager() {
                 <Upload className="h-4 w-4 mr-2" />
               )}
               {uploadPreview.length}건 업로드
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Matching Dialog (직접 매칭 등록/수정) */}
+      <Dialog open={showEditDialog} onOpenChange={closeEditDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5" />
+              매칭 정보 {editTarget?.business_number ? '수정' : '등록'}
+            </DialogTitle>
+            <DialogDescription>
+              CSO관리업체명에 매칭할 사업자번호를 입력하세요.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* 업체명 표시 */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">CSO관리업체명</label>
+              <div className="p-3 bg-muted rounded-md font-medium">
+                {editTarget?.cso_company_name}
+              </div>
+            </div>
+
+            {/* 현재 상태 표시 */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">현재 상태</label>
+              <div className="flex items-center gap-2">
+                {editTarget && <StatusBadge status={editTarget.status} />}
+                {editTarget?.erp_company_name && (
+                  <span className="text-sm text-muted-foreground">
+                    (ERP: {editTarget.erp_company_name})
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* 사업자번호 입력 */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                매칭할 사업자번호 <span className="text-red-500">*</span>
+              </label>
+              <Input
+                placeholder="000-00-00000"
+                value={formatBusinessNumber(editBusinessNumber)}
+                onChange={(e) => setEditBusinessNumber(e.target.value.replace(/\D/g, ''))}
+                maxLength={12}
+                className="font-mono text-lg"
+              />
+              <p className="text-xs text-muted-foreground">
+                10자리 숫자를 입력하세요. 하이픈(-)은 자동으로 추가됩니다.
+              </p>
+            </div>
+
+            {/* 기존 정보 안내 */}
+            {editTarget?.business_number && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>기존 매칭 정보</AlertTitle>
+                <AlertDescription className="font-mono">
+                  {editTarget.business_number.slice(0, 3)}-
+                  {editTarget.business_number.slice(3, 5)}-
+                  {editTarget.business_number.slice(5)}
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeEditDialog} disabled={saving}>
+              취소
+            </Button>
+            <Button
+              onClick={handleSaveMatching}
+              disabled={saving || editBusinessNumber.replace(/\D/g, '').length !== 10}
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              저장
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={closeDeleteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              매칭 정보 삭제
+            </DialogTitle>
+            <DialogDescription>
+              이 작업은 되돌릴 수 없습니다. 정말 삭제하시겠습니까?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <div className="p-4 border rounded-lg bg-red-50 dark:bg-red-950/30 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">업체명</span>
+                <span className="font-medium">{deleteTarget?.cso_company_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">사업자번호</span>
+                <span className="font-mono">
+                  {deleteTarget?.business_number ? (
+                    <>
+                      {deleteTarget.business_number.slice(0, 3)}-
+                      {deleteTarget.business_number.slice(3, 5)}-
+                      {deleteTarget.business_number.slice(5)}
+                    </>
+                  ) : '-'}
+                </span>
+              </div>
+            </div>
+            <p className="mt-4 text-sm text-muted-foreground">
+              매칭 정보를 삭제하면 해당 업체는 &quot;미등록&quot; 상태로 변경되며,
+              회원은 정산 데이터를 조회할 수 없게 됩니다.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDeleteDialog} disabled={deleting}>
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteMatching}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              삭제
             </Button>
           </DialogFooter>
         </DialogContent>
