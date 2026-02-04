@@ -105,7 +105,7 @@ export default function AdminDashboardPage() {
       href: '/admin/integrity',
       icon: ShieldCheck,
       title: '무결성 검증',
-      description: 'CSO 매칭 상태 검수',
+      description: 'CSO 관리업체 매칭 상태 검수',
       color: 'bg-red-500',
     },
     {
