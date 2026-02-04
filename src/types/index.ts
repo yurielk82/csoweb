@@ -279,3 +279,36 @@ export const NUMERIC_COLUMN_KEYS = [
   '담당_수수료율', '추가수수료율_담당', '담당수수료율_통합', '담당_수수료',
   '거래처제품_인센티브율_담당', '거래처제품_담당', '관리업체_인센티브율_담당', '관리업체_담당', '담당수수료_합계',
 ];
+
+// ===========================================
+// CSO Matching Types
+// ===========================================
+
+// CSO 매칭 상태
+export type CSOMatchingStatus = 'normal' | 'unregistered' | 'pending_join' | 'missing_match';
+
+// CSO 매칭 테이블 레코드
+export interface CSOMatching {
+  cso_company_name: string; // PK: CSO관리업체명
+  business_number: string;  // 사업자등록번호
+  created_at?: string;
+  updated_at?: string;
+}
+
+// 무결성 검증 결과
+export interface IntegrityCheckResult {
+  id: string;
+  cso_company_name: string;     // 엑셀 업체명
+  business_number: string | null; // 매칭 사업자번호
+  status: CSOMatchingStatus;
+  erp_company_name: string | null; // ERP(회원DB) 등록명
+  last_settlement_month: string | null; // 마지막 정산월
+  is_approved: boolean | null;    // 회원 승인 여부
+  row_count: number;              // 정산 데이터 건수
+}
+
+// 매칭 업로드 아이템
+export interface MatchingUploadItem {
+  cso_company_name: string;
+  business_number: string;
+}

@@ -11,7 +11,9 @@ import {
   FileSpreadsheet,
   TrendingUp,
   Clock,
-  AlertCircle
+  AlertCircle,
+  ShieldCheck,
+  Database
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -100,12 +102,26 @@ export default function AdminDashboardPage() {
       color: 'bg-blue-500',
     },
     {
+      href: '/admin/integrity',
+      icon: ShieldCheck,
+      title: '무결성 검증',
+      description: 'CSO 매칭 상태 검수',
+      color: 'bg-red-500',
+    },
+    {
       href: '/admin/approvals',
       icon: Users,
       title: '회원 승인',
       description: '대기 중인 회원 승인',
       color: 'bg-green-500',
       badge: stats.pendingApprovals > 0 ? stats.pendingApprovals : undefined,
+    },
+    {
+      href: '/admin/data',
+      icon: Database,
+      title: '데이터 관리',
+      description: '정산 데이터 관리',
+      color: 'bg-cyan-500',
     },
     {
       href: '/admin/columns',
