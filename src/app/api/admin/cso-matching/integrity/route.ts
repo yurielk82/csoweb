@@ -42,31 +42,47 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const month = searchParams.get('month');
 
-    // 1. 정산서에서 고유한 CSO관리업체 목록 추출
-    let settlementQuery = supabase
-      .from('settlements')
-      .select('CSO관리업체, 정산월, business_number');
-
-    if (month) {
-      settlementQuery = settlementQuery.eq('정산월', month);
-    }
-
-    const { data: settlementData, error: settlementError } = await settlementQuery;
-
-    if (settlementError) {
-      console.error('Settlement fetch error:', settlementError);
-      return NextResponse.json(
-        { success: false, error: '정산 데이터 조회 실패' },
-        { status: 500 }
-      );
-    }
-
+    // 1. 정산서에서 고유한 CSO관리업체 목록 추출 (페이지네이션으로 전체 조회)
     // Type assertion for settlement data
     type SettlementRow = {
       'CSO관리업체': string | null;
       '정산월': string | null;
       business_number: string;
     };
+
+    const allSettlementData: SettlementRow[] = [];
+    const pageSize = 1000;
+    let page = 0;
+
+    while (true) {
+      let query = supabase
+        .from('settlements')
+        .select('CSO관리업체, 정산월, business_number');
+
+      if (month) {
+        query = query.eq('정산월', month);
+      }
+
+      const { data, error } = await query
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (error) {
+        console.error('Settlement fetch error:', error);
+        return NextResponse.json(
+          { success: false, error: '정산 데이터 조회 실패' },
+          { status: 500 }
+        );
+      }
+
+      if (!data || data.length === 0) break;
+      
+      allSettlementData.push(...(data as unknown as SettlementRow[]));
+      
+      if (data.length < pageSize) break;
+      page++;
+    }
+
+    console.log(`Total settlement rows fetched: ${allSettlementData.length}`);
 
     // CSO관리업체별 통계 집계
     const csoStats = new Map<string, {
@@ -75,7 +91,7 @@ export async function GET(request: NextRequest) {
       businessNumbers: Set<string>;
     }>();
 
-    for (const row of (settlementData as unknown as SettlementRow[]) || []) {
+    for (const row of allSettlementData) {
       const csoName = row['CSO관리업체'];
       if (!csoName) continue;
 
@@ -98,6 +114,8 @@ export async function GET(request: NextRequest) {
         stat.businessNumbers.add(row.business_number);
       }
     }
+
+    console.log(`Unique CSO companies found: ${csoStats.size}`);
 
     // 2. CSO 매칭 테이블 조회
     const { data: matchingData, error: matchingError } = await supabase
