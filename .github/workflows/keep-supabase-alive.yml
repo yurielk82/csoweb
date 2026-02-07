@@ -10,9 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Random delay (0-4 hours)
+      - name: Random delay (0-1 hours)
         run: |
-          DELAY=$((RANDOM % 14400))
+          DELAY=$((RANDOM % 3600))
           echo "Waiting $DELAY seconds..."
           sleep $DELAY
 
