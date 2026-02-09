@@ -202,11 +202,15 @@ export default function LoginPage() {
               href="https://www.kogl.or.kr/info/license.do#702" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center hover:opacity-80 transition-opacity"
               title="공공누리 제1유형: 출처표시"
             >
-              <span className="text-[10px] font-bold text-teal-700">OPEN</span>
-              <span className="text-[9px] px-1 bg-teal-600 text-white rounded font-medium">공공누리 제1유형</span>
+              <img 
+                src="https://www.kogl.or.kr/open/web/images/images_2014/codetype/new_img_opencode1.jpg" 
+                alt="공공누리 1유형" 
+                width="75" 
+                height="27"
+              />
             </a>
             <span className="text-muted-foreground/30">|</span>
             {/* CC BY 4.0 라이선스 */}
