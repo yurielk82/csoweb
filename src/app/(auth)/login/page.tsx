@@ -24,7 +24,7 @@ interface CompanyInfo {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setUser } = useAuth();
+  const { user, setUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -32,6 +32,18 @@ export default function LoginPage() {
     password: '',
   });
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+  
+  // 로그인 성공 후 이동할 경로 (상태 반영 후 이동용)
+  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
+
+  // ✅ 핵심: user 상태가 반영된 후에만 페이지 이동
+  useEffect(() => {
+    if (pendingRedirect && user) {
+      // user 상태가 메모리에 반영됨 → 이제 안전하게 이동
+      router.push(pendingRedirect);
+      setPendingRedirect(null);
+    }
+  }, [user, pendingRedirect, router]);
 
   useEffect(() => {
     // 회사 정보 로드
@@ -73,19 +85,22 @@ export default function LoginPage() {
 
       if (!result.success) {
         setError(result.error || '로그인에 실패했습니다.');
+        setLoading(false);
         return;
       }
 
       // 로그인 성공: AuthContext 상태 업데이트 (localStorage도 자동 저장됨)
-      // ⚠️ 중요: router.push 전에 setUser 호출하여 메모리 상태 먼저 업데이트
       if (result.data.user) {
+        // 1. 먼저 이동할 경로 저장
+        setPendingRedirect(result.data.redirect);
+        // 2. 그 다음 user 상태 업데이트 (비동기)
         setUser(result.data.user);
+        // 3. useEffect에서 user가 반영되면 자동으로 이동
+        // ⚠️ 여기서 router.push 하지 않음! useEffect가 처리
       }
-
-      router.push(result.data.redirect);
+      // loading은 이동 완료 전까지 유지 (UX)
     } catch {
       setError('로그인 중 오류가 발생했습니다.');
-    } finally {
       setLoading(false);
     }
   };
