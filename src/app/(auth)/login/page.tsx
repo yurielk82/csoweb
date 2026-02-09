@@ -193,45 +193,51 @@ export default function LoginPage() {
             )}
           </div>
           
-          {/* 저작권 및 라이선스 정보 */}
-          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-1 border-t border-muted-foreground/10">
+          {/* 저작권 */}
+          <div className="text-center pt-1 border-t border-muted-foreground/10">
             <span>© 2026 KDH | Sales Management Team</span>
-            <span className="text-muted-foreground/30">|</span>
+          </div>
+          
+          {/* 라이선스 정보 */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-2">
             {/* 공공누리 KOGL 제1유형 라이선스 */}
-            <a 
-              href="https://www.kogl.or.kr/info/license.do#702" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center hover:opacity-80 transition-opacity"
-              title="공공누리 제1유형: 출처표시"
-            >
-              <img 
-                src="https://www.kogl.or.kr/open/web/images/images_2014/codetype/new_img_opencode1.jpg" 
-                alt="공공누리 1유형" 
-                width="75" 
-                height="27"
-              />
-            </a>
-            <span className="text-muted-foreground/30">|</span>
+            <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-md">
+              <a 
+                href="https://www.kogl.or.kr/info/license.do#702" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex-shrink-0"
+              >
+                <img 
+                  src="https://www.kogl.or.kr/open/web/images/images_2014/codetype/new_img_opencode1.jpg" 
+                  alt="공공누리 1유형 마크" 
+                  className="h-8 w-auto object-contain"
+                />
+              </a>
+              <span className="text-[10px] leading-tight text-gray-600">
+                공공누리 <strong className="text-teal-700">&quot;출처표시&quot;</strong> 조건
+              </span>
+            </div>
+            
             {/* CC BY 4.0 라이선스 */}
             <a 
               href="https://creativecommons.org/licenses/by/4.0/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
               title="CC BY 4.0 라이선스"
             >
               <img 
                 src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" 
                 alt="CC" 
-                className="h-3.5 w-3.5"
+                className="h-4 w-4"
               />
               <img 
                 src="https://mirrors.creativecommons.org/presskit/icons/by.svg" 
                 alt="BY" 
-                className="h-3.5 w-3.5"
+                className="h-4 w-4"
               />
-              <span className="text-[10px] text-muted-foreground/70">CC BY 4.0</span>
+              <span className="text-[10px] text-gray-600">CC BY 4.0</span>
             </a>
           </div>
         </div>
