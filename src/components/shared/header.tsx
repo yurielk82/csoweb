@@ -36,7 +36,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export function Header() {
   const router = useRouter();
-  const { user, isInitialized, clearUser } = useAuth();
+  const { user, isMounted, clearUser } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -54,8 +54,8 @@ export function Header() {
     }
   };
 
-  // 초기화 전이거나 사용자 정보 없으면 로딩/빈 상태
-  if (!isInitialized || !user) {
+  // 마운트 전이거나 사용자 정보 없으면 로딩 상태 (Hydration 안전)
+  if (!isMounted || !user) {
     return (
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center">
@@ -64,7 +64,8 @@ export function Header() {
             <span className="font-bold text-lg hidden sm:inline">CSO Portal</span>
           </Link>
           <div className="flex-1" />
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          {/* 마운트 전에는 스피너 숨김 (Hydration 일치) */}
+          {isMounted && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
         </div>
       </header>
     );

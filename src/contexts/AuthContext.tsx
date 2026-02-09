@@ -22,8 +22,8 @@ const STORAGE_KEY = 'cso_auth_user';
 interface AuthContextValue {
   /** 현재 로그인한 사용자 정보 (null이면 미로그인) */
   user: UserSession | null;
-  /** 초기 로딩 완료 여부 (localStorage 확인 완료) */
-  isInitialized: boolean;
+  /** 클라이언트 마운트 완료 여부 (Hydration 안전) */
+  isMounted: boolean;
   /** 로그인 상태 여부 */
   isAuthenticated: boolean;
   /** 로그인 성공 시 호출 - 상태 업데이트 + localStorage 저장 */
@@ -40,60 +40,73 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 // ============================================
+// Helper: localStorage 안전하게 접근
+// ============================================
+function getStoredUser(): UserSession | null {
+  if (typeof window === 'undefined') return null;
+  
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return null;
+    
+    const parsed = JSON.parse(stored) as UserSession;
+    // 필수 필드 검증
+    if (parsed.id && parsed.business_number && parsed.company_name) {
+      return parsed;
+    }
+    localStorage.removeItem(STORAGE_KEY);
+    return null;
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
+}
+
+function saveStoredUser(user: UserSession): void {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+  } catch (e) {
+    console.warn('Failed to save user to localStorage:', e);
+  }
+}
+
+function removeStoredUser(): void {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (e) {
+    console.warn('Failed to remove user from localStorage:', e);
+  }
+}
+
+// ============================================
 // Provider
 // ============================================
 interface AuthProviderProps {
   children: ReactNode;
-  /** 서버에서 전달받은 초기 사용자 정보 (SSR) */
-  initialUser?: UserSession | null;
 }
 
-export function AuthProvider({ children, initialUser = null }: AuthProviderProps) {
-  const [user, setUserState] = useState<UserSession | null>(initialUser);
-  const [isInitialized, setIsInitialized] = useState(false);
+export function AuthProvider({ children }: AuthProviderProps) {
+  // SSR에서는 null로 시작 (Hydration 일치)
+  const [user, setUserState] = useState<UserSession | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
-  // 앱 로드 시 localStorage에서 사용자 정보 복원
+  // 클라이언트 마운트 시 localStorage에서 복원
   useEffect(() => {
-    // SSR에서 이미 사용자 정보가 있으면 그대로 사용
-    if (initialUser) {
-      // localStorage에도 동기화
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(initialUser));
-      } catch (e) {
-        console.warn('Failed to sync user to localStorage:', e);
-      }
-      setIsInitialized(true);
-      return;
+    const storedUser = getStoredUser();
+    if (storedUser) {
+      setUserState(storedUser);
     }
-
-    // localStorage에서 복원 시도
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as UserSession;
-        // 필수 필드 검증
-        if (parsed.id && parsed.business_number && parsed.company_name) {
-          setUserState(parsed);
-        } else {
-          localStorage.removeItem(STORAGE_KEY);
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to restore user from localStorage:', e);
-      localStorage.removeItem(STORAGE_KEY);
-    }
-    
-    setIsInitialized(true);
-  }, [initialUser]);
+    setIsMounted(true);
+  }, []);
 
   // 로그인 성공 시 호출
   const setUser = useCallback((newUser: UserSession) => {
     setUserState(newUser);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
-    } catch (e) {
-      console.warn('Failed to save user to localStorage:', e);
-    }
+    saveStoredUser(newUser);
   }, []);
 
   // 사용자 정보 부분 업데이트 (회원정보 수정 등)
@@ -101,11 +114,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
     setUserState(prev => {
       if (!prev) return prev;
       const updated = { ...prev, ...updates };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (e) {
-        console.warn('Failed to update user in localStorage:', e);
-      }
+      saveStoredUser(updated);
       return updated;
     });
   }, []);
@@ -113,22 +122,18 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
   // 로그아웃 시 호출
   const clearUser = useCallback(() => {
     setUserState(null);
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch (e) {
-      console.warn('Failed to remove user from localStorage:', e);
-    }
+    removeStoredUser();
   }, []);
 
-  // Context value 메모이제이션 (불필요한 리렌더링 방지)
+  // Context value 메모이제이션
   const value = useMemo<AuthContextValue>(() => ({
     user,
-    isInitialized,
+    isMounted,
     isAuthenticated: !!user,
     setUser,
     updateUser,
     clearUser,
-  }), [user, isInitialized, setUser, updateUser, clearUser]);
+  }), [user, isMounted, setUser, updateUser, clearUser]);
 
   return (
     <AuthContext.Provider value={value}>
@@ -146,16 +151,4 @@ export function useAuth(): AuthContextValue {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
-
-// Optional: 인증 필수 페이지용 Hook (미인증 시 에러)
-export function useRequireAuth(): AuthContextValue & { user: UserSession } {
-  const auth = useAuth();
-  if (!auth.isInitialized) {
-    throw new Error('Auth not initialized yet');
-  }
-  if (!auth.user) {
-    throw new Error('User not authenticated');
-  }
-  return auth as AuthContextValue & { user: UserSession };
 }
