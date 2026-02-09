@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FileSpreadsheet, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +24,7 @@ interface CompanyInfo {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { setUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -74,13 +76,10 @@ export default function LoginPage() {
         return;
       }
 
-      // 로그인 성공: localStorage에 사용자 정보 저장 (AuthContext에서 읽어감)
+      // 로그인 성공: AuthContext 상태 업데이트 (localStorage도 자동 저장됨)
+      // ⚠️ 중요: router.push 전에 setUser 호출하여 메모리 상태 먼저 업데이트
       if (result.data.user) {
-        try {
-          localStorage.setItem('cso_auth_user', JSON.stringify(result.data.user));
-        } catch (e) {
-          console.warn('Failed to save user to localStorage:', e);
-        }
+        setUser(result.data.user);
       }
 
       router.push(result.data.redirect);

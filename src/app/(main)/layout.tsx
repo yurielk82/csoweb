@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { Header } from '@/components/shared/header';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthSync } from '@/components/shared/AuthSync';
 
 export default async function MainLayout({
   children,
@@ -24,13 +24,15 @@ export default async function MainLayout({
   }
   
   return (
-    <AuthProvider initialUser={session}>
+    <>
+      {/* SSR 세션을 클라이언트 AuthContext에 동기화 */}
+      <AuthSync serverSession={session} />
       <div className="min-h-screen bg-gray-50">
         <Header />
         <main className="container mx-auto px-4 py-6">
           {children}
         </main>
       </div>
-    </AuthProvider>
+    </>
   );
 }
