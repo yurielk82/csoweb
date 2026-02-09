@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { Header } from '@/components/shared/header';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 export default async function MainLayout({
   children,
@@ -23,11 +24,13 @@ export default async function MainLayout({
   }
   
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header user={session} />
-      <main className="container mx-auto px-4 py-6">
-        {children}
-      </main>
-    </div>
+    <AuthProvider initialUser={session}>
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <main className="container mx-auto px-4 py-6">
+          {children}
+        </main>
+      </div>
+    </AuthProvider>
   );
 }

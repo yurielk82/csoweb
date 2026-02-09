@@ -20,7 +20,8 @@ import {
   UserCog,
   Search,
   Calculator,
-  ShieldCheck
+  ShieldCheck,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,24 +32,43 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import type { UserSession } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface HeaderProps {
-  user: UserSession;
-}
-
-export function Header({ user }: HeaderProps) {
+export function Header() {
   const router = useRouter();
+  const { user, isInitialized, clearUser } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
+      // 1. 클라이언트 상태 먼저 초기화 (즉각 UI 반영)
+      clearUser();
+      // 2. 서버 세션 삭제
       await fetch('/api/auth/logout', { method: 'POST' });
+      // 3. 로그인 페이지로 이동
       router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);
+      // 에러가 나도 로그인 페이지로 이동
+      router.push('/login');
     }
   };
+
+  // 초기화 전이거나 사용자 정보 없으면 로딩/빈 상태
+  if (!isInitialized || !user) {
+    return (
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 items-center">
+          <Link href="/" className="flex items-center gap-2 mr-6">
+            <FileSpreadsheet className="h-6 w-6 text-primary" />
+            <span className="font-bold text-lg hidden sm:inline">CSO Portal</span>
+          </Link>
+          <div className="flex-1" />
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      </header>
+    );
+  }
 
   const adminMenuItems = [
     { href: '/admin', label: '대시보드', icon: LayoutDashboard },

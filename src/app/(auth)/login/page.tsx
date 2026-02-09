@@ -74,6 +74,15 @@ export default function LoginPage() {
         return;
       }
 
+      // 로그인 성공: localStorage에 사용자 정보 저장 (AuthContext에서 읽어감)
+      if (result.data.user) {
+        try {
+          localStorage.setItem('cso_auth_user', JSON.stringify(result.data.user));
+        } catch (e) {
+          console.warn('Failed to save user to localStorage:', e);
+        }
+      }
+
       router.push(result.data.redirect);
     } catch {
       setError('로그인 중 오류가 발생했습니다.');
