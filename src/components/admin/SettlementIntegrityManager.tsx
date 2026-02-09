@@ -18,11 +18,10 @@ import {
   Calendar,
   UserPlus,
   Link2Off,
-  Eye,
-  EyeOff,
   Pencil,
   Trash2,
   Save,
+  Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -136,8 +135,9 @@ export default function SettlementIntegrityManager() {
   // State
   const [loading, setLoading] = useState(true);
   const [checkResults, setCheckResults] = useState<IntegrityCheckResult[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showIssuesOnly, setShowIssuesOnly] = useState(false);
+  const [searchInput, setSearchInput] = useState(''); // 입력 중인 검색어
+  const [searchQuery, setSearchQuery] = useState(''); // 실제 적용된 검색어
+  const [filterStatus, setFilterStatus] = useState<MatchingStatus | 'all' | 'issues'>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
 
@@ -158,6 +158,13 @@ export default function SettlementIntegrityManager() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<IntegrityCheckResult | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Add company dialog state (사업자번호 기준 거래처 추가)
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [addBusinessNumber, setAddBusinessNumber] = useState('');
+  const [addCompanyName, setAddCompanyName] = useState('');
+  const [addingCompany, setAddingCompany] = useState(false);
+  const [linkedCompanies, setLinkedCompanies] = useState<string[]>([]);
 
   // ===========================================
   // Data Fetching
@@ -205,24 +212,52 @@ export default function SettlementIntegrityManager() {
   const filteredResults = useMemo(() => {
     let results = checkResults;
 
-    // 검색 필터
+    // 검색 필터 (사업자번호 검색 시 연결된 모든 업체 노출)
     if (searchQuery.trim()) {
       const normalizedQuery = normalizeText(searchQuery);
-      results = results.filter(
-        (r) =>
-          normalizeText(r.cso_company_name).includes(normalizedQuery) ||
-          (r.business_number && r.business_number.includes(searchQuery.replace(/\D/g, ''))) ||
-          (r.erp_company_name && normalizeText(r.erp_company_name).includes(normalizedQuery))
-      );
+      const searchBizNum = searchQuery.replace(/\D/g, '');
+      
+      // 사업자번호로 검색한 경우, 해당 번호에 연결된 모든 업체 찾기
+      if (searchBizNum.length >= 3) {
+        const matchedBizNumbers = new Set<string>();
+        results.forEach((r) => {
+          if (r.business_number && r.business_number.includes(searchBizNum)) {
+            matchedBizNumbers.add(r.business_number);
+          }
+        });
+        
+        if (matchedBizNumbers.size > 0) {
+          results = results.filter(
+            (r) => r.business_number && matchedBizNumbers.has(r.business_number)
+          );
+        } else {
+          // 사업자번호 매칭 없으면 업체명으로 검색
+          results = results.filter(
+            (r) =>
+              normalizeText(r.cso_company_name).includes(normalizedQuery) ||
+              (r.erp_company_name && normalizeText(r.erp_company_name).includes(normalizedQuery))
+          );
+        }
+      } else {
+        // 짧은 검색어는 업체명으로 검색
+        results = results.filter(
+          (r) =>
+            normalizeText(r.cso_company_name).includes(normalizedQuery) ||
+            (r.business_number && r.business_number.includes(searchBizNum)) ||
+            (r.erp_company_name && normalizeText(r.erp_company_name).includes(normalizedQuery))
+        );
+      }
     }
 
-    // 문제 항목만 보기 필터
-    if (showIssuesOnly) {
+    // 상태 필터
+    if (filterStatus === 'issues') {
       results = results.filter((r) => r.status !== 'normal');
+    } else if (filterStatus !== 'all') {
+      results = results.filter((r) => r.status === filterStatus);
     }
 
     return results;
-  }, [checkResults, searchQuery, showIssuesOnly]);
+  }, [checkResults, searchQuery, filterStatus]);
 
   // ===========================================
   // Statistics
@@ -547,6 +582,164 @@ export default function SettlementIntegrityManager() {
   };
 
   // ===========================================
+  // 검색 핸들링 (Enter/클릭 트리거)
+  // ===========================================
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+  };
+
+  // ===========================================
+  // 사업자번호 기준 거래처 관리
+  // ===========================================
+  const openAddDialog = (businessNumber?: string) => {
+    setAddBusinessNumber(businessNumber || '');
+    setAddCompanyName('');
+    // 해당 사업자번호에 연결된 기존 거래처 목록 조회
+    if (businessNumber) {
+      const linked = checkResults
+        .filter((r) => r.business_number === businessNumber)
+        .map((r) => r.cso_company_name);
+      setLinkedCompanies(linked);
+    } else {
+      setLinkedCompanies([]);
+    }
+    setShowAddDialog(true);
+  };
+
+  const closeAddDialog = () => {
+    setShowAddDialog(false);
+    setAddBusinessNumber('');
+    setAddCompanyName('');
+    setLinkedCompanies([]);
+  };
+
+  // 사업자번호 변경 시 연결된 거래처 목록 업데이트
+  const handleBizNumChange = (value: string) => {
+    const cleanedBizNum = value.replace(/\D/g, '');
+    setAddBusinessNumber(cleanedBizNum);
+    
+    if (cleanedBizNum.length === 10) {
+      const linked = checkResults
+        .filter((r) => r.business_number === cleanedBizNum)
+        .map((r) => r.cso_company_name);
+      setLinkedCompanies(linked);
+    } else {
+      setLinkedCompanies([]);
+    }
+  };
+
+  const handleAddCompany = async () => {
+    const cleanedBizNum = addBusinessNumber.replace(/\D/g, '');
+    if (cleanedBizNum.length !== 10) {
+      toast({
+        variant: 'destructive',
+        title: '입력 오류',
+        description: '사업자번호는 10자리 숫자여야 합니다.',
+      });
+      return;
+    }
+
+    if (!addCompanyName.trim()) {
+      toast({
+        variant: 'destructive',
+        title: '입력 오류',
+        description: 'CSO관리업체명을 입력해주세요.',
+      });
+      return;
+    }
+
+    setAddingCompany(true);
+    try {
+      const res = await fetch('/api/admin/cso-matching/upsert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{
+            cso_company_name: addCompanyName.trim(),
+            business_number: cleanedBizNum,
+          }],
+        }),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        toast({
+          title: '거래처 추가 완료',
+          description: `"${addCompanyName}"이(가) 사업자번호 ${formatBusinessNumber(cleanedBizNum)}에 연결되었습니다.`,
+        });
+        // 목록 업데이트
+        setLinkedCompanies([...linkedCompanies, addCompanyName.trim()]);
+        setAddCompanyName('');
+        fetchIntegrityData();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: '추가 실패',
+          description: result.error,
+        });
+      }
+    } catch (error) {
+      console.error('Add company error:', error);
+      toast({
+        variant: 'destructive',
+        title: '오류',
+        description: '거래처 추가 중 오류가 발생했습니다.',
+      });
+    } finally {
+      setAddingCompany(false);
+    }
+  };
+
+  // 연결된 거래처 삭제
+  const handleRemoveLinkedCompany = async (companyName: string) => {
+    try {
+      const res = await fetch('/api/admin/cso-matching/upsert', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cso_company_name: companyName,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        toast({
+          title: '삭제 완료',
+          description: `"${companyName}" 매칭이 삭제되었습니다.`,
+        });
+        setLinkedCompanies(linkedCompanies.filter((c) => c !== companyName));
+        fetchIntegrityData();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: '삭제 실패',
+          description: result.error,
+        });
+      }
+    } catch (error) {
+      console.error('Remove company error:', error);
+      toast({
+        variant: 'destructive',
+        title: '오류',
+        description: '거래처 삭제 중 오류가 발생했습니다.',
+      });
+    }
+  };
+
+  // ===========================================
   // Render
   // ===========================================
   return (
@@ -563,6 +756,10 @@ export default function SettlementIntegrityManager() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="default" onClick={() => openAddDialog()}>
+            <Plus className="h-4 w-4 mr-2" />
+            거래처 추가
+          </Button>
           <Button variant="outline" onClick={() => setShowUploadDialog(true)}>
             <Upload className="h-4 w-4 mr-2" />
             매칭 데이터 업로드
@@ -574,9 +771,15 @@ export default function SettlementIntegrityManager() {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - 클릭 시 필터링 */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card>
+        <Card 
+          className={cn(
+            "cursor-pointer transition-all hover:shadow-md",
+            filterStatus === 'all' && "ring-2 ring-primary"
+          )}
+          onClick={() => setFilterStatus('all')}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">전체</CardTitle>
           </CardHeader>
@@ -584,7 +787,13 @@ export default function SettlementIntegrityManager() {
             <div className="text-2xl font-bold">{stats.total}</div>
           </CardContent>
         </Card>
-        <Card className="border-green-200 bg-green-50/50 dark:bg-green-950/20">
+        <Card 
+          className={cn(
+            "border-green-200 bg-green-50/50 dark:bg-green-950/20 cursor-pointer transition-all hover:shadow-md",
+            filterStatus === 'normal' && "ring-2 ring-green-500"
+          )}
+          onClick={() => setFilterStatus('normal')}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-1">
               <CheckCircle className="h-4 w-4" />
@@ -597,7 +806,13 @@ export default function SettlementIntegrityManager() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-red-200 bg-red-50/50 dark:bg-red-950/20">
+        <Card 
+          className={cn(
+            "border-red-200 bg-red-50/50 dark:bg-red-950/20 cursor-pointer transition-all hover:shadow-md",
+            filterStatus === 'unregistered' && "ring-2 ring-red-500"
+          )}
+          onClick={() => setFilterStatus('unregistered')}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-red-700 dark:text-red-400 flex items-center gap-1">
               <AlertCircle className="h-4 w-4" />
@@ -610,7 +825,13 @@ export default function SettlementIntegrityManager() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-950/20">
+        <Card 
+          className={cn(
+            "border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 cursor-pointer transition-all hover:shadow-md",
+            filterStatus === 'pending_join' && "ring-2 ring-orange-500"
+          )}
+          onClick={() => setFilterStatus('pending_join')}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-400 flex items-center gap-1">
               <UserPlus className="h-4 w-4" />
@@ -623,7 +844,13 @@ export default function SettlementIntegrityManager() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-yellow-200 bg-yellow-50/50 dark:bg-yellow-950/20">
+        <Card 
+          className={cn(
+            "border-yellow-200 bg-yellow-50/50 dark:bg-yellow-950/20 cursor-pointer transition-all hover:shadow-md",
+            filterStatus === 'missing_match' && "ring-2 ring-yellow-500"
+          )}
+          onClick={() => setFilterStatus('missing_match')}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-yellow-700 dark:text-yellow-500 flex items-center gap-1">
               <Link2Off className="h-4 w-4" />
@@ -636,12 +863,16 @@ export default function SettlementIntegrityManager() {
             </div>
           </CardContent>
         </Card>
-        <Card className={cn(
-          "border-2",
-          stats.issues > 0 
-            ? "border-red-500 bg-red-100/50 dark:bg-red-950/30" 
-            : "border-green-500 bg-green-100/50 dark:bg-green-950/30"
-        )}>
+        <Card 
+          className={cn(
+            "border-2 cursor-pointer transition-all hover:shadow-md",
+            stats.issues > 0 
+              ? "border-red-500 bg-red-100/50 dark:bg-red-950/30" 
+              : "border-green-500 bg-green-100/50 dark:bg-green-950/30",
+            filterStatus === 'issues' && "ring-2 ring-red-500"
+          )}
+          onClick={() => setFilterStatus('issues')}
+        >
           <CardHeader className="pb-2">
             <CardTitle className={cn(
               "text-sm font-medium flex items-center gap-1",
@@ -700,15 +931,37 @@ export default function SettlementIntegrityManager() {
         <CardContent className="pt-6">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="업체명, 사업자번호로 검색..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+              <div className="relative flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="업체명 또는 사업자번호로 검색 (Enter)"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                    className="pl-10 pr-10"
+                  />
+                  {searchInput && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                      onClick={clearSearch}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <Button onClick={handleSearch}>
+                  <Search className="h-4 w-4 mr-2" />
+                  검색
+                </Button>
               </div>
+              {searchQuery && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  &quot;{searchQuery}&quot; 검색 결과: {filteredResults.length}건
+                </p>
+              )}
             </div>
             <div className="flex gap-2 items-center">
               <select
@@ -723,20 +976,6 @@ export default function SettlementIntegrityManager() {
                   </option>
                 ))}
               </select>
-              <Button
-                variant={showIssuesOnly ? 'default' : 'outline'}
-                onClick={() => setShowIssuesOnly(!showIssuesOnly)}
-                className={cn(
-                  showIssuesOnly && 'bg-red-600 hover:bg-red-700'
-                )}
-              >
-                {showIssuesOnly ? (
-                  <Eye className="h-4 w-4 mr-2" />
-                ) : (
-                  <EyeOff className="h-4 w-4 mr-2" />
-                )}
-                문제 항목만 보기
-              </Button>
               <Button
                 variant="outline"
                 onClick={handleExportIssues}
@@ -803,11 +1042,15 @@ export default function SettlementIntegrityManager() {
                       </TableCell>
                       <TableCell className="font-mono text-sm">
                         {result.business_number ? (
-                          <span>
+                          <button
+                            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                            onClick={() => openAddDialog(result.business_number!)}
+                            title="사업자번호 기준 거래처 관리"
+                          >
                             {result.business_number.slice(0, 3)}-
                             {result.business_number.slice(3, 5)}-
                             {result.business_number.slice(5)}
-                          </span>
+                          </button>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
@@ -865,8 +1108,10 @@ export default function SettlementIntegrityManager() {
                         colSpan={7}
                         className="text-center py-12 text-muted-foreground"
                       >
-                        {showIssuesOnly
-                          ? '문제 항목이 없습니다.'
+                        {searchQuery
+                          ? `"${searchQuery}" 검색 결과가 없습니다.`
+                          : filterStatus !== 'all'
+                          ? '해당 상태의 항목이 없습니다.'
                           : '검증할 데이터가 없습니다.'}
                       </TableCell>
                     </TableRow>
@@ -1167,6 +1412,122 @@ export default function SettlementIntegrityManager() {
                 <Trash2 className="h-4 w-4 mr-2" />
               )}
               삭제
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Company Dialog (사업자번호 기준 거래처 관리) */}
+      <Dialog open={showAddDialog} onOpenChange={closeAddDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              거래처 추가 / 관리
+            </DialogTitle>
+            <DialogDescription>
+              사업자번호에 연결할 CSO관리업체명(거래처)을 추가하거나 관리합니다.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* 사업자번호 입력 */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                사업자번호 <span className="text-red-500">*</span>
+              </label>
+              <Input
+                placeholder="000-00-00000"
+                value={formatBusinessNumber(addBusinessNumber)}
+                onChange={(e) => handleBizNumChange(e.target.value)}
+                maxLength={12}
+                className="font-mono text-lg"
+              />
+              <p className="text-xs text-muted-foreground">
+                10자리 숫자를 입력하세요. 하이픈(-)은 자동으로 추가됩니다.
+              </p>
+            </div>
+
+            {/* 연결된 거래처 목록 */}
+            {addBusinessNumber.replace(/\D/g, '').length === 10 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  연결된 거래처 ({linkedCompanies.length}개)
+                </label>
+                {linkedCompanies.length > 0 ? (
+                  <div className="border rounded-md divide-y max-h-[150px] overflow-y-auto">
+                    {linkedCompanies.map((company) => (
+                      <div
+                        key={company}
+                        className="flex items-center justify-between p-2 hover:bg-muted/50"
+                      >
+                        <span className="text-sm">{company}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-100"
+                          onClick={() => handleRemoveLinkedCompany(company)}
+                          title="매칭 삭제"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground p-3 border rounded-md bg-muted/30">
+                    연결된 거래처가 없습니다.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* 새 거래처 추가 */}
+            {addBusinessNumber.replace(/\D/g, '').length === 10 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">새 거래처 추가</label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="CSO관리업체명 입력"
+                    value={addCompanyName}
+                    onChange={(e) => setAddCompanyName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && addCompanyName.trim()) {
+                        handleAddCompany();
+                      }
+                    }}
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={handleAddCompany}
+                    disabled={addingCompany || !addCompanyName.trim()}
+                  >
+                    {addingCompany ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* 안내 */}
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>1:N 매핑 안내</AlertTitle>
+              <AlertDescription className="text-sm">
+                <ul className="list-disc list-inside space-y-1 mt-2">
+                  <li>하나의 사업자번호에 여러 거래처(CSO관리업체명)를 연결할 수 있습니다.</li>
+                  <li>회원은 자신의 사업자번호에 연결된 모든 거래처의 정산 데이터를 조회합니다.</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeAddDialog}>
+              닫기
             </Button>
           </DialogFooter>
         </DialogContent>
