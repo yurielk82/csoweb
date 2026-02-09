@@ -266,6 +266,31 @@ export default function DashboardPage() {
     return <Loading text="정산서를 불러오는 중..." />;
   }
 
+  // 정산월 데이터가 아예 없는 경우 (CSO 매칭이 안 된 사용자)
+  if (!loading && yearMonths.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <FileSpreadsheet className="h-6 w-6" />
+            정산서 조회
+          </h1>
+          <p className="text-muted-foreground">월별 정산 내역을 조회하고 다운로드하세요.</p>
+        </div>
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <AlertCircle className="h-16 w-16 text-amber-500 mb-4" />
+            <h2 className="text-xl font-semibold text-amber-800 mb-2">조회 가능한 정산 데이터가 없습니다</h2>
+            <p className="text-amber-700 text-center max-w-md">
+              현재 회원님의 사업자번호와 매칭된 정산 데이터가 없습니다.<br />
+              관리자에게 문의하여 CSO 매칭 등록을 요청해주세요.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -491,8 +516,22 @@ export default function DashboardPage() {
                   </>
                 ) : (
                   <tr>
-                    <td colSpan={displayColumns.length} className="text-center py-8 text-muted-foreground">
-                      데이터가 없습니다.
+                    <td colSpan={displayColumns.length} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-3">
+                        <FileSpreadsheet className="h-12 w-12 text-muted-foreground/50" />
+                        <div className="space-y-1">
+                          <p className="text-lg font-medium text-muted-foreground">
+                            {selectedMonth ? `${selectedMonth} 정산 데이터가 없습니다.` : '정산 데이터가 없습니다.'}
+                          </p>
+                          <p className="text-sm text-muted-foreground/70">
+                            {yearMonths.length === 0 
+                              ? '아직 등록된 정산 데이터가 없습니다. 관리자에게 문의해주세요.'
+                              : search 
+                                ? `"${search}" 검색 결과가 없습니다. 다른 검색어를 입력해보세요.`
+                                : '해당 월에 매칭된 정산 내역이 없습니다.'}
+                          </p>
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 )}
