@@ -205,12 +205,12 @@ export default function LoginPage() {
               className="inline-flex items-center gap-1.5 hover:opacity-80 transition-opacity"
               title="공공누리 제1유형: 출처표시"
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
-                src="https://www.kogl.or.kr/open/web/images/images_2014/codetype/new_img_opencode1.jpg" 
+                src="/images/kogl_type1.png" 
                 alt="공공누리 제1유형" 
                 className="h-5"
               />
-              <span className="text-[10px] text-muted-foreground/70 hidden sm:inline">출처표시</span>
             </a>
             <span className="text-muted-foreground/30">|</span>
             {/* CC BY 4.0 라이선스 */}
