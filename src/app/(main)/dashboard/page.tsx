@@ -59,8 +59,12 @@ interface NoticeSettings {
 }
 
 export default function DashboardPage() {
-  const [loading, setLoading] = useState(true);
+  // 로딩 상태 관리
+  const [initialLoading, setInitialLoading] = useState(true); // 최초 진입 시 정산월 목록 로딩
+  const [dataLoading, setDataLoading] = useState(false); // 정산 데이터 로딩
   const [downloading, setDownloading] = useState(false);
+  
+  // 데이터 상태
   const [data, setData] = useState<SettlementResponse | null>(null);
   const [columns, setColumns] = useState<ColumnSetting[]>([]);
   const [yearMonths, setYearMonths] = useState<string[]>([]);
@@ -69,6 +73,10 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [noticeSettings, setNoticeSettings] = useState<NoticeSettings | null>(null);
+  
+  // 에러 상태
+  const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<'network' | 'auth' | 'no_data' | 'no_matching' | null>(null);
 
   // Fetch column settings
   useEffect(() => {
@@ -84,21 +92,61 @@ export default function DashboardPage() {
             .map((c: ColumnSetting) => c.column_key);
           setSelectedColumns(requiredKeys.length > 0 ? requiredKeys : visibleColumns.map((c: ColumnSetting) => c.column_key));
         }
+      })
+      .catch(err => {
+        console.error('Fetch columns error:', err);
       });
   }, []);
 
   // Fetch available settlement months
   useEffect(() => {
-    fetch('/api/settlements/year-months')
-      .then(res => res.json())
-      .then(result => {
-        if (result.success) {
-          setYearMonths(result.data);
-          if (result.data.length > 0) {
-            setSelectedMonth(result.data[0]);
-          }
+    const fetchYearMonths = async () => {
+      try {
+        const res = await fetch('/api/settlements/year-months');
+        
+        // 인증 오류 체크
+        if (res.status === 401) {
+          setError('로그인이 필요합니다. 다시 로그인해주세요.');
+          setErrorType('auth');
+          setInitialLoading(false);
+          return;
         }
-      });
+        
+        // 서버 오류 체크
+        if (!res.ok) {
+          setError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+          setErrorType('network');
+          setInitialLoading(false);
+          return;
+        }
+        
+        const result = await res.json();
+        
+        if (result.success) {
+          const months = result.data || [];
+          setYearMonths(months);
+          
+          if (months.length > 0) {
+            setSelectedMonth(months[0]);
+          } else {
+            // 정산월이 없는 경우 - CSO 매칭이 안 된 사용자
+            setErrorType('no_matching');
+          }
+        } else {
+          // API 응답은 성공했지만 데이터 없음
+          setError(result.error || '정산월 목록을 불러올 수 없습니다.');
+          setErrorType('no_data');
+        }
+      } catch (err) {
+        console.error('Fetch year-months error:', err);
+        setError('네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.');
+        setErrorType('network');
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+    
+    fetchYearMonths();
   }, []);
 
   // Fetch notice settings
@@ -115,9 +163,17 @@ export default function DashboardPage() {
 
   // Fetch settlements
   const fetchSettlements = useCallback(async () => {
-    if (!selectedMonth) return;
+    // 정산월이 없으면 스킵 (에러 아님, 단순히 선택 안 됨)
+    if (!selectedMonth) {
+      return;
+    }
     
-    setLoading(true);
+    setDataLoading(true);
+    // 데이터 로딩 시 에러 타입은 유지하되 메시지만 초기화
+    if (errorType !== 'no_matching' && errorType !== 'auth') {
+      setError(null);
+    }
+    
     try {
       const params = new URLSearchParams({
         settlement_month: selectedMonth,
@@ -127,17 +183,44 @@ export default function DashboardPage() {
       if (search) params.set('search', search);
 
       const res = await fetch(`/api/settlements?${params}`);
+      
+      // 인증 오류
+      if (res.status === 401) {
+        setError('세션이 만료되었습니다. 다시 로그인해주세요.');
+        setErrorType('auth');
+        setDataLoading(false);
+        return;
+      }
+      
+      // 서버 오류
+      if (!res.ok) {
+        setError('정산 데이터를 불러오는 중 서버 오류가 발생했습니다.');
+        setErrorType('network');
+        setDataLoading(false);
+        return;
+      }
+      
       const result = await res.json();
       
       if (result.success) {
         setData(result.data);
+        // 데이터 로드 성공 시 에러 상태 초기화
+        if (errorType !== 'no_matching') {
+          setError(null);
+          setErrorType(null);
+        }
+      } else {
+        setError(result.error || '정산 데이터를 불러오는 중 오류가 발생했습니다.');
+        setErrorType('no_data');
       }
-    } catch (error) {
-      console.error('Fetch settlements error:', error);
+    } catch (err) {
+      console.error('Fetch settlements error:', err);
+      setError('네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.');
+      setErrorType('network');
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
-  }, [selectedMonth, page, search]);
+  }, [selectedMonth, page, search, errorType]);
 
   useEffect(() => {
     fetchSettlements();
@@ -262,12 +345,74 @@ export default function DashboardPage() {
     }
   }
 
-  if (loading && !data) {
-    return <Loading text="정산서를 불러오는 중..." />;
+  // 1. 초기 로딩 중 (정산월 목록 가져오는 중)
+  if (initialLoading) {
+    return <Loading text="정산 정보를 확인하는 중..." />;
   }
 
-  // 정산월 데이터가 아예 없는 경우 (CSO 매칭이 안 된 사용자)
-  if (!loading && yearMonths.length === 0) {
+  // 2. 인증 오류 (로그인 필요)
+  if (errorType === 'auth') {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <FileSpreadsheet className="h-6 w-6" />
+            정산서 조회
+          </h1>
+          <p className="text-muted-foreground">월별 정산 내역을 조회하고 다운로드하세요.</p>
+        </div>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
+            <h2 className="text-xl font-semibold text-red-800 mb-2">로그인이 필요합니다</h2>
+            <p className="text-red-700 text-center max-w-md mb-4">
+              {error || '세션이 만료되었거나 로그인이 필요합니다.'}
+            </p>
+            <Button 
+              variant="destructive"
+              onClick={() => window.location.href = '/login'}
+            >
+              로그인 페이지로 이동
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // 3. 네트워크 오류
+  if (errorType === 'network' && !data) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <FileSpreadsheet className="h-6 w-6" />
+            정산서 조회
+          </h1>
+          <p className="text-muted-foreground">월별 정산 내역을 조회하고 다운로드하세요.</p>
+        </div>
+        <Card className="border-gray-200 bg-gray-50">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <RefreshCw className="h-16 w-16 text-gray-400 mb-4" />
+            <h2 className="text-xl font-semibold text-gray-700 mb-2">연결 오류</h2>
+            <p className="text-gray-600 text-center max-w-md mb-4">
+              {error || '서버와 연결할 수 없습니다. 인터넷 연결을 확인해주세요.'}
+            </p>
+            <Button 
+              variant="outline"
+              onClick={() => window.location.reload()}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              새로고침
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // 4. CSO 매칭 없음 (정산월 목록이 비어있음)
+  if (yearMonths.length === 0 || errorType === 'no_matching') {
     return (
       <div className="space-y-6">
         <div>
@@ -285,6 +430,13 @@ export default function DashboardPage() {
               현재 회원님의 사업자번호와 매칭된 정산 데이터가 없습니다.<br />
               관리자에게 문의하여 CSO 매칭 등록을 요청해주세요.
             </p>
+            <div className="mt-4 p-3 bg-amber-100 rounded-lg text-sm text-amber-800">
+              <p><strong>문의 시 안내사항:</strong></p>
+              <ul className="list-disc list-inside mt-1 space-y-1">
+                <li>가입 시 등록한 사업자번호 확인</li>
+                <li>CSO 업체명 및 거래처명 확인</li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -306,12 +458,12 @@ export default function DashboardPage() {
           <Button 
             variant="outline" 
             onClick={fetchSettlements}
-            disabled={loading}
+            disabled={dataLoading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${dataLoading ? 'animate-spin' : ''}`} />
             새로고침
           </Button>
-          <Button onClick={handleExport} disabled={downloading || !data?.settlements.length}>
+          <Button onClick={handleExport} disabled={downloading || dataLoading || !data?.settlements.length}>
             {downloading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
