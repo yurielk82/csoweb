@@ -153,8 +153,9 @@ export default function LoginPage() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white/50 border-t py-2 px-4">
-        <div className="max-w-6xl mx-auto text-xs text-muted-foreground">
+      <footer className="bg-white/50 border-t py-3 px-4">
+        <div className="max-w-6xl mx-auto text-xs text-muted-foreground space-y-2">
+          {/* 회사 정보 */}
           <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5">
             {companyInfo?.company_name && (
               <span className="font-medium text-foreground">{companyInfo.company_name}</span>
@@ -190,12 +191,48 @@ export default function LoginPage() {
                 {companyInfo.website}
               </a>
             )}
-            {/* 구분선 - 회사정보가 있을 때만 */}
-            {companyInfo && (companyInfo.company_name || companyInfo.phone) && (
-              <span className="text-muted-foreground/50">|</span>
-            )}
-            {/* 저작권 문구 - 고정 */}
-            <span>© 2026 KDH | Sales Management Team. All rights reserved.</span>
+          </div>
+          
+          {/* 저작권 및 라이선스 정보 */}
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-1 border-t border-muted-foreground/10">
+            <span>© 2026 KDH | Sales Management Team</span>
+            <span className="text-muted-foreground/30">|</span>
+            {/* 공공데이터 KOGL 라이선스 */}
+            <a 
+              href="https://www.kogl.or.kr/info/license.do" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
+              title="공공누리 제1유형"
+            >
+              <img 
+                src="https://www.data.go.kr/images/bbs/kogl_type1.png" 
+                alt="KOGL Type 1" 
+                className="h-4"
+              />
+              <span className="text-[10px] text-muted-foreground/70">공공데이터</span>
+            </a>
+            <span className="text-muted-foreground/30">|</span>
+            {/* CC BY 4.0 라이선스 */}
+            <a 
+              href="https://creativecommons.org/licenses/by/4.0/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
+              title="CC BY 4.0 라이선스"
+            >
+              <img 
+                src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" 
+                alt="CC" 
+                className="h-3.5 w-3.5"
+              />
+              <img 
+                src="https://mirrors.creativecommons.org/presskit/icons/by.svg" 
+                alt="BY" 
+                className="h-3.5 w-3.5"
+              />
+              <span className="text-[10px] text-muted-foreground/70">CC BY 4.0</span>
+            </a>
           </div>
         </div>
       </footer>
