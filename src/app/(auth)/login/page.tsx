@@ -197,20 +197,20 @@ export default function LoginPage() {
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-1 border-t border-muted-foreground/10">
             <span>© 2026 KDH | Sales Management Team</span>
             <span className="text-muted-foreground/30">|</span>
-            {/* 공공데이터 KOGL 라이선스 */}
+            {/* 공공누리 KOGL 제1유형 라이선스 */}
             <a 
-              href="https://www.kogl.or.kr/info/license.do" 
+              href="https://www.kogl.or.kr/info/license.do#702" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
-              title="공공누리 제1유형"
+              className="inline-flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+              title="공공누리 제1유형: 출처표시"
             >
               <img 
-                src="https://www.data.go.kr/images/bbs/kogl_type1.png" 
-                alt="KOGL Type 1" 
-                className="h-4"
+                src="https://www.kogl.or.kr/open/web/images/images_2014/codetype/new_img_opencode1.jpg" 
+                alt="공공누리 제1유형" 
+                className="h-5"
               />
-              <span className="text-[10px] text-muted-foreground/70">공공데이터</span>
+              <span className="text-[10px] text-muted-foreground/70 hidden sm:inline">출처표시</span>
             </a>
             <span className="text-muted-foreground/30">|</span>
             {/* CC BY 4.0 라이선스 */}
