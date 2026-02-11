@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   AlertCircle,
@@ -89,6 +89,67 @@ function formatBusinessNumber(value: string): string {
 }
 
 // ===========================================
+// Mapping Status Icon Component
+// ===========================================
+interface MappingStatusIconProps {
+  row: IntegrityRow;
+}
+
+const MappingStatusIcon = memo(function MappingStatusIcon({ row }: MappingStatusIconProps) {
+  // 매핑 완료: CSO업체명이 1개 이상 && 회원가입 상태가 '가입'
+  // 미완료: CSO업체명이 없거나 회원가입 상태가 '미가입'
+  const hasCSO = row.cso_company_names.length > 0;
+  const isRegistered = row.registration_status === 'registered';
+  
+  if (isRegistered && hasCSO) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="text-green-500 cursor-help text-base" title="매핑완료">✅</span>
+          </TooltipTrigger>
+          <TooltipContent className="bg-green-600 text-white">
+            <p>매핑완료: 회원가입 O, CSO매핑 O</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+  
+  if (!isRegistered || !hasCSO) {
+    const reasons: string[] = [];
+    if (!isRegistered) reasons.push('회원 미가입');
+    if (!hasCSO) reasons.push('CSO 미매핑');
+    
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="text-amber-500 cursor-help text-base" title="미완료">⚠️</span>
+          </TooltipTrigger>
+          <TooltipContent className="bg-amber-500 text-white">
+            <p>미완료: {reasons.join(', ')}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+  
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="text-red-500 cursor-help text-base" title="오류">❌</span>
+        </TooltipTrigger>
+        <TooltipContent className="bg-red-600 text-white">
+          <p>데이터 오류</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+});
+
+// ===========================================
 // Status Badge Component
 // ===========================================
 function StatusBadge({ status }: { status: RegistrationStatus }) {
@@ -97,21 +158,21 @@ function StatusBadge({ status }: { status: RegistrationStatus }) {
       return (
         <Badge className="bg-green-600 hover:bg-green-700 text-white font-medium px-2 py-0.5 text-xs">
           <UserCheck className="h-3 w-3 mr-1" />
-          정상
+          가입
         </Badge>
       );
     case 'unregistered':
       return (
         <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-2 py-0.5 text-xs">
           <UserX className="h-3 w-3 mr-1" />
-          미등록
+          미가입
         </Badge>
       );
     case 'pending_approval':
       return (
-        <Badge className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-2 py-0.5 text-xs">
+        <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-2 py-0.5 text-xs">
           <Clock className="h-3 w-3 mr-1" />
-          승인대기
+          미가입
         </Badge>
       );
     default:
@@ -370,7 +431,7 @@ export default function SettlementIntegrityManager() {
   const [csoMapping, setCsoMapping] = useState<Record<string, string>>({}); // CSO명 → 사업자번호
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<RegistrationStatus | 'all' | 'no_cso'>('all');
+  const [filterStatus, setFilterStatus] = useState<'registered' | 'unregistered' | 'all' | 'no_cso'>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
 
@@ -461,8 +522,13 @@ export default function SettlementIntegrityManager() {
     // 상태 필터
     if (filterStatus === 'no_cso') {
       results = results.filter((r) => r.cso_company_names.length === 0);
-    } else if (filterStatus !== 'all') {
-      results = results.filter((r) => r.registration_status === filterStatus);
+    } else if (filterStatus === 'unregistered') {
+      // 미가입 = 미등록 + 승인대기
+      results = results.filter((r) => 
+        r.registration_status === 'unregistered' || r.registration_status === 'pending_approval'
+      );
+    } else if (filterStatus === 'registered') {
+      results = results.filter((r) => r.registration_status === 'registered');
     }
 
     return results;
@@ -472,12 +538,17 @@ export default function SettlementIntegrityManager() {
   // Statistics
   // ===========================================
   const stats = useMemo(() => {
+    const registered = tableData.filter((r) => r.registration_status === 'registered').length;
+    const unregisteredCount = tableData.filter((r) => 
+      r.registration_status === 'unregistered' || r.registration_status === 'pending_approval'
+    ).length;
+    const no_cso = tableData.filter((r) => r.cso_company_names.length === 0).length;
+    
     return {
       total: tableData.length,
-      registered: tableData.filter((r) => r.registration_status === 'registered').length,
-      unregistered: tableData.filter((r) => r.registration_status === 'unregistered').length,
-      pending_approval: tableData.filter((r) => r.registration_status === 'pending_approval').length,
-      no_cso: tableData.filter((r) => r.cso_company_names.length === 0).length,
+      registered,
+      unregistered: unregisteredCount, // 미가입 = 미등록 + 승인대기
+      no_cso,
     };
   }, [tableData]);
 
@@ -775,12 +846,12 @@ export default function SettlementIntegrityManager() {
         setNewBusinessName(user.company_name);
         toast({
           title: '회원 확인',
-          description: `${user.company_name} (${user.is_approved ? '승인완료' : '승인대기'})`,
+          description: `${user.company_name} (${user.is_approved ? '가입' : '미가입'})`,
         });
       } else {
         setVerifiedUser(null);
         toast({
-          title: '미등록 사업자',
+          title: '미가입 사업자',
           description: '회원가입되지 않은 사업자번호입니다. 사업자명을 직접 입력하세요.',
         });
       }
@@ -982,12 +1053,11 @@ export default function SettlementIntegrityManager() {
       const XLSX = await import('xlsx');
 
       const exportData = filteredData
-        .filter((r) => r.registration_status === 'unregistered' || r.cso_company_names.length === 0)
+        .filter((r) => r.registration_status !== 'registered' || r.cso_company_names.length === 0)
         .map((r) => ({
           '사업자번호': formatBusinessNumber(r.business_number),
           '사업자명': r.business_name || '-',
-          '회원가입상태': r.registration_status === 'registered' ? '정상' :
-                        r.registration_status === 'unregistered' ? '미등록' : '승인대기',
+          '회원가입상태': r.registration_status === 'registered' ? '가입' : '미가입',
           'CSO관리업체명': r.cso_company_names.join(', ') || '-',
           '마지막정산월': r.last_settlement_month || '-',
           '정산건수': r.row_count,
@@ -1058,8 +1128,8 @@ export default function SettlementIntegrityManager() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      {/* Stats Cards - 4개로 간소화: 전체, 가입, 미가입, CSO미매핑 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card
           className={cn(
             "cursor-pointer transition-all hover:shadow-md",
@@ -1084,7 +1154,7 @@ export default function SettlementIntegrityManager() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-1">
               <UserCheck className="h-4 w-4" />
-              정상
+              가입
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1103,31 +1173,12 @@ export default function SettlementIntegrityManager() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1">
               <UserX className="h-4 w-4" />
-              미등록
+              미가입
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">
               {stats.unregistered}
-            </div>
-          </CardContent>
-        </Card>
-        <Card
-          className={cn(
-            "border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 cursor-pointer transition-all hover:shadow-md",
-            filterStatus === 'pending_approval' && "ring-2 ring-orange-500"
-          )}
-          onClick={() => setFilterStatus('pending_approval')}
-        >
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-400 flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              승인대기
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">
-              {stats.pending_approval}
             </div>
           </CardContent>
         </Card>
@@ -1161,7 +1212,7 @@ export default function SettlementIntegrityManager() {
             <ul className="space-y-1 text-sm">
               {stats.unregistered > 0 && (
                 <li>
-                  <span className="font-semibold text-amber-700">미등록 {stats.unregistered}건:</span>{' '}
+                  <span className="font-semibold text-amber-700">미가입 {stats.unregistered}건:</span>{' '}
                   회원가입되지 않은 사업자번호입니다.
                 </li>
               )}
@@ -1269,7 +1320,8 @@ export default function SettlementIntegrityManager() {
                 </TableHeader>
                 <TableBody>
                   {filteredData.map((row) => {
-                    const isUnregistered = row.registration_status === 'unregistered';
+                    // 미가입 = unregistered + pending_approval
+                    const isUnregistered = row.registration_status === 'unregistered' || row.registration_status === 'pending_approval';
                     const hasNoCso = row.cso_company_names.length === 0;
 
                     return (
@@ -1284,18 +1336,21 @@ export default function SettlementIntegrityManager() {
                         )}
                       >
                         <TableCell className="font-mono text-sm">
-                          {row.is_readonly ? (
-                            <span className="text-gray-600">{formatBusinessNumber(row.business_number)}</span>
-                          ) : (
-                            <EditableCell
-                              value={row.business_number}
-                              onChange={() => {
-                                // TODO: 사업자번호 수정 시 회원 검증 + 저장
-                              }}
-                              format={formatBusinessNumber}
-                              className="font-mono"
-                            />
-                          )}
+                          <div className="flex items-center gap-2">
+                            <MappingStatusIcon row={row} />
+                            {row.is_readonly ? (
+                              <span className="text-gray-600">{formatBusinessNumber(row.business_number)}</span>
+                            ) : (
+                              <EditableCell
+                                value={row.business_number}
+                                onChange={() => {
+                                  // TODO: 사업자번호 수정 시 회원 검증 + 저장
+                                }}
+                                format={formatBusinessNumber}
+                                className="font-mono"
+                              />
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           {row.is_readonly ? (
@@ -1569,7 +1624,7 @@ export default function SettlementIntegrityManager() {
               </div>
               {verifiedUser && (
                 <p className="text-sm text-green-600">
-                  ✓ {verifiedUser.company_name} ({verifiedUser.is_approved ? '승인완료' : '승인대기'})
+                  ✓ {verifiedUser.company_name} ({verifiedUser.is_approved ? '가입' : '미가입'})
                 </p>
               )}
             </div>
