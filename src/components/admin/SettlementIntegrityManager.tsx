@@ -3,8 +3,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
-  AlertCircle,
-  AlertTriangle,
   Upload,
   FileSpreadsheet,
   Search,
@@ -19,12 +17,16 @@ import {
   Clock,
   Trash2,
   Plus,
+  FileText,
+  CheckCircle2,
+  CircleAlert,
+  Database,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+// Alert 컬포넌트는 사용하지 않음
 import { Progress } from '@/components/ui/progress';
 import {
   Table,
@@ -431,7 +433,8 @@ export default function SettlementIntegrityManager() {
   const [csoMapping, setCsoMapping] = useState<Record<string, string>>({}); // CSO명 → 사업자번호
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'registered' | 'unregistered' | 'all' | 'no_cso'>('all');
+  // 새로운 필터 상태: all, settlement, complete, not_registered, no_cso
+  const [filterStatus, setFilterStatus] = useState<'all' | 'settlement' | 'complete' | 'not_registered' | 'no_cso'>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
 
@@ -520,35 +523,59 @@ export default function SettlementIntegrityManager() {
     }
 
     // 상태 필터
-    if (filterStatus === 'no_cso') {
-      results = results.filter((r) => r.cso_company_names.length === 0);
-    } else if (filterStatus === 'unregistered') {
-      // 미가입 = 미등록 + 승인대기
+    if (filterStatus === 'settlement') {
+      // 정산서: row_count > 0인 항목 (정산서DB에 등장한 CSO관리업체가 있는 경우)
+      results = results.filter((r) => r.row_count > 0);
+    } else if (filterStatus === 'complete') {
+      // 매핑완료: CSO매핑 O + 회원가입 O
       results = results.filter((r) => 
-        r.registration_status === 'unregistered' || r.registration_status === 'pending_approval'
+        r.cso_company_names.length > 0 && r.registration_status === 'registered'
       );
-    } else if (filterStatus === 'registered') {
-      results = results.filter((r) => r.registration_status === 'registered');
+    } else if (filterStatus === 'not_registered') {
+      // 회원 미가입: CSO매핑 O + 회원가입 X
+      results = results.filter((r) => 
+        r.cso_company_names.length > 0 && 
+        (r.registration_status === 'unregistered' || r.registration_status === 'pending_approval')
+      );
+    } else if (filterStatus === 'no_cso') {
+      // CSO관리업체 미입력: row_count > 0이지만 CSO매핑이 없는 경우
+      // 또는 회원이지만 CSO매핑이 없는 경우
+      results = results.filter((r) => r.cso_company_names.length === 0);
     }
 
     return results;
   }, [tableData, searchQuery, filterStatus]);
 
   // ===========================================
-  // Statistics
+  // Statistics - 새로운 필터 카드용
   // ===========================================
   const stats = useMemo(() => {
-    const registered = tableData.filter((r) => r.registration_status === 'registered').length;
-    const unregisteredCount = tableData.filter((r) => 
-      r.registration_status === 'unregistered' || r.registration_status === 'pending_approval'
+    // 전체: 매핑테이블에 등록된 전체 사업자 수
+    const total = tableData.length;
+    
+    // 정산서: 정산서DB에 등장한 CSO관리업체 기준 매핑 대상 수 (row_count > 0)
+    const settlement = tableData.filter((r) => r.row_count > 0).length;
+    
+    // 매핑완료: CSO매핑 O + 회원가입 O
+    const complete = tableData.filter((r) => 
+      r.cso_company_names.length > 0 && r.registration_status === 'registered'
     ).length;
-    const no_cso = tableData.filter((r) => r.cso_company_names.length === 0).length;
+    
+    // 회원 미가입: CSO매핑 O + 회원가입 X
+    const notRegistered = tableData.filter((r) => 
+      r.cso_company_names.length > 0 && 
+      (r.registration_status === 'unregistered' || r.registration_status === 'pending_approval')
+    ).length;
+    
+    // CSO관리업체 미입력: CSO매핑이 없는 항목
+    const noCso = tableData.filter((r) => r.cso_company_names.length === 0).length;
     
     return {
-      total: tableData.length,
-      registered,
-      unregistered: unregisteredCount, // 미가입 = 미등록 + 승인대기
-      no_cso,
+      total,
+      settlement,
+      complete,
+      notRegistered,
+      noCso,
     };
   }, [tableData]);
 
@@ -1128,104 +1155,108 @@ export default function SettlementIntegrityManager() {
         </div>
       </div>
 
-      {/* Stats Cards - 4개로 간소화: 전체, 가입, 미가입, CSO미매핑 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {/* Stats Cards - 5개 카드: 전체, 정산서, 매핑완료, 회원 미가입, CSO관리업체 미입력 */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        {/* 전체 - 파란색 */}
         <Card
           className={cn(
-            "cursor-pointer transition-all hover:shadow-md",
-            filterStatus === 'all' && "ring-2 ring-primary"
+            "cursor-pointer transition-all hover:shadow-md border-blue-200 bg-blue-50/50 dark:bg-blue-950/20",
+            filterStatus === 'all' && "ring-2 ring-blue-500"
           )}
           onClick={() => setFilterStatus('all')}
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">전체</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card
-          className={cn(
-            "border-green-200 bg-green-50/50 dark:bg-green-950/20 cursor-pointer transition-all hover:shadow-md",
-            filterStatus === 'registered' && "ring-2 ring-green-500"
-          )}
-          onClick={() => setFilterStatus('registered')}
-        >
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-1">
-              <UserCheck className="h-4 w-4" />
-              가입
+            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-400 flex items-center gap-1">
+              <Database className="h-4 w-4" />
+              전체
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-700 dark:text-green-400">
-              {stats.registered}
-            </div>
+            <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{stats.total}</div>
+            <p className="text-xs text-muted-foreground mt-1">매핑테이블에 등록된 전체 사업자</p>
           </CardContent>
         </Card>
+
+        {/* 정산서 - 회색 */}
         <Card
           className={cn(
-            "border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 cursor-pointer transition-all hover:shadow-md",
-            filterStatus === 'unregistered' && "ring-2 ring-amber-500"
+            "cursor-pointer transition-all hover:shadow-md",
+            filterStatus === 'settlement' && "ring-2 ring-gray-500"
           )}
-          onClick={() => setFilterStatus('unregistered')}
+          onClick={() => setFilterStatus('settlement')}
+        >
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+              <FileText className="h-4 w-4" />
+              정산서
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.settlement}</div>
+            <p className="text-xs text-muted-foreground mt-1">정산서에 등장한 매핑 대상</p>
+          </CardContent>
+        </Card>
+
+        {/* 매핑완료 - 초록색 */}
+        <Card
+          className={cn(
+            "cursor-pointer transition-all hover:shadow-md border-green-200 bg-green-50/50 dark:bg-green-950/20",
+            filterStatus === 'complete' && "ring-2 ring-green-500"
+          )}
+          onClick={() => setFilterStatus('complete')}
+        >
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-1">
+              <CheckCircle2 className="h-4 w-4" />
+              매핑완료
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-700 dark:text-green-400">{stats.complete}</div>
+            <p className="text-xs text-muted-foreground mt-1">CSO매핑 + 회원가입 완료</p>
+          </CardContent>
+        </Card>
+
+        {/* 회원 미가입 - 노란색 */}
+        <Card
+          className={cn(
+            "cursor-pointer transition-all hover:shadow-md border-amber-200 bg-amber-50/50 dark:bg-amber-950/20",
+            filterStatus === 'not_registered' && "ring-2 ring-amber-500"
+          )}
+          onClick={() => setFilterStatus('not_registered')}
         >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1">
               <UserX className="h-4 w-4" />
-              미가입
+              회원 미가입
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">
-              {stats.unregistered}
-            </div>
+            <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">{stats.notRegistered}</div>
+            <p className="text-xs text-muted-foreground mt-1">매핑 O · 회원가입 유도 필요</p>
           </CardContent>
         </Card>
+
+        {/* CSO관리업체 미입력 - 빨간색 */}
         <Card
           className={cn(
-            "border-red-200 bg-red-50/50 dark:bg-red-950/20 cursor-pointer transition-all hover:shadow-md",
+            "cursor-pointer transition-all hover:shadow-md border-red-200 bg-red-50/50 dark:bg-red-950/20",
             filterStatus === 'no_cso' && "ring-2 ring-red-500"
           )}
           onClick={() => setFilterStatus('no_cso')}
         >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-red-700 dark:text-red-400 flex items-center gap-1">
-              <AlertCircle className="h-4 w-4" />
-              CSO미매핑
+              <CircleAlert className="h-4 w-4" />
+              CSO미입력
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-700 dark:text-red-400">
-              {stats.no_cso}
-            </div>
+            <div className="text-2xl font-bold text-red-700 dark:text-red-400">{stats.noCso}</div>
+            <p className="text-xs text-muted-foreground mt-1">CSO관리업체 즉시 입력 필요</p>
           </CardContent>
         </Card>
       </div>
-
-      {/* Issue Alert */}
-      {(stats.unregistered > 0 || stats.no_cso > 0) && (
-        <Alert variant="destructive" className="border-2 border-red-500 bg-red-50 dark:bg-red-950/50">
-          <AlertTriangle className="h-5 w-5" />
-          <AlertTitle className="text-lg font-bold">주의: 매핑 필요</AlertTitle>
-          <AlertDescription className="mt-2">
-            <ul className="space-y-1 text-sm">
-              {stats.unregistered > 0 && (
-                <li>
-                  <span className="font-semibold text-amber-700">미가입 {stats.unregistered}건:</span>{' '}
-                  회원가입되지 않은 사업자번호입니다.
-                </li>
-              )}
-              {stats.no_cso > 0 && (
-                <li>
-                  <span className="font-semibold text-red-700">CSO미매핑 {stats.no_cso}건:</span>{' '}
-                  CSO관리업체명이 연결되지 않았습니다.
-                </li>
-              )}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {/* Filters */}
       <Card>
@@ -1278,7 +1309,7 @@ export default function SettlementIntegrityManager() {
               <Button
                 variant="outline"
                 onClick={handleExportIssues}
-                disabled={stats.unregistered + stats.no_cso === 0}
+                disabled={stats.notRegistered + stats.noCso === 0}
               >
                 <Download className="h-4 w-4 mr-2" />
                 문제항목 다운로드
