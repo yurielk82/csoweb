@@ -434,7 +434,7 @@ export default function SettlementIntegrityManager() {
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   // 새로운 필터 상태: all, settlement, complete, not_registered, no_cso
-  const [filterStatus, setFilterStatus] = useState<'all' | 'settlement' | 'complete' | 'not_registered' | 'no_cso'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'settlement' | 'complete' | 'not_registered' | 'no_cso'>('settlement');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
 
@@ -1174,42 +1174,42 @@ export default function SettlementIntegrityManager() {
 
       {/* Stats Cards - 5개 카드: 전체, 정산서, 매핑완료, 회원 미가입, CSO관리업체 미입력 */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {/* 전체 - 파란색 */}
+        {/* 전체 - 회색 */}
         <Card
           className={cn(
-            "cursor-pointer transition-all hover:shadow-md border-blue-200 bg-blue-50/50 dark:bg-blue-950/20",
-            filterStatus === 'all' && "ring-2 ring-blue-500"
+            "cursor-pointer transition-all hover:shadow-md",
+            filterStatus === 'all' && "ring-2 ring-gray-500"
           )}
           onClick={() => setFilterStatus('all')}
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-400 flex items-center gap-1">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
               <Database className="h-4 w-4" />
               전체
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{stats.total}</div>
+            <div className="text-2xl font-bold">{stats.total}</div>
             <p className="text-xs text-muted-foreground mt-1">매핑테이블에 등록된 전체 사업자</p>
           </CardContent>
         </Card>
 
-        {/* 정산서 - 회색 */}
+        {/* 정산서 - 파란색 */}
         <Card
           className={cn(
-            "cursor-pointer transition-all hover:shadow-md",
-            filterStatus === 'settlement' && "ring-2 ring-gray-500"
+            "cursor-pointer transition-all hover:shadow-md border-blue-200 bg-blue-50/50 dark:bg-blue-950/20",
+            filterStatus === 'settlement' && "ring-2 ring-blue-500"
           )}
           onClick={() => setFilterStatus('settlement')}
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-400 flex items-center gap-1">
               <FileText className="h-4 w-4" />
               정산서
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.settlement}</div>
+            <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{stats.settlement}</div>
             <p className="text-xs text-muted-foreground mt-1">정산서에 등장한 매핑 대상</p>
           </CardContent>
         </Card>
