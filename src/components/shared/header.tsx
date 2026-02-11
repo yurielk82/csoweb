@@ -74,7 +74,7 @@ export function Header() {
   const adminMenuItems = [
     { href: '/admin', label: '대시보드', icon: LayoutDashboard },
     { href: '/admin/master', label: '정산서 마스터 조회', icon: Search },
-    { href: '/admin/upload', label: '엑셀 업로드', icon: Upload },
+    { href: '/admin/upload', label: '정산서 업로드', icon: Upload },
     { href: '/admin/integrity', label: '무결성 검증', icon: ShieldCheck },
     { href: '/admin/columns', label: '컬럼 설정', icon: Columns },
     { href: '/admin/data', label: '데이터 관리', icon: Database },

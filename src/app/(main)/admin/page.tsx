@@ -97,7 +97,7 @@ export default function AdminDashboardPage() {
     {
       href: '/admin/upload',
       icon: Upload,
-      title: '엑셀 업로드',
+      title: '정산서 업로드',
       description: '정산서 데이터 업로드',
       color: 'bg-blue-500',
     },

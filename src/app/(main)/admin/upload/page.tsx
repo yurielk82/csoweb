@@ -277,7 +277,7 @@ export default function UploadPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Upload className="h-6 w-6" />
-          엑셀 업로드
+          정산서 업로드
         </h1>
         <p className="text-muted-foreground">정산서 데이터를 업로드합니다.</p>
       </div>
