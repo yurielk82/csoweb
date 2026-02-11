@@ -465,18 +465,21 @@ export default function SettlementIntegrityManager() {
   const fetchIntegrityData = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (selectedMonth) params.set('month', selectedMonth);
-
-      const res = await fetch(`/api/admin/cso-matching/integrity?${params.toString()}`);
+      // 전체 데이터를 가져오고, 정산월 필터링은 클라이언트에서 처리
+      const res = await fetch('/api/admin/cso-matching/integrity');
       const result = await res.json();
 
       if (result.success) {
         setTableData(result.data.results);
         setCsoMapping(result.data.csoMapping || {});
-        if (result.data.availableMonths) {
-          setAvailableMonths(result.data.availableMonths);
-        }
+        
+        // 정산월 드롭박스: 마지막정산월의 유니크값 추출 (최신월 순 정렬)
+        const months = [...new Set(
+          result.data.results
+            .map((r: IntegrityRow) => r.last_settlement_month)
+            .filter(Boolean)
+        )].sort().reverse() as string[];
+        setAvailableMonths(months);
       } else {
         toast({
           variant: 'destructive',
@@ -494,7 +497,7 @@ export default function SettlementIntegrityManager() {
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth, toast]);
+  }, [toast]);
 
   useEffect(() => {
     fetchIntegrityData();
@@ -522,53 +525,67 @@ export default function SettlementIntegrityManager() {
       });
     }
 
+    // 정산월 필터 (드롭박스 선택 시)
+    if (selectedMonth) {
+      results = results.filter((r) => r.last_settlement_month === selectedMonth);
+    }
+
     // 상태 필터
     if (filterStatus === 'settlement') {
-      // 정산서: row_count > 0인 항목 (정산서DB에 등장한 CSO관리업체가 있는 경우)
-      results = results.filter((r) => r.row_count > 0);
+      // 정산서: 마지막정산월에 값이 있는 행
+      results = results.filter((r) => r.last_settlement_month !== null);
     } else if (filterStatus === 'complete') {
-      // 매핑완료: CSO매핑 O + 회원가입 O
+      // 매핑완료: 정산서 기준 중 CSO매핑 O + 회원가입 O
       results = results.filter((r) => 
-        r.cso_company_names.length > 0 && r.registration_status === 'registered'
+        r.last_settlement_month !== null &&
+        r.cso_company_names.length > 0 && 
+        r.registration_status === 'registered'
       );
     } else if (filterStatus === 'not_registered') {
-      // 회원 미가입: CSO매핑 O + 회원가입 X
+      // 회원 미가입: 정산서 기준 중 회원가입 X
       results = results.filter((r) => 
-        r.cso_company_names.length > 0 && 
+        r.last_settlement_month !== null &&
         (r.registration_status === 'unregistered' || r.registration_status === 'pending_approval')
       );
     } else if (filterStatus === 'no_cso') {
-      // CSO관리업체 미입력: row_count > 0이지만 CSO매핑이 없는 경우
-      // 또는 회원이지만 CSO매핑이 없는 경우
-      results = results.filter((r) => r.cso_company_names.length === 0);
+      // CSO관리업체 미입력: 정산서 기준 중 CSO매핑 없음
+      results = results.filter((r) => 
+        r.last_settlement_month !== null &&
+        r.cso_company_names.length === 0
+      );
     }
 
     return results;
-  }, [tableData, searchQuery, filterStatus]);
+  }, [tableData, searchQuery, filterStatus, selectedMonth]);
 
   // ===========================================
   // Statistics - 새로운 필터 카드용
   // ===========================================
   const stats = useMemo(() => {
+    // 정산월 필터 적용된 데이터
+    const filteredByMonth = selectedMonth 
+      ? tableData.filter((r) => r.last_settlement_month === selectedMonth)
+      : tableData;
+    
     // 전체: 매핑테이블에 등록된 전체 사업자 수
-    const total = tableData.length;
+    const total = filteredByMonth.length;
     
-    // 정산서: 정산서DB에 등장한 CSO관리업체 기준 매핑 대상 수 (row_count > 0)
-    const settlement = tableData.filter((r) => r.row_count > 0).length;
+    // 정산서: 마지막정산월에 값이 있는 행
+    const settlementData = filteredByMonth.filter((r) => r.last_settlement_month !== null);
+    const settlement = settlementData.length;
     
-    // 매핑완료: CSO매핑 O + 회원가입 O
-    const complete = tableData.filter((r) => 
+    // 매핑완료: 정산서 기준 중 CSO매핑 O + 회원가입 O
+    const complete = settlementData.filter((r) => 
       r.cso_company_names.length > 0 && r.registration_status === 'registered'
     ).length;
     
-    // 회원 미가입: CSO매핑 O + 회원가입 X
-    const notRegistered = tableData.filter((r) => 
-      r.cso_company_names.length > 0 && 
-      (r.registration_status === 'unregistered' || r.registration_status === 'pending_approval')
+    // 회원 미가입: 정산서 기준 중 회원가입 X
+    const notRegistered = settlementData.filter((r) => 
+      r.registration_status === 'unregistered' || r.registration_status === 'pending_approval'
     ).length;
     
-    // CSO관리업체 미입력: CSO매핑이 없는 항목
-    const noCso = tableData.filter((r) => r.cso_company_names.length === 0).length;
+    // CSO관리업체 미입력: 정산서 기준 중 CSO매핑 없음
+    const noCso = settlementData.filter((r) => r.cso_company_names.length === 0).length;
     
     return {
       total,
@@ -577,7 +594,7 @@ export default function SettlementIntegrityManager() {
       notRegistered,
       noCso,
     };
-  }, [tableData]);
+  }, [tableData, selectedMonth]);
 
   // ===========================================
   // CSO Tag Handlers

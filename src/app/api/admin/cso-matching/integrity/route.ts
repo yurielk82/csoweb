@@ -225,9 +225,48 @@ export async function GET(request: NextRequest) {
       return a.business_number.localeCompare(b.business_number);
     });
 
-    // 6. 통계
+    // 6. 통계 - 새로운 필터 카드용
+    // 전체: 매핑테이블에 등록된 전체 사업자 수
+    const total = results.length;
+    
+    // 정산서DB에 등장한 고유 CSO관리업체 수 (csoStats에서 가져옴)
+    const settlementCsoCount = csoStats.size;
+    
+    // 정산서 대상 중 매핑완료: 정산서에 등장한 CSO관리업체 중 매핑 O + 회원가입 O
+    let completeCount = 0;
+    for (const csoName of csoStats.keys()) {
+      const bizNum = csoToBiz.get(csoName);
+      if (bizNum) {
+        const user = userMap.get(bizNum);
+        if (user && user.is_approved) {
+          completeCount++;
+        }
+      }
+    }
+    
+    // 회원 미가입: 매핑 O + 회원가입 X
+    const notRegisteredCount = results.filter(r => 
+      r.cso_company_names.length > 0 && 
+      (r.registration_status === 'unregistered' || r.registration_status === 'pending_approval')
+    ).length;
+    
+    // CSO관리업체 미입력: 정산서에 등장했지만 매핑테이블에 없는 CSO관리업체 수
+    let noCsoMappingCount = 0;
+    const unmappedCsoNames: string[] = [];
+    for (const csoName of csoStats.keys()) {
+      if (!csoToBiz.has(csoName)) {
+        noCsoMappingCount++;
+        unmappedCsoNames.push(csoName);
+      }
+    }
+    
     const stats = {
-      total: results.length,
+      total,
+      settlementCsoCount, // 정산서DB에 등장한 CSO관리업체 수
+      completeCount, // 매핑완료 (정산서 대상 중)
+      notRegisteredCount, // 회원 미가입
+      noCsoMappingCount, // CSO관리업체 미입력 (정산서에 있지만 매핑 없음)
+      // 기존 호환성
       registered: results.filter(r => r.registration_status === 'registered').length,
       unregistered: results.filter(r => r.registration_status === 'unregistered').length,
       pending_approval: results.filter(r => r.registration_status === 'pending_approval').length,
@@ -256,6 +295,7 @@ export async function GET(request: NextRequest) {
         availableMonths,
         stats,
         csoMapping, // 프론트에서 중복 검증에 사용
+        unmappedCsoNames, // 정산서에 있지만 매핑 없는 CSO명 목록
       },
     });
   } catch (error) {
