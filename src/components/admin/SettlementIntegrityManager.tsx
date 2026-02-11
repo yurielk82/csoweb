@@ -382,8 +382,8 @@ export default function SettlementIntegrityManager() {
   const [csoMapping, setCsoMapping] = useState<Record<string, string>>({}); // CSO명 → 사업자번호
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  // 새로운 필터 상태: all, settlement, complete, not_registered, no_cso
-  const [filterStatus, setFilterStatus] = useState<'all' | 'settlement' | 'complete' | 'not_registered' | 'no_cso'>('settlement');
+  // 새로운 필터 상태: all, settlement, complete, not_registered, no_cso, unprocessed
+  const [filterStatus, setFilterStatus] = useState<'all' | 'settlement' | 'complete' | 'not_registered' | 'no_cso' | 'unprocessed'>('settlement');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
 
@@ -497,9 +497,16 @@ export default function SettlementIntegrityManager() {
         (r.registration_status === 'unregistered' || r.registration_status === 'pending_approval')
       );
     } else if (filterStatus === 'no_cso') {
-      // CSO관리업체 미입력: 정산서 기준 중 CSO매핑 없음
+      // CSO관리업체명 X: 정산서 기준 중 CSO매핑 없음
       results = results.filter((r) => 
         r.last_settlement_month !== null &&
+        r.cso_company_names.length === 0
+      );
+    } else if (filterStatus === 'unprocessed') {
+      // 미처리: 회원가입 X AND CSO관리업체명 X
+      results = results.filter((r) => 
+        r.last_settlement_month !== null &&
+        (r.registration_status === 'unregistered' || r.registration_status === 'pending_approval') &&
         r.cso_company_names.length === 0
       );
     }
@@ -519,7 +526,7 @@ export default function SettlementIntegrityManager() {
     // 전체: 매핑테이블에 등록된 전체 사업자 수
     const total = filteredByMonth.length;
     
-    // 정산서: 마지막정산월에 값이 있는 행
+    // 정산서DB: 마지막정산월에 값이 있는 행
     const settlementData = filteredByMonth.filter((r) => r.last_settlement_month !== null);
     const settlement = settlementData.length;
     
@@ -528,13 +535,19 @@ export default function SettlementIntegrityManager() {
       r.cso_company_names.length > 0 && r.registration_status === 'registered'
     ).length;
     
-    // 회원 미가입: 정산서 기준 중 회원가입 X
+    // 회원가입 X: 정산서 기준 중 회원가입 X (CSO매핑 여부 무관)
     const notRegistered = settlementData.filter((r) => 
       r.registration_status === 'unregistered' || r.registration_status === 'pending_approval'
     ).length;
     
-    // CSO관리업체 미입력: 정산서 기준 중 CSO매핑 없음
+    // CSO관리업체명 X: 정산서 기준 중 CSO매핑 없음 (회원가입 여부 무관)
     const noCso = settlementData.filter((r) => r.cso_company_names.length === 0).length;
+    
+    // 미처리: 회원가입 X AND CSO관리업체명 X (중복 집계)
+    const unprocessed = settlementData.filter((r) => 
+      (r.registration_status === 'unregistered' || r.registration_status === 'pending_approval') &&
+      r.cso_company_names.length === 0
+    ).length;
     
     return {
       total,
@@ -542,6 +555,7 @@ export default function SettlementIntegrityManager() {
       complete,
       notRegistered,
       noCso,
+      unprocessed,
     };
   }, [tableData, selectedMonth]);
 
@@ -1121,9 +1135,9 @@ export default function SettlementIntegrityManager() {
         </div>
       </div>
 
-      {/* Stats Cards - 5개 카드: 전체, 정산서, 매핑완료, 회원 미가입, CSO관리업체 미입력 */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {/* 전체 - 회색 */}
+      {/* Stats Cards - 6개 카드: 전체, 정산서DB, 매핑완료, 회원가입 X, CSO관리업체명 X, 미처리 */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        {/* 전체 - 회색 (참고용) */}
         <Card
           className={cn(
             "cursor-pointer transition-all hover:shadow-md",
@@ -1142,26 +1156,26 @@ export default function SettlementIntegrityManager() {
           </CardContent>
         </Card>
 
-        {/* 정산서DB - 파란색 */}
+        {/* 정산서DB - 남색 (기준) */}
         <Card
           className={cn(
-            "cursor-pointer transition-all hover:shadow-md border-blue-200 bg-blue-50/50 dark:bg-blue-950/20",
-            filterStatus === 'settlement' && "ring-2 ring-blue-500"
+            "cursor-pointer transition-all hover:shadow-md border-indigo-200 bg-indigo-50/50 dark:bg-indigo-950/20",
+            filterStatus === 'settlement' && "ring-2 ring-indigo-500"
           )}
           onClick={() => setFilterStatus('settlement')}
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-400 flex items-center gap-1">
+            <CardTitle className="text-sm font-medium text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
               <FileText className="h-4 w-4" />
               정산서DB
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{stats.settlement}</div>
+            <div className="text-2xl font-bold text-indigo-700 dark:text-indigo-400">{stats.settlement}</div>
           </CardContent>
         </Card>
 
-        {/* 매핑완료 - 초록색 */}
+        {/* 매핑완료 - 초록색 (정상) */}
         <Card
           className={cn(
             "cursor-pointer transition-all hover:shadow-md border-green-200 bg-green-50/50 dark:bg-green-950/20",
@@ -1180,7 +1194,7 @@ export default function SettlementIntegrityManager() {
           </CardContent>
         </Card>
 
-        {/* 회원가입 X - 노란색 */}
+        {/* 회원가입 X - 노란색 (주의 - 한 가지 문제) */}
         <Card
           className={cn(
             "cursor-pointer transition-all hover:shadow-md border-amber-200 bg-amber-50/50 dark:bg-amber-950/20",
@@ -1199,22 +1213,41 @@ export default function SettlementIntegrityManager() {
           </CardContent>
         </Card>
 
-        {/* CSO관리업체명 X - 빨간색 */}
+        {/* CSO관리업체명 X - 노란색 (주의 - 한 가지 문제) */}
         <Card
           className={cn(
-            "cursor-pointer transition-all hover:shadow-md border-red-200 bg-red-50/50 dark:bg-red-950/20",
-            filterStatus === 'no_cso' && "ring-2 ring-red-500"
+            "cursor-pointer transition-all hover:shadow-md border-amber-200 bg-amber-50/50 dark:bg-amber-950/20",
+            filterStatus === 'no_cso' && "ring-2 ring-amber-500"
           )}
           onClick={() => setFilterStatus('no_cso')}
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-red-700 dark:text-red-400 flex items-center gap-1">
+            <CardTitle className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1">
               <CircleAlert className="h-4 w-4" />
               CSO관리업체명 X
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-700 dark:text-red-400">{stats.noCso}</div>
+            <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">{stats.noCso}</div>
+          </CardContent>
+        </Card>
+
+        {/* 미처리 - 빨간색 (긴급 - 두 가지 문제) */}
+        <Card
+          className={cn(
+            "cursor-pointer transition-all hover:shadow-md border-red-200 bg-red-50/50 dark:bg-red-950/20",
+            filterStatus === 'unprocessed' && "ring-2 ring-red-500"
+          )}
+          onClick={() => setFilterStatus('unprocessed')}
+        >
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-red-700 dark:text-red-400 flex items-center gap-1">
+              <CircleAlert className="h-4 w-4" />
+              미처리
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-700 dark:text-red-400">{stats.unprocessed}</div>
           </CardContent>
         </Card>
       </div>
@@ -1300,16 +1333,16 @@ export default function SettlementIntegrityManager() {
           ) : (
             <ScrollArea className="h-[500px]">
               <div className="overflow-x-auto">
-              <Table className="table-auto">
+              <Table className="table-fixed w-full">
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
-                    <TableHead className="whitespace-nowrap">사업자번호</TableHead>
-                    <TableHead className="whitespace-nowrap">사업자명</TableHead>
-                    <TableHead className="whitespace-nowrap">회원가입상태</TableHead>
-                    <TableHead className="w-full">CSO관리업체명 매핑</TableHead>
-                    <TableHead className="whitespace-nowrap">마지막정산월</TableHead>
-                    <TableHead className="whitespace-nowrap text-right">정산건수</TableHead>
-                    <TableHead className="whitespace-nowrap text-center">관리</TableHead>
+                    <TableHead className="w-[140px]">사업자번호</TableHead>
+                    <TableHead className="w-[160px]">사업자명</TableHead>
+                    <TableHead className="w-[100px]">회원가입상태</TableHead>
+                    <TableHead className="min-w-[200px]">CSO관리업체명 매핑</TableHead>
+                    <TableHead className="w-[110px]">마지막정산월</TableHead>
+                    <TableHead className="w-[80px] text-right">정산건수</TableHead>
+                    <TableHead className="w-[60px] text-center">관리</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1329,20 +1362,20 @@ export default function SettlementIntegrityManager() {
                           row.saveState === 'error' && 'border-l-4 border-l-red-400'
                         )}
                       >
-                        <TableCell className="font-mono text-sm whitespace-nowrap bg-muted/30">
-                          <div className="flex items-center gap-2">
+                        <TableCell className="font-mono text-sm bg-muted/30">
+                          <div className="flex items-center gap-1">
                             <MappingStatusIcon row={row} />
-                            <span className="text-gray-600">{formatBusinessNumber(row.business_number)}</span>
+                            <span className="text-gray-600 text-xs">{formatBusinessNumber(row.business_number)}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap bg-muted/30">
-                          <span className="text-sm">{row.business_name || '-'}</span>
+                        <TableCell className="bg-muted/30">
+                          <span className="text-sm truncate block">{row.business_name || '-'}</span>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
+                        <TableCell>
                           <StatusBadge status={row.registration_status} />
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-wrap gap-2 items-center">
+                          <div className="flex flex-wrap gap-1 items-center">
                             {row.cso_company_names.map((csoName, idx) => {
                               const existingBizNum = csoMapping[csoName];
                               const isDuplicate = existingBizNum && existingBizNum !== row.business_number;
