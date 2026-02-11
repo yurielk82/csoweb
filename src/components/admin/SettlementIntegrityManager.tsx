@@ -44,12 +44,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -104,51 +99,14 @@ const MappingStatusIcon = memo(function MappingStatusIcon({ row }: MappingStatus
   const isRegistered = row.registration_status === 'registered';
   
   if (isRegistered && hasCSO) {
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="text-green-500 cursor-help text-base" title="매핑완료">✅</span>
-          </TooltipTrigger>
-          <TooltipContent className="bg-green-600 text-white">
-            <p>매핑완료: 회원가입 O, CSO매핑 O</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
+    return <span className="text-green-500 text-base" title="매핑완료">✅</span>;
   }
   
   if (!isRegistered || !hasCSO) {
-    const reasons: string[] = [];
-    if (!isRegistered) reasons.push('회원 미가입');
-    if (!hasCSO) reasons.push('CSO 미매핑');
-    
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="text-amber-500 cursor-help text-base" title="미완료">⚠️</span>
-          </TooltipTrigger>
-          <TooltipContent className="bg-amber-500 text-white">
-            <p>미완료: {reasons.join(', ')}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
+    return <span className="text-amber-500 text-base" title="미완료">⚠️</span>;
   }
   
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="text-red-500 cursor-help text-base" title="오류">❌</span>
-        </TooltipTrigger>
-        <TooltipContent className="bg-red-600 text-white">
-          <p>데이터 오류</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
+  return <span className="text-red-500 text-base" title="오류">❌</span>;
 });
 
 // ===========================================
@@ -238,40 +196,30 @@ function CSOTag({ value, isDuplicate, duplicateInfo, onEdit, onDelete, disabled 
   }
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span
-            className={cn(
-              "inline-flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer transition-all",
-              isDuplicate
-                ? "bg-orange-100 border-2 border-orange-400 text-orange-800"
-                : "bg-blue-100 text-blue-800 hover:bg-blue-200"
-            )}
-            onClick={() => !disabled && setIsEditing(true)}
-          >
-            <span className="max-w-[150px] truncate">{value}</span>
-            {!disabled && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete();
-                }}
-                className="text-gray-500 hover:text-red-500 ml-1"
-                title="삭제"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </span>
-        </TooltipTrigger>
-        {isDuplicate && duplicateInfo && (
-          <TooltipContent className="bg-orange-500 text-white">
-            <p>다른 사업자에 매핑됨: {duplicateInfo}</p>
-          </TooltipContent>
-        )}
-      </Tooltip>
-    </TooltipProvider>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer transition-all",
+        isDuplicate
+          ? "bg-orange-100 border-2 border-orange-400 text-orange-800"
+          : "bg-blue-100 text-blue-800 hover:bg-blue-200"
+      )}
+      onClick={() => !disabled && setIsEditing(true)}
+      title={isDuplicate && duplicateInfo ? `다른 사업자에 매핑됨: ${duplicateInfo}` : undefined}
+    >
+      <span className="max-w-[150px] truncate">{value}</span>
+      {!disabled && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="text-gray-500 hover:text-red-500 ml-1"
+          title="삭제"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
+    </span>
   );
 }
 
@@ -1191,11 +1139,10 @@ export default function SettlementIntegrityManager() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground mt-1">매핑테이블에 등록된 전체 사업자</p>
           </CardContent>
         </Card>
 
-        {/* 정산서 - 파란색 */}
+        {/* 정산서DB - 파란색 */}
         <Card
           className={cn(
             "cursor-pointer transition-all hover:shadow-md border-blue-200 bg-blue-50/50 dark:bg-blue-950/20",
@@ -1206,12 +1153,11 @@ export default function SettlementIntegrityManager() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-400 flex items-center gap-1">
               <FileText className="h-4 w-4" />
-              정산서
+              정산서DB
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{stats.settlement}</div>
-            <p className="text-xs text-muted-foreground mt-1">정산서에 등장한 매핑 대상</p>
           </CardContent>
         </Card>
 
@@ -1231,11 +1177,10 @@ export default function SettlementIntegrityManager() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700 dark:text-green-400">{stats.complete}</div>
-            <p className="text-xs text-muted-foreground mt-1">CSO매핑 + 회원가입 완료</p>
           </CardContent>
         </Card>
 
-        {/* 회원 미가입 - 노란색 */}
+        {/* 회원가입 X - 노란색 */}
         <Card
           className={cn(
             "cursor-pointer transition-all hover:shadow-md border-amber-200 bg-amber-50/50 dark:bg-amber-950/20",
@@ -1246,16 +1191,15 @@ export default function SettlementIntegrityManager() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1">
               <UserX className="h-4 w-4" />
-              회원 미가입
+              회원가입 X
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">{stats.notRegistered}</div>
-            <p className="text-xs text-muted-foreground mt-1">매핑 O · 회원가입 유도 필요</p>
           </CardContent>
         </Card>
 
-        {/* CSO관리업체 미입력 - 빨간색 */}
+        {/* CSO관리업체명 X - 빨간색 */}
         <Card
           className={cn(
             "cursor-pointer transition-all hover:shadow-md border-red-200 bg-red-50/50 dark:bg-red-950/20",
@@ -1266,12 +1210,11 @@ export default function SettlementIntegrityManager() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-red-700 dark:text-red-400 flex items-center gap-1">
               <CircleAlert className="h-4 w-4" />
-              CSO미입력
+              CSO관리업체명 X
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-700 dark:text-red-400">{stats.noCso}</div>
-            <p className="text-xs text-muted-foreground mt-1">CSO관리업체 즉시 입력 필요</p>
           </CardContent>
         </Card>
       </div>
@@ -1363,7 +1306,7 @@ export default function SettlementIntegrityManager() {
                     <TableHead className="whitespace-nowrap">사업자번호</TableHead>
                     <TableHead className="whitespace-nowrap">사업자명</TableHead>
                     <TableHead className="whitespace-nowrap">회원가입상태</TableHead>
-                    <TableHead className="w-full">CSO관리업체명</TableHead>
+                    <TableHead className="w-full">CSO관리업체명 매핑</TableHead>
                     <TableHead className="whitespace-nowrap">마지막정산월</TableHead>
                     <TableHead className="whitespace-nowrap text-right">정산건수</TableHead>
                     <TableHead className="whitespace-nowrap text-center">관리</TableHead>
@@ -1387,27 +1330,13 @@ export default function SettlementIntegrityManager() {
                         )}
                       >
                         <TableCell className="font-mono text-sm whitespace-nowrap bg-muted/30">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-2 cursor-default">
-                                <MappingStatusIcon row={row} />
-                                <span className="text-gray-600">{formatBusinessNumber(row.business_number)}</span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>수정이 필요하면 행을 삭제 후 다시 추가하세요</p>
-                            </TooltipContent>
-                          </Tooltip>
+                          <div className="flex items-center gap-2">
+                            <MappingStatusIcon row={row} />
+                            <span className="text-gray-600">{formatBusinessNumber(row.business_number)}</span>
+                          </div>
                         </TableCell>
                         <TableCell className="whitespace-nowrap bg-muted/30">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-sm cursor-default">{row.business_name || '-'}</span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>수정이 필요하면 행을 삭제 후 다시 추가하세요</p>
-                            </TooltipContent>
-                          </Tooltip>
+                          <span className="text-sm">{row.business_name || '-'}</span>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <StatusBadge status={row.registration_status} />
