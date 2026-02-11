@@ -160,7 +160,7 @@ function StatusBadge({ status }: { status: RegistrationStatus }) {
       return (
         <Badge className="bg-green-600 hover:bg-green-700 text-white font-medium px-2 py-0.5 text-xs">
           <UserCheck className="h-3 w-3 mr-1" />
-          가입
+          가입완료
         </Badge>
       );
     case 'unregistered':
@@ -356,6 +356,7 @@ interface EditableCellProps {
   className?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function EditableCell({ value, onChange, disabled, placeholder, format, className }: EditableCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
@@ -890,7 +891,7 @@ export default function SettlementIntegrityManager() {
         setNewBusinessName(user.company_name);
         toast({
           title: '회원 확인',
-          description: `${user.company_name} (${user.is_approved ? '가입' : '미가입'})`,
+          description: `${user.company_name} (${user.is_approved ? '가입완료' : '미가입'})`,
         });
       } else {
         setVerifiedUser(null);
@@ -1101,7 +1102,7 @@ export default function SettlementIntegrityManager() {
         .map((r) => ({
           '사업자번호': formatBusinessNumber(r.business_number),
           '사업자명': r.business_name || '-',
-          '회원가입상태': r.registration_status === 'registered' ? '가입' : '미가입',
+          '회원가입상태': r.registration_status === 'registered' ? '가입완료' : '미가입',
           'CSO관리업체명': r.cso_company_names.join(', ') || '-',
           '마지막정산월': r.last_settlement_month || '-',
           '정산건수': r.row_count,
@@ -1313,12 +1314,13 @@ export default function SettlementIntegrityManager() {
               )}
             </div>
             <div className="flex gap-2 items-center">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">마지막 정산월</span>
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                <option value="">전체 정산월</option>
+                <option value="">전체</option>
                 {availableMonths.map((month) => (
                   <option key={month} value={month}>{month}</option>
                 ))}
@@ -1354,16 +1356,17 @@ export default function SettlementIntegrityManager() {
             </div>
           ) : (
             <ScrollArea className="h-[500px]">
-              <Table>
+              <div className="overflow-x-auto">
+              <Table className="table-auto">
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
-                    <TableHead className="w-[140px]">사업자번호</TableHead>
-                    <TableHead className="w-[150px]">사업자명</TableHead>
-                    <TableHead className="w-[100px]">회원가입상태</TableHead>
-                    <TableHead className="min-w-[300px]">CSO관리업체명</TableHead>
-                    <TableHead className="w-[100px]">마지막정산월</TableHead>
-                    <TableHead className="w-[80px] text-right">정산건수</TableHead>
-                    <TableHead className="w-[60px] text-center">관리</TableHead>
+                    <TableHead className="whitespace-nowrap">사업자번호</TableHead>
+                    <TableHead className="whitespace-nowrap">사업자명</TableHead>
+                    <TableHead className="whitespace-nowrap">회원가입상태</TableHead>
+                    <TableHead className="w-full">CSO관리업체명</TableHead>
+                    <TableHead className="whitespace-nowrap">마지막정산월</TableHead>
+                    <TableHead className="whitespace-nowrap text-right">정산건수</TableHead>
+                    <TableHead className="whitespace-nowrap text-center">관리</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1383,38 +1386,30 @@ export default function SettlementIntegrityManager() {
                           row.saveState === 'error' && 'border-l-4 border-l-red-400'
                         )}
                       >
-                        <TableCell className="font-mono text-sm">
-                          <div className="flex items-center gap-2">
-                            <MappingStatusIcon row={row} />
-                            {row.is_readonly ? (
-                              <span className="text-gray-600">{formatBusinessNumber(row.business_number)}</span>
-                            ) : (
-                              <EditableCell
-                                value={row.business_number}
-                                onChange={() => {
-                                  // TODO: 사업자번호 수정 시 회원 검증 + 저장
-                                }}
-                                format={formatBusinessNumber}
-                                className="font-mono"
-                              />
-                            )}
-                          </div>
+                        <TableCell className="font-mono text-sm whitespace-nowrap bg-muted/30">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-2 cursor-default">
+                                <MappingStatusIcon row={row} />
+                                <span className="text-gray-600">{formatBusinessNumber(row.business_number)}</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>수정이 필요하면 행을 삭제 후 다시 추가하세요</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </TableCell>
-                        <TableCell>
-                          {row.is_readonly ? (
-                            <span className="text-sm">{row.business_name || '-'}</span>
-                          ) : (
-                            <EditableCell
-                              value={row.business_name || ''}
-                              onChange={() => {
-                                // TODO: 사업자명 수정
-                              }}
-                              placeholder="사업자명 입력"
-                              className={cn(isUnregistered && 'bg-amber-100')}
-                            />
-                          )}
+                        <TableCell className="whitespace-nowrap bg-muted/30">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-sm cursor-default">{row.business_name || '-'}</span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>수정이 필요하면 행을 삭제 후 다시 추가하세요</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <StatusBadge status={row.registration_status} />
                         </TableCell>
                         <TableCell>
@@ -1436,7 +1431,7 @@ export default function SettlementIntegrityManager() {
                             <AddCSOInput onAdd={(value) => handleAddCSOTag(row.id, value)} />
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           {row.last_settlement_month ? (
                             <Badge variant="outline" className="font-mono text-xs">
                               <Calendar className="h-3 w-3 mr-1" />
@@ -1446,10 +1441,10 @@ export default function SettlementIntegrityManager() {
                             <span className="text-muted-foreground text-sm">-</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-right font-medium">
+                        <TableCell className="text-right font-medium whitespace-nowrap">
                           {row.row_count.toLocaleString()}
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className="text-center whitespace-nowrap">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -1480,6 +1475,7 @@ export default function SettlementIntegrityManager() {
                   )}
                 </TableBody>
               </Table>
+              </div>
             </ScrollArea>
           )}
         </CardContent>
@@ -1672,7 +1668,7 @@ export default function SettlementIntegrityManager() {
               </div>
               {verifiedUser && (
                 <p className="text-sm text-green-600">
-                  ✓ {verifiedUser.company_name} ({verifiedUser.is_approved ? '가입' : '미가입'})
+                  ✓ {verifiedUser.company_name} ({verifiedUser.is_approved ? '가입완료' : '미가입'})
                 </p>
               )}
             </div>
