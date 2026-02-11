@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, useOptimistic, startTransition } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   AlertCircle,
@@ -22,6 +22,7 @@ import {
   Trash2,
   Save,
   Plus,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -88,6 +89,14 @@ function normalizeText(text: string): string {
     .toLowerCase();
 }
 
+// 사업자번호 포맷팅 (000-00-00000)
+function formatBusinessNumber(value: string): string {
+  const numbers = value.replace(/\D/g, '').slice(0, 10);
+  if (numbers.length <= 3) return numbers;
+  if (numbers.length <= 5) return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+  return `${numbers.slice(0, 3)}-${numbers.slice(3, 5)}-${numbers.slice(5)}`;
+}
+
 // ===========================================
 // Status Badge Component
 // ===========================================
@@ -127,6 +136,131 @@ function StatusBadge({ status }: { status: MatchingStatus }) {
 }
 
 // ===========================================
+// Inline Edit Cell Component
+// ===========================================
+interface InlineEditCellProps {
+  result: IntegrityCheckResult;
+  isEditing: boolean;
+  editValue: string;
+  isSaving: boolean;
+  onStartEdit: () => void;
+  onValueChange: (value: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onNavigate: (direction: 'next' | 'prev') => void;
+  openAddDialog: (businessNumber: string) => void;
+}
+
+function InlineEditCell({
+  result,
+  isEditing,
+  editValue,
+  isSaving,
+  onStartEdit,
+  onValueChange,
+  onSave,
+  onCancel,
+  onNavigate,
+  openAddDialog,
+}: InlineEditCellProps) {
+  const localInputRef = useRef<HTMLInputElement>(null);
+
+  // 편집 모드가 시작되면 자동으로 포커스
+  useEffect(() => {
+    if (isEditing && localInputRef.current) {
+      localInputRef.current.focus();
+      localInputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onSave();
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      onSave();
+      // Tab 시 다음 행으로 이동은 onSave 완료 후 처리됨
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancel();
+    } else if (e.key === 'ArrowDown' && e.ctrlKey) {
+      e.preventDefault();
+      onNavigate('next');
+    } else if (e.key === 'ArrowUp' && e.ctrlKey) {
+      e.preventDefault();
+      onNavigate('prev');
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-1">
+        <Input
+          ref={localInputRef}
+          value={formatBusinessNumber(editValue)}
+          onChange={(e) => onValueChange(e.target.value.replace(/\D/g, ''))}
+          onKeyDown={handleKeyDown}
+          onBlur={() => {
+            // 저장 중이 아닐 때만 취소
+            if (!isSaving) {
+              // 약간의 딜레이를 주어 버튼 클릭이 먼저 처리되도록 함
+              setTimeout(() => onCancel(), 150);
+            }
+          }}
+          maxLength={12}
+          placeholder="000-00-00000"
+          className="w-[130px] h-8 font-mono text-sm"
+          disabled={isSaving}
+        />
+        {isSaving ? (
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onSave();
+            }}
+            disabled={editValue.length !== 10}
+          >
+            <Check className="h-4 w-4 text-green-600" />
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  // 기존 값 표시 또는 빈 값일 때 입력 유도
+  if (result.business_number) {
+    return (
+      <button
+        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-mono text-sm"
+        onClick={() => openAddDialog(result.business_number!)}
+        title="사업자번호 기준 거래처 관리"
+      >
+        {formatBusinessNumber(result.business_number)}
+      </button>
+    );
+  }
+
+  // 미등록 상태: 클릭 시 인라인 편집 시작
+  return (
+    <button
+      onClick={onStartEdit}
+      className="text-red-500 hover:text-red-700 hover:underline cursor-pointer text-sm flex items-center gap-1"
+      title="클릭하여 사업자번호 입력"
+    >
+      <Pencil className="h-3 w-3" />
+      입력 필요
+    </button>
+  );
+}
+
+// ===========================================
 // Main Component
 // ===========================================
 export default function SettlementIntegrityManager() {
@@ -140,6 +274,23 @@ export default function SettlementIntegrityManager() {
   const [filterStatus, setFilterStatus] = useState<MatchingStatus | 'all' | 'issues'>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+
+  // Inline edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  // Optimistic update state
+  const [optimisticResults, setOptimisticResults] = useOptimistic(
+    checkResults,
+    (state, optimisticValue: { id: string; business_number: string }) => {
+      return state.map((r) =>
+        r.id === optimisticValue.id
+          ? { ...r, business_number: optimisticValue.business_number, status: 'pending_join' as MatchingStatus }
+          : r
+      );
+    }
+  );
 
   // Upload dialog state
   const [showUploadDialog, setShowUploadDialog] = useState(false);
@@ -207,10 +358,10 @@ export default function SettlementIntegrityManager() {
   }, [fetchIntegrityData]);
 
   // ===========================================
-  // Filtering Logic
+  // Filtering Logic (에러 우선 정렬 강화)
   // ===========================================
   const filteredResults = useMemo(() => {
-    let results = checkResults;
+    let results = [...optimisticResults];
 
     // 검색 필터 (사업자번호 검색 시 연결된 모든 업체 노출)
     if (searchQuery.trim()) {
@@ -256,8 +407,25 @@ export default function SettlementIntegrityManager() {
       results = results.filter((r) => r.status === filterStatus);
     }
 
+    // 에러 우선 정렬 (미등록 → 가입대기 → 매칭누락 → 정상)
+    results.sort((a, b) => {
+      const statusOrder = { unregistered: 0, pending_join: 1, missing_match: 2, normal: 3 };
+      const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+      if (statusDiff !== 0) return statusDiff;
+      
+      // 같은 상태면 업체명 순
+      return a.cso_company_name.localeCompare(b.cso_company_name, 'ko');
+    });
+
     return results;
-  }, [checkResults, searchQuery, filterStatus]);
+  }, [optimisticResults, searchQuery, filterStatus]);
+
+  // 미등록 항목 목록 (포커스 이동용)
+  const unregisteredIds = useMemo(() => {
+    return filteredResults
+      .filter((r) => r.status === 'unregistered')
+      .map((r) => r.id);
+  }, [filteredResults]);
 
   // ===========================================
   // Statistics
@@ -272,6 +440,119 @@ export default function SettlementIntegrityManager() {
 
     return { total, normal, unregistered, pendingJoin, missingMatch, issues };
   }, [checkResults]);
+
+  // ===========================================
+  // Inline Edit Handlers
+  // ===========================================
+  const startInlineEdit = useCallback((id: string, currentValue: string | null) => {
+    setEditingId(id);
+    setEditValue(currentValue || '');
+    // 포커스는 ref를 통해 자동으로 처리됨
+  }, []);
+
+  const cancelInlineEdit = useCallback(() => {
+    setEditingId(null);
+    setEditValue('');
+  }, []);
+
+  const saveInlineEdit = useCallback(async (result: IntegrityCheckResult) => {
+    const cleanedBizNum = editValue.replace(/\D/g, '');
+    
+    if (cleanedBizNum.length !== 10) {
+      toast({
+        variant: 'destructive',
+        title: '입력 오류',
+        description: '사업자번호는 10자리 숫자여야 합니다.',
+      });
+      return;
+    }
+
+    setSavingId(result.id);
+
+    // 낙관적 업데이트 적용
+    startTransition(() => {
+      setOptimisticResults({ id: result.id, business_number: cleanedBizNum });
+    });
+
+    try {
+      const res = await fetch('/api/admin/cso-matching/upsert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{
+            cso_company_name: result.cso_company_name,
+            business_number: cleanedBizNum,
+          }],
+        }),
+      });
+
+      const apiResult = await res.json();
+
+      if (apiResult.success) {
+        toast({
+          title: '저장 완료',
+          description: `"${result.cso_company_name}"의 매칭 정보가 저장되었습니다.`,
+        });
+        
+        // 편집 모드 종료
+        setEditingId(null);
+        setEditValue('');
+        
+        // 다음 미등록 항목으로 포커스 이동
+        const currentIndex = unregisteredIds.indexOf(result.id);
+        const nextId = unregisteredIds[currentIndex + 1];
+        
+        if (nextId) {
+          // 약간의 딜레이 후 다음 행 편집 시작
+          setTimeout(() => {
+            const nextResult = filteredResults.find((r) => r.id === nextId);
+            if (nextResult) {
+              startInlineEdit(nextId, nextResult.business_number);
+            }
+          }, 100);
+        }
+        
+        // 데이터 새로고침 (백그라운드)
+        fetchIntegrityData();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: '저장 실패',
+          description: apiResult.error,
+        });
+        // 실패 시 데이터 새로고침하여 원상복구
+        fetchIntegrityData();
+      }
+    } catch (error) {
+      console.error('Save matching error:', error);
+      toast({
+        variant: 'destructive',
+        title: '오류',
+        description: '매칭 정보 저장 중 오류가 발생했습니다.',
+      });
+      fetchIntegrityData();
+    } finally {
+      setSavingId(null);
+    }
+  }, [editValue, toast, unregisteredIds, filteredResults, startInlineEdit, fetchIntegrityData, setOptimisticResults]);
+
+  const navigateToUnregistered = useCallback((direction: 'next' | 'prev') => {
+    if (!editingId) return;
+    
+    const currentIndex = unregisteredIds.indexOf(editingId);
+    if (currentIndex === -1) return;
+    
+    const targetIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+    const targetId = unregisteredIds[targetIndex];
+    
+    if (targetId) {
+      const targetResult = filteredResults.find((r) => r.id === targetId);
+      if (targetResult) {
+        cancelInlineEdit();
+        setTimeout(() => startInlineEdit(targetId, targetResult.business_number), 50);
+      }
+    }
+  }, [editingId, unregisteredIds, filteredResults, cancelInlineEdit, startInlineEdit]);
 
   // ===========================================
   // Excel Upload Handling
@@ -450,7 +731,7 @@ export default function SettlementIntegrityManager() {
   };
 
   // ===========================================
-  // 직접 매칭 등록/수정 핸들링
+  // 직접 매칭 등록/수정 핸들링 (다이얼로그 방식)
   // ===========================================
   const openEditDialog = (result: IntegrityCheckResult) => {
     setEditTarget(result);
@@ -573,14 +854,6 @@ export default function SettlementIntegrityManager() {
     }
   };
 
-  // 사업자번호 포맷팅 (입력 시)
-  const formatBusinessNumber = (value: string) => {
-    const numbers = value.replace(/\D/g, '').slice(0, 10);
-    if (numbers.length <= 3) return numbers;
-    if (numbers.length <= 5) return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
-    return `${numbers.slice(0, 3)}-${numbers.slice(3, 5)}-${numbers.slice(5)}`;
-  };
-
   // ===========================================
   // 검색 핸들링 (Enter/클릭 트리거)
   // ===========================================
@@ -600,9 +873,9 @@ export default function SettlementIntegrityManager() {
   };
 
   // ===========================================
-  // 사업자번호 기준 거래처 관리
+  // 사업자번호 기준 거래처 관리 (1:N 매핑)
   // ===========================================
-  const openAddDialog = (businessNumber?: string) => {
+  const openAddDialog = useCallback((businessNumber?: string) => {
     setAddBusinessNumber(businessNumber || '');
     setAddCompanyName('');
     // 해당 사업자번호에 연결된 기존 거래처 목록 조회
@@ -615,7 +888,7 @@ export default function SettlementIntegrityManager() {
       setLinkedCompanies([]);
     }
     setShowAddDialog(true);
-  };
+  }, [checkResults]);
 
   const closeAddDialog = () => {
     setShowAddDialog(false);
@@ -740,6 +1013,16 @@ export default function SettlementIntegrityManager() {
   };
 
   // ===========================================
+  // 첫 번째 미등록 항목 빠른 편집 시작
+  // ===========================================
+  const startQuickEdit = () => {
+    const firstUnregistered = filteredResults.find((r) => r.status === 'unregistered');
+    if (firstUnregistered) {
+      startInlineEdit(firstUnregistered.id, firstUnregistered.business_number);
+    }
+  };
+
+  // ===========================================
   // Render
   // ===========================================
   return (
@@ -755,8 +1038,14 @@ export default function SettlementIntegrityManager() {
             CSO관리업체명과 회원 사업자번호 매칭 상태를 검수합니다.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="default" onClick={() => openAddDialog()}>
+        <div className="flex gap-2 flex-wrap">
+          {stats.unregistered > 0 && (
+            <Button variant="default" onClick={startQuickEdit} className="bg-red-600 hover:bg-red-700">
+              <Pencil className="h-4 w-4 mr-2" />
+              미등록 빠른 입력 ({stats.unregistered})
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => openAddDialog()}>
             <Plus className="h-4 w-4 mr-2" />
             거래처 추가
           </Button>
@@ -770,6 +1059,17 @@ export default function SettlementIntegrityManager() {
           </Button>
         </div>
       </div>
+
+      {/* 키보드 단축키 안내 */}
+      <Alert className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20">
+        <AlertCircle className="h-4 w-4 text-blue-600" />
+        <AlertTitle className="text-blue-700">키보드 단축키</AlertTitle>
+        <AlertDescription className="text-sm text-blue-600">
+          <span className="font-mono bg-blue-100 px-1 rounded">Enter</span> / <span className="font-mono bg-blue-100 px-1 rounded">Tab</span>: 저장 후 다음 미등록 항목으로 이동 | 
+          <span className="font-mono bg-blue-100 px-1 rounded ml-2">Esc</span>: 편집 취소 | 
+          <span className="font-mono bg-blue-100 px-1 rounded ml-2">Ctrl+↓/↑</span>: 미등록 항목 간 이동
+        </AlertDescription>
+      </Alert>
 
       {/* Stats Cards - 클릭 시 필터링 */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -906,7 +1206,7 @@ export default function SettlementIntegrityManager() {
               {stats.unregistered > 0 && (
                 <li>
                   <span className="font-semibold text-red-700">미등록 {stats.unregistered}건:</span>{' '}
-                  정산서 업체명이 매칭 테이블에 없음 - 매칭 데이터 추가 필요
+                  정산서 업체명이 매칭 테이블에 없음 - 사업자번호 입력 필요
                 </li>
               )}
               {stats.pendingJoin > 0 && (
@@ -998,9 +1298,15 @@ export default function SettlementIntegrityManager() {
             <Badge variant="secondary" className="ml-2">
               {filteredResults.length}건
             </Badge>
+            {editingId && (
+              <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">
+                편집 중
+              </Badge>
+            )}
           </CardTitle>
           <CardDescription>
-            정산서의 CSO관리업체명과 회원 데이터의 매칭 상태를 확인합니다.
+            정산서의 CSO관리업체명과 회원 데이터의 매칭 상태를 확인합니다. 
+            <span className="text-blue-600 font-medium ml-1">테이블에서 직접 사업자번호를 입력할 수 있습니다.</span>
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -1014,7 +1320,7 @@ export default function SettlementIntegrityManager() {
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
                     <TableHead className="w-[200px]">엑셀 업체명</TableHead>
-                    <TableHead className="w-[140px]">매칭 사업자번호</TableHead>
+                    <TableHead className="w-[160px]">매칭 사업자번호</TableHead>
                     <TableHead className="w-[120px]">DB 상태</TableHead>
                     <TableHead className="w-[200px]">ERP 등록명</TableHead>
                     <TableHead className="w-[100px]">마지막 정산월</TableHead>
@@ -1034,26 +1340,26 @@ export default function SettlementIntegrityManager() {
                         result.status === 'missing_match' &&
                           'bg-yellow-100/80 dark:bg-yellow-950/50 hover:bg-yellow-200/80 dark:hover:bg-yellow-950/70 border-l-4 border-l-yellow-500',
                         result.status === 'normal' &&
-                          'hover:bg-muted/50'
+                          'hover:bg-muted/50',
+                        editingId === result.id && 'ring-2 ring-blue-400 ring-inset'
                       )}
                     >
                       <TableCell className="font-medium">
                         {result.cso_company_name}
                       </TableCell>
                       <TableCell className="font-mono text-sm">
-                        {result.business_number ? (
-                          <button
-                            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                            onClick={() => openAddDialog(result.business_number!)}
-                            title="사업자번호 기준 거래처 관리"
-                          >
-                            {result.business_number.slice(0, 3)}-
-                            {result.business_number.slice(3, 5)}-
-                            {result.business_number.slice(5)}
-                          </button>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
+                        <InlineEditCell
+                          result={result}
+                          isEditing={editingId === result.id}
+                          editValue={editingId === result.id ? editValue : ''}
+                          isSaving={savingId === result.id}
+                          onStartEdit={() => startInlineEdit(result.id, result.business_number)}
+                          onValueChange={setEditValue}
+                          onSave={() => saveInlineEdit(result)}
+                          onCancel={cancelInlineEdit}
+                          onNavigate={navigateToUnregistered}
+                          openAddDialog={openAddDialog}
+                        />
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={result.status} />
@@ -1083,7 +1389,7 @@ export default function SettlementIntegrityManager() {
                             size="icon"
                             className="h-8 w-8"
                             onClick={() => openEditDialog(result)}
-                            title="매칭 등록/수정"
+                            title="매칭 등록/수정 (다이얼로그)"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -1218,7 +1524,7 @@ export default function SettlementIntegrityManager() {
                         <TableRow key={idx}>
                           <TableCell>{item.cso_company_name}</TableCell>
                           <TableCell className="font-mono">
-                            {item.business_number}
+                            {formatBusinessNumber(item.business_number)}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1332,9 +1638,7 @@ export default function SettlementIntegrityManager() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>기존 매칭 정보</AlertTitle>
                 <AlertDescription className="font-mono">
-                  {editTarget.business_number.slice(0, 3)}-
-                  {editTarget.business_number.slice(3, 5)}-
-                  {editTarget.business_number.slice(5)}
+                  {formatBusinessNumber(editTarget.business_number)}
                 </AlertDescription>
               </Alert>
             )}
@@ -1381,13 +1685,7 @@ export default function SettlementIntegrityManager() {
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">사업자번호</span>
                 <span className="font-mono">
-                  {deleteTarget?.business_number ? (
-                    <>
-                      {deleteTarget.business_number.slice(0, 3)}-
-                      {deleteTarget.business_number.slice(3, 5)}-
-                      {deleteTarget.business_number.slice(5)}
-                    </>
-                  ) : '-'}
+                  {deleteTarget?.business_number ? formatBusinessNumber(deleteTarget.business_number) : '-'}
                 </span>
               </div>
             </div>
