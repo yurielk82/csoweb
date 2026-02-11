@@ -1,28 +1,24 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef, useOptimistic, startTransition } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   AlertCircle,
   AlertTriangle,
-  CheckCircle,
   Upload,
   FileSpreadsheet,
   Search,
-  Filter,
   RefreshCw,
   Loader2,
   X,
   Download,
   Building2,
   Calendar,
-  UserPlus,
-  Link2Off,
-  Pencil,
+  UserCheck,
+  UserX,
+  Clock,
   Trash2,
-  Save,
   Plus,
-  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +42,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -54,42 +56,31 @@ import { cn } from '@/lib/utils';
 // Types
 // ===========================================
 
-export type MatchingStatus = 'normal' | 'unregistered' | 'pending_join' | 'missing_match';
+type RegistrationStatus = 'registered' | 'unregistered' | 'pending_approval';
+type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-export interface CSOMatching {
-  cso_company_name: string; // PK: CSO관리업체명
-  business_number: string; // 사업자등록번호
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface IntegrityCheckResult {
+interface IntegrityRow {
   id: string;
-  cso_company_name: string; // 엑셀 업체명
-  business_number: string | null; // 매칭 사업자번호
-  status: MatchingStatus;
-  erp_company_name: string | null; // ERP(회원DB) 등록명
-  last_settlement_month: string | null; // 마지막 정산월
-  is_approved: boolean | null; // 회원 승인 여부
-  row_count: number; // 정산 데이터 건수
+  business_number: string;
+  business_name: string | null;
+  registration_status: RegistrationStatus;
+  cso_company_names: string[];
+  last_settlement_month: string | null;
+  row_count: number;
+  is_readonly: boolean;
+  // UI state
+  saveState?: SaveState;
 }
 
-export interface MatchingUploadItem {
+interface MatchingUploadItem {
   cso_company_name: string;
   business_number: string;
 }
 
 // ===========================================
-// Utility: 텍스트 정규화 (공백/특수문자 제거)
+// Utility Functions
 // ===========================================
-function normalizeText(text: string): string {
-  return text
-    .replace(/\s+/g, '') // 모든 공백 제거
-    .replace(/[^\w가-힣]/g, '') // 특수문자 제거 (영문, 숫자, 한글만 유지)
-    .toLowerCase();
-}
 
-// 사업자번호 포맷팅 (000-00-00000)
 function formatBusinessNumber(value: string): string {
   const numbers = value.replace(/\D/g, '').slice(0, 10);
   if (numbers.length <= 3) return numbers;
@@ -100,34 +91,27 @@ function formatBusinessNumber(value: string): string {
 // ===========================================
 // Status Badge Component
 // ===========================================
-function StatusBadge({ status }: { status: MatchingStatus }) {
+function StatusBadge({ status }: { status: RegistrationStatus }) {
   switch (status) {
-    case 'normal':
+    case 'registered':
       return (
-        <Badge className="bg-green-600 hover:bg-green-700 text-white font-medium px-3 py-1">
-          <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
+        <Badge className="bg-green-600 hover:bg-green-700 text-white font-medium px-2 py-0.5 text-xs">
+          <UserCheck className="h-3 w-3 mr-1" />
           정상
         </Badge>
       );
     case 'unregistered':
       return (
-        <Badge className="bg-red-600 hover:bg-red-700 text-white font-medium px-3 py-1 animate-pulse">
-          <AlertCircle className="h-3.5 w-3.5 mr-1.5" />
+        <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-2 py-0.5 text-xs">
+          <UserX className="h-3 w-3 mr-1" />
           미등록
         </Badge>
       );
-    case 'pending_join':
+    case 'pending_approval':
       return (
-        <Badge className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-3 py-1 animate-pulse">
-          <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-          가입대기
-        </Badge>
-      );
-    case 'missing_match':
-      return (
-        <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white font-medium px-3 py-1 animate-pulse">
-          <Link2Off className="h-3.5 w-3.5 mr-1.5" />
-          매칭누락
+        <Badge className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-2 py-0.5 text-xs">
+          <Clock className="h-3 w-3 mr-1" />
+          승인대기
         </Badge>
       );
     default:
@@ -136,127 +120,241 @@ function StatusBadge({ status }: { status: MatchingStatus }) {
 }
 
 // ===========================================
-// Inline Edit Cell Component
+// CSO Tag Component (인라인 편집 가능)
 // ===========================================
-interface InlineEditCellProps {
-  result: IntegrityCheckResult;
-  isEditing: boolean;
-  editValue: string;
-  isSaving: boolean;
-  onStartEdit: () => void;
-  onValueChange: (value: string) => void;
-  onSave: () => void;
-  onCancel: () => void;
-  onNavigate: (direction: 'next' | 'prev') => void;
-  openAddDialog: (businessNumber: string) => void;
+interface CSOTagProps {
+  value: string;
+  isDuplicate: boolean;
+  duplicateInfo?: string;
+  onEdit: (newValue: string) => void;
+  onDelete: () => void;
+  disabled?: boolean;
 }
 
-function InlineEditCell({
-  result,
-  isEditing,
-  editValue,
-  isSaving,
-  onStartEdit,
-  onValueChange,
-  onSave,
-  onCancel,
-  onNavigate,
-  openAddDialog,
-}: InlineEditCellProps) {
-  const localInputRef = useRef<HTMLInputElement>(null);
+function CSOTag({ value, isDuplicate, duplicateInfo, onEdit, onDelete, disabled }: CSOTagProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // 편집 모드가 시작되면 자동으로 포커스
   useEffect(() => {
-    if (isEditing && localInputRef.current) {
-      localInputRef.current.focus();
-      localInputRef.current.select();
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
     }
   }, [isEditing]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+  const handleSave = () => {
+    if (editValue.trim() && editValue.trim() !== value) {
+      onEdit(editValue.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === 'Tab') {
       e.preventDefault();
-      onSave();
-    } else if (e.key === 'Tab') {
-      e.preventDefault();
-      onSave();
-      // Tab 시 다음 행으로 이동은 onSave 완료 후 처리됨
+      handleSave();
     } else if (e.key === 'Escape') {
-      e.preventDefault();
-      onCancel();
-    } else if (e.key === 'ArrowDown' && e.ctrlKey) {
-      e.preventDefault();
-      onNavigate('next');
-    } else if (e.key === 'ArrowUp' && e.ctrlKey) {
-      e.preventDefault();
-      onNavigate('prev');
+      setEditValue(value);
+      setIsEditing(false);
     }
   };
 
   if (isEditing) {
     return (
-      <div className="flex items-center gap-1">
-        <Input
-          ref={localInputRef}
-          value={formatBusinessNumber(editValue)}
-          onChange={(e) => onValueChange(e.target.value.replace(/\D/g, ''))}
-          onKeyDown={handleKeyDown}
-          onBlur={() => {
-            // 저장 중이 아닐 때만 취소
-            if (!isSaving) {
-              // 약간의 딜레이를 주어 버튼 클릭이 먼저 처리되도록 함
-              setTimeout(() => onCancel(), 150);
-            }
-          }}
-          maxLength={12}
-          placeholder="000-00-00000"
-          className="w-[130px] h-8 font-mono text-sm"
-          disabled={isSaving}
-        />
-        {isSaving ? (
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-        ) : (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onSave();
-            }}
-            disabled={editValue.length !== 10}
+      <input
+        ref={inputRef}
+        value={editValue}
+        onChange={(e) => setEditValue(e.target.value)}
+        onBlur={handleSave}
+        onKeyDown={handleKeyDown}
+        className="px-2 py-1 text-sm border rounded min-w-[100px] max-w-[200px] outline-none focus:ring-2 focus:ring-blue-400"
+        disabled={disabled}
+      />
+    );
+  }
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 px-2 py-1 rounded text-sm cursor-pointer transition-all",
+              isDuplicate
+                ? "bg-orange-100 border-2 border-orange-400 text-orange-800"
+                : "bg-blue-100 text-blue-800 hover:bg-blue-200"
+            )}
+            onClick={() => !disabled && setIsEditing(true)}
           >
-            <Check className="h-4 w-4 text-green-600" />
-          </Button>
+            <span className="max-w-[150px] truncate">{value}</span>
+            {!disabled && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                className="text-gray-500 hover:text-red-500 ml-1"
+                title="삭제"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </span>
+        </TooltipTrigger>
+        {isDuplicate && duplicateInfo && (
+          <TooltipContent className="bg-orange-500 text-white">
+            <p>다른 사업자에 매핑됨: {duplicateInfo}</p>
+          </TooltipContent>
         )}
-      </div>
-    );
-  }
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
-  // 기존 값 표시 또는 빈 값일 때 입력 유도
-  if (result.business_number) {
+// ===========================================
+// Add CSO Tag Input Component
+// ===========================================
+interface AddCSOInputProps {
+  onAdd: (value: string) => void;
+  disabled?: boolean;
+}
+
+function AddCSOInput({ onAdd, disabled }: AddCSOInputProps) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [value, setValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isAdding && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isAdding]);
+
+  const handleAdd = () => {
+    if (value.trim()) {
+      onAdd(value.trim());
+      setValue('');
+    }
+    setIsAdding(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      handleAdd();
+    } else if (e.key === 'Escape') {
+      setValue('');
+      setIsAdding(false);
+    }
+  };
+
+  if (isAdding) {
     return (
-      <button
-        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-mono text-sm"
-        onClick={() => openAddDialog(result.business_number!)}
-        title="사업자번호 기준 거래처 관리"
-      >
-        {formatBusinessNumber(result.business_number)}
-      </button>
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={handleAdd}
+        onKeyDown={handleKeyDown}
+        placeholder="CSO업체명 입력"
+        className="px-2 py-1 text-sm border rounded min-w-[120px] outline-none focus:ring-2 focus:ring-blue-400"
+        disabled={disabled}
+      />
     );
   }
 
-  // 미등록 상태: 클릭 시 인라인 편집 시작
   return (
     <button
-      onClick={onStartEdit}
-      className="text-red-500 hover:text-red-700 hover:underline cursor-pointer text-sm flex items-center gap-1"
-      title="클릭하여 사업자번호 입력"
+      onClick={() => !disabled && setIsAdding(true)}
+      className={cn(
+        "px-2 py-1 text-sm rounded transition-all flex items-center gap-1",
+        disabled
+          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+      )}
+      disabled={disabled}
     >
-      <Pencil className="h-3 w-3" />
-      입력 필요
+      <Plus className="h-3 w-3" />
+      추가
     </button>
+  );
+}
+
+// ===========================================
+// Inline Editable Cell Component
+// ===========================================
+interface EditableCellProps {
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  format?: (value: string) => string;
+  className?: string;
+}
+
+function EditableCell({ value, onChange, disabled, placeholder, format, className }: EditableCellProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setEditValue(value);
+  }, [value]);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleSave = () => {
+    if (editValue !== value) {
+      onChange(format ? format(editValue) : editValue);
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === 'Escape') {
+      setEditValue(value);
+      setIsEditing(false);
+    }
+  };
+
+  if (disabled) {
+    return (
+      <span className={cn("text-sm", className)}>
+        {format ? format(value) : value || '-'}
+      </span>
+    );
+  }
+
+  if (isEditing) {
+    return (
+      <input
+        ref={inputRef}
+        value={format ? format(editValue) : editValue}
+        onChange={(e) => setEditValue(e.target.value.replace(/\D/g, ''))}
+        onBlur={handleSave}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        className={cn("px-2 py-1 text-sm border rounded outline-none focus:ring-2 focus:ring-blue-400 w-full", className)}
+      />
+    );
+  }
+
+  return (
+    <span
+      onClick={() => setIsEditing(true)}
+      className={cn("text-sm cursor-pointer hover:bg-gray-100 px-2 py-1 rounded", className)}
+    >
+      {format ? format(value) : value || placeholder || '클릭하여 입력'}
+    </span>
   );
 }
 
@@ -268,29 +366,13 @@ export default function SettlementIntegrityManager() {
 
   // State
   const [loading, setLoading] = useState(true);
-  const [checkResults, setCheckResults] = useState<IntegrityCheckResult[]>([]);
-  const [searchInput, setSearchInput] = useState(''); // 입력 중인 검색어
-  const [searchQuery, setSearchQuery] = useState(''); // 실제 적용된 검색어
-  const [filterStatus, setFilterStatus] = useState<MatchingStatus | 'all' | 'issues'>('all');
+  const [tableData, setTableData] = useState<IntegrityRow[]>([]);
+  const [csoMapping, setCsoMapping] = useState<Record<string, string>>({}); // CSO명 → 사업자번호
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<RegistrationStatus | 'all' | 'no_cso'>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
-
-  // Inline edit state
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [savingId, setSavingId] = useState<string | null>(null);
-
-  // Optimistic update state
-  const [optimisticResults, setOptimisticResults] = useOptimistic(
-    checkResults,
-    (state, optimisticValue: { id: string; business_number: string }) => {
-      return state.map((r) =>
-        r.id === optimisticValue.id
-          ? { ...r, business_number: optimisticValue.business_number, status: 'pending_join' as MatchingStatus }
-          : r
-      );
-    }
-  );
 
   // Upload dialog state
   const [showUploadDialog, setShowUploadDialog] = useState(false);
@@ -299,23 +381,19 @@ export default function SettlementIntegrityManager() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadPreview, setUploadPreview] = useState<MatchingUploadItem[]>([]);
 
-  // Edit dialog state (직접 매칭 등록/수정)
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editTarget, setEditTarget] = useState<IntegrityCheckResult | null>(null);
-  const [editBusinessNumber, setEditBusinessNumber] = useState('');
-  const [saving, setSaving] = useState(false);
-
   // Delete dialog state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<IntegrityCheckResult | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<IntegrityRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Add company dialog state (사업자번호 기준 거래처 추가)
+  // Add new row dialog state
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [addBusinessNumber, setAddBusinessNumber] = useState('');
-  const [addCompanyName, setAddCompanyName] = useState('');
-  const [addingCompany, setAddingCompany] = useState(false);
-  const [linkedCompanies, setLinkedCompanies] = useState<string[]>([]);
+  const [newBusinessNumber, setNewBusinessNumber] = useState('');
+  const [newBusinessName, setNewBusinessName] = useState('');
+  const [newCsoName, setNewCsoName] = useState('');
+  const [addingRow, setAddingRow] = useState(false);
+  const [verifyingBizNum, setVerifyingBizNum] = useState(false);
+  const [verifiedUser, setVerifiedUser] = useState<{ company_name: string; is_approved: boolean } | null>(null);
 
   // ===========================================
   // Data Fetching
@@ -330,7 +408,8 @@ export default function SettlementIntegrityManager() {
       const result = await res.json();
 
       if (result.success) {
-        setCheckResults(result.data.results);
+        setTableData(result.data.results);
+        setCsoMapping(result.data.csoMapping || {});
         if (result.data.availableMonths) {
           setAvailableMonths(result.data.availableMonths);
         }
@@ -358,106 +437,321 @@ export default function SettlementIntegrityManager() {
   }, [fetchIntegrityData]);
 
   // ===========================================
-  // Filtering Logic (에러 우선 정렬 강화)
+  // Filtering Logic
   // ===========================================
-  const filteredResults = useMemo(() => {
-    let results = [...optimisticResults];
+  const filteredData = useMemo(() => {
+    let results = [...tableData];
 
-    // 검색 필터 (사업자번호 검색 시 연결된 모든 업체 노출)
+    // 검색 필터
     if (searchQuery.trim()) {
-      const normalizedQuery = normalizeText(searchQuery);
+      const query = searchQuery.toLowerCase();
       const searchBizNum = searchQuery.replace(/\D/g, '');
       
-      // 사업자번호로 검색한 경우, 해당 번호에 연결된 모든 업체 찾기
-      if (searchBizNum.length >= 3) {
-        const matchedBizNumbers = new Set<string>();
-        results.forEach((r) => {
-          if (r.business_number && r.business_number.includes(searchBizNum)) {
-            matchedBizNumbers.add(r.business_number);
-          }
-        });
-        
-        if (matchedBizNumbers.size > 0) {
-          results = results.filter(
-            (r) => r.business_number && matchedBizNumbers.has(r.business_number)
-          );
-        } else {
-          // 사업자번호 매칭 없으면 업체명으로 검색
-          results = results.filter(
-            (r) =>
-              normalizeText(r.cso_company_name).includes(normalizedQuery) ||
-              (r.erp_company_name && normalizeText(r.erp_company_name).includes(normalizedQuery))
-          );
-        }
-      } else {
-        // 짧은 검색어는 업체명으로 검색
-        results = results.filter(
-          (r) =>
-            normalizeText(r.cso_company_name).includes(normalizedQuery) ||
-            (r.business_number && r.business_number.includes(searchBizNum)) ||
-            (r.erp_company_name && normalizeText(r.erp_company_name).includes(normalizedQuery))
-        );
-      }
+      results = results.filter((r) => {
+        // 사업자번호 검색
+        if (searchBizNum && r.business_number.includes(searchBizNum)) return true;
+        // 사업자명 검색
+        if (r.business_name?.toLowerCase().includes(query)) return true;
+        // CSO업체명 검색
+        if (r.cso_company_names.some(cso => cso.toLowerCase().includes(query))) return true;
+        return false;
+      });
     }
 
     // 상태 필터
-    if (filterStatus === 'issues') {
-      results = results.filter((r) => r.status !== 'normal');
+    if (filterStatus === 'no_cso') {
+      results = results.filter((r) => r.cso_company_names.length === 0);
     } else if (filterStatus !== 'all') {
-      results = results.filter((r) => r.status === filterStatus);
+      results = results.filter((r) => r.registration_status === filterStatus);
     }
 
-    // 에러 우선 정렬 (미등록 → 가입대기 → 매칭누락 → 정상)
-    results.sort((a, b) => {
-      const statusOrder = { unregistered: 0, pending_join: 1, missing_match: 2, normal: 3 };
-      const statusDiff = statusOrder[a.status] - statusOrder[b.status];
-      if (statusDiff !== 0) return statusDiff;
-      
-      // 같은 상태면 업체명 순
-      return a.cso_company_name.localeCompare(b.cso_company_name, 'ko');
-    });
-
     return results;
-  }, [optimisticResults, searchQuery, filterStatus]);
-
-  // 미등록 항목 목록 (포커스 이동용)
-  const unregisteredIds = useMemo(() => {
-    return filteredResults
-      .filter((r) => r.status === 'unregistered')
-      .map((r) => r.id);
-  }, [filteredResults]);
+  }, [tableData, searchQuery, filterStatus]);
 
   // ===========================================
   // Statistics
   // ===========================================
   const stats = useMemo(() => {
-    const total = checkResults.length;
-    const normal = checkResults.filter((r) => r.status === 'normal').length;
-    const unregistered = checkResults.filter((r) => r.status === 'unregistered').length;
-    const pendingJoin = checkResults.filter((r) => r.status === 'pending_join').length;
-    const missingMatch = checkResults.filter((r) => r.status === 'missing_match').length;
-    const issues = unregistered + pendingJoin + missingMatch;
-
-    return { total, normal, unregistered, pendingJoin, missingMatch, issues };
-  }, [checkResults]);
+    return {
+      total: tableData.length,
+      registered: tableData.filter((r) => r.registration_status === 'registered').length,
+      unregistered: tableData.filter((r) => r.registration_status === 'unregistered').length,
+      pending_approval: tableData.filter((r) => r.registration_status === 'pending_approval').length,
+      no_cso: tableData.filter((r) => r.cso_company_names.length === 0).length,
+    };
+  }, [tableData]);
 
   // ===========================================
-  // Inline Edit Handlers
+  // CSO Tag Handlers
   // ===========================================
-  const startInlineEdit = useCallback((id: string, currentValue: string | null) => {
-    setEditingId(id);
-    setEditValue(currentValue || '');
-    // 포커스는 ref를 통해 자동으로 처리됨
-  }, []);
+  const handleAddCSOTag = async (rowId: string, csoName: string) => {
+    const row = tableData.find((r) => r.id === rowId);
+    if (!row) return;
 
-  const cancelInlineEdit = useCallback(() => {
-    setEditingId(null);
-    setEditValue('');
-  }, []);
+    // 중복 검증
+    const existingBizNum = csoMapping[csoName];
+    if (existingBizNum && existingBizNum !== row.business_number) {
+      toast({
+        variant: 'destructive',
+        title: '중복 경고',
+        description: `"${csoName}"은(는) 이미 다른 사업자(${formatBusinessNumber(existingBizNum)})에 매핑되어 있습니다.`,
+      });
+      // 경고만 표시하고 계속 진행
+    }
 
-  const saveInlineEdit = useCallback(async (result: IntegrityCheckResult) => {
-    const cleanedBizNum = editValue.replace(/\D/g, '');
-    
+    // 낙관적 업데이트
+    setTableData((prev) =>
+      prev.map((r) =>
+        r.id === rowId
+          ? { ...r, cso_company_names: [...r.cso_company_names, csoName], saveState: 'saving' }
+          : r
+      )
+    );
+
+    try {
+      const res = await fetch('/api/admin/cso-matching/upsert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ cso_company_name: csoName, business_number: row.business_number }],
+        }),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        // 저장 성공
+        setTableData((prev) =>
+          prev.map((r) => (r.id === rowId ? { ...r, saveState: 'saved' } : r))
+        );
+        setCsoMapping((prev) => ({ ...prev, [csoName]: row.business_number }));
+        
+        // 1초 후 상태 초기화
+        setTimeout(() => {
+          setTableData((prev) =>
+            prev.map((r) => (r.id === rowId ? { ...r, saveState: 'idle' } : r))
+          );
+        }, 1000);
+
+        toast({
+          title: '저장 완료',
+          description: `"${csoName}" 태그가 추가되었습니다.`,
+        });
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      // 롤백
+      setTableData((prev) =>
+        prev.map((r) =>
+          r.id === rowId
+            ? { ...r, cso_company_names: r.cso_company_names.filter((c) => c !== csoName), saveState: 'error' }
+            : r
+        )
+      );
+      toast({
+        variant: 'destructive',
+        title: '저장 실패',
+        description: error instanceof Error ? error.message : '오류가 발생했습니다.',
+      });
+    }
+  };
+
+  const handleEditCSOTag = async (rowId: string, oldName: string, newName: string) => {
+    const row = tableData.find((r) => r.id === rowId);
+    if (!row) return;
+
+    // 중복 검증
+    const existingBizNum = csoMapping[newName];
+    if (existingBizNum && existingBizNum !== row.business_number) {
+      toast({
+        variant: 'destructive',
+        title: '중복 경고',
+        description: `"${newName}"은(는) 이미 다른 사업자(${formatBusinessNumber(existingBizNum)})에 매핑되어 있습니다.`,
+      });
+    }
+
+    // 낙관적 업데이트
+    setTableData((prev) =>
+      prev.map((r) =>
+        r.id === rowId
+          ? {
+              ...r,
+              cso_company_names: r.cso_company_names.map((c) => (c === oldName ? newName : c)),
+              saveState: 'saving',
+            }
+          : r
+      )
+    );
+
+    try {
+      // 기존 삭제
+      await fetch('/api/admin/cso-matching/upsert', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cso_company_name: oldName }),
+      });
+
+      // 새로 추가
+      const res = await fetch('/api/admin/cso-matching/upsert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ cso_company_name: newName, business_number: row.business_number }],
+        }),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        setTableData((prev) =>
+          prev.map((r) => (r.id === rowId ? { ...r, saveState: 'saved' } : r))
+        );
+        setCsoMapping((prev) => {
+          const newMapping = { ...prev };
+          delete newMapping[oldName];
+          newMapping[newName] = row.business_number;
+          return newMapping;
+        });
+
+        setTimeout(() => {
+          setTableData((prev) =>
+            prev.map((r) => (r.id === rowId ? { ...r, saveState: 'idle' } : r))
+          );
+        }, 1000);
+
+        toast({
+          title: '수정 완료',
+          description: `"${oldName}" → "${newName}"`,
+        });
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      // 롤백
+      setTableData((prev) =>
+        prev.map((r) =>
+          r.id === rowId
+            ? {
+                ...r,
+                cso_company_names: r.cso_company_names.map((c) => (c === newName ? oldName : c)),
+                saveState: 'error',
+              }
+            : r
+        )
+      );
+      toast({
+        variant: 'destructive',
+        title: '수정 실패',
+        description: error instanceof Error ? error.message : '오류가 발생했습니다.',
+      });
+    }
+  };
+
+  const handleDeleteCSOTag = async (rowId: string, csoName: string) => {
+    const row = tableData.find((r) => r.id === rowId);
+    if (!row) return;
+
+    // 낙관적 업데이트
+    setTableData((prev) =>
+      prev.map((r) =>
+        r.id === rowId
+          ? { ...r, cso_company_names: r.cso_company_names.filter((c) => c !== csoName), saveState: 'saving' }
+          : r
+      )
+    );
+
+    try {
+      const res = await fetch('/api/admin/cso-matching/upsert', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cso_company_name: csoName }),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        setTableData((prev) =>
+          prev.map((r) => (r.id === rowId ? { ...r, saveState: 'saved' } : r))
+        );
+        setCsoMapping((prev) => {
+          const newMapping = { ...prev };
+          delete newMapping[csoName];
+          return newMapping;
+        });
+
+        setTimeout(() => {
+          setTableData((prev) =>
+            prev.map((r) => (r.id === rowId ? { ...r, saveState: 'idle' } : r))
+          );
+        }, 1000);
+
+        toast({
+          title: '삭제 완료',
+          description: `"${csoName}" 태그가 삭제되었습니다.`,
+        });
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      // 롤백
+      setTableData((prev) =>
+        prev.map((r) =>
+          r.id === rowId
+            ? { ...r, cso_company_names: [...r.cso_company_names, csoName], saveState: 'error' }
+            : r
+        )
+      );
+      toast({
+        variant: 'destructive',
+        title: '삭제 실패',
+        description: error instanceof Error ? error.message : '오류가 발생했습니다.',
+      });
+    }
+  };
+
+  // ===========================================
+  // Row Delete Handler
+  // ===========================================
+  const handleDeleteRow = async () => {
+    if (!deleteTarget) return;
+
+    setDeleting(true);
+    try {
+      // 해당 사업자번호의 모든 CSO 매칭 삭제
+      for (const csoName of deleteTarget.cso_company_names) {
+        await fetch('/api/admin/cso-matching/upsert', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cso_company_name: csoName }),
+        });
+      }
+
+      toast({
+        title: '삭제 완료',
+        description: `사업자번호 ${formatBusinessNumber(deleteTarget.business_number)}의 모든 매핑이 삭제되었습니다.`,
+      });
+
+      setShowDeleteDialog(false);
+      setDeleteTarget(null);
+      fetchIntegrityData();
+    } catch (error) {
+      console.error('Delete row error:', error);
+      toast({
+        variant: 'destructive',
+        title: '삭제 실패',
+        description: '매핑 삭제 중 오류가 발생했습니다.',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // ===========================================
+  // Add New Row Handler
+  // ===========================================
+  const handleVerifyBusinessNumber = async () => {
+    const cleanedBizNum = newBusinessNumber.replace(/\D/g, '');
     if (cleanedBizNum.length !== 10) {
       toast({
         variant: 'destructive',
@@ -467,95 +761,96 @@ export default function SettlementIntegrityManager() {
       return;
     }
 
-    setSavingId(result.id);
+    setVerifyingBizNum(true);
+    try {
+      const res = await fetch(`/api/users?search=${cleanedBizNum}`);
+      const result = await res.json();
 
-    // 낙관적 업데이트 적용
-    startTransition(() => {
-      setOptimisticResults({ id: result.id, business_number: cleanedBizNum });
-    });
+      if (result.success && result.data.length > 0) {
+        const user = result.data[0];
+        setVerifiedUser({
+          company_name: user.company_name,
+          is_approved: user.is_approved,
+        });
+        setNewBusinessName(user.company_name);
+        toast({
+          title: '회원 확인',
+          description: `${user.company_name} (${user.is_approved ? '승인완료' : '승인대기'})`,
+        });
+      } else {
+        setVerifiedUser(null);
+        toast({
+          title: '미등록 사업자',
+          description: '회원가입되지 않은 사업자번호입니다. 사업자명을 직접 입력하세요.',
+        });
+      }
+    } catch (error) {
+      console.error('Verify business number error:', error);
+      setVerifiedUser(null);
+    } finally {
+      setVerifyingBizNum(false);
+    }
+  };
 
+  const handleAddNewRow = async () => {
+    const cleanedBizNum = newBusinessNumber.replace(/\D/g, '');
+    if (cleanedBizNum.length !== 10) {
+      toast({
+        variant: 'destructive',
+        title: '입력 오류',
+        description: '사업자번호는 10자리 숫자여야 합니다.',
+      });
+      return;
+    }
+
+    if (!newCsoName.trim()) {
+      toast({
+        variant: 'destructive',
+        title: '입력 오류',
+        description: 'CSO관리업체명을 입력해주세요.',
+      });
+      return;
+    }
+
+    setAddingRow(true);
     try {
       const res = await fetch('/api/admin/cso-matching/upsert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: [{
-            cso_company_name: result.cso_company_name,
-            business_number: cleanedBizNum,
-          }],
+          items: [{ cso_company_name: newCsoName.trim(), business_number: cleanedBizNum }],
         }),
       });
 
-      const apiResult = await res.json();
+      const result = await res.json();
 
-      if (apiResult.success) {
+      if (result.success) {
         toast({
-          title: '저장 완료',
-          description: `"${result.cso_company_name}"의 매칭 정보가 저장되었습니다.`,
+          title: '추가 완료',
+          description: `새 매핑이 추가되었습니다.`,
         });
-        
-        // 편집 모드 종료
-        setEditingId(null);
-        setEditValue('');
-        
-        // 다음 미등록 항목으로 포커스 이동
-        const currentIndex = unregisteredIds.indexOf(result.id);
-        const nextId = unregisteredIds[currentIndex + 1];
-        
-        if (nextId) {
-          // 약간의 딜레이 후 다음 행 편집 시작
-          setTimeout(() => {
-            const nextResult = filteredResults.find((r) => r.id === nextId);
-            if (nextResult) {
-              startInlineEdit(nextId, nextResult.business_number);
-            }
-          }, 100);
-        }
-        
-        // 데이터 새로고침 (백그라운드)
+        setShowAddDialog(false);
+        setNewBusinessNumber('');
+        setNewBusinessName('');
+        setNewCsoName('');
+        setVerifiedUser(null);
         fetchIntegrityData();
       } else {
-        toast({
-          variant: 'destructive',
-          title: '저장 실패',
-          description: apiResult.error,
-        });
-        // 실패 시 데이터 새로고침하여 원상복구
-        fetchIntegrityData();
+        throw new Error(result.error);
       }
     } catch (error) {
-      console.error('Save matching error:', error);
       toast({
         variant: 'destructive',
-        title: '오류',
-        description: '매칭 정보 저장 중 오류가 발생했습니다.',
+        title: '추가 실패',
+        description: error instanceof Error ? error.message : '오류가 발생했습니다.',
       });
-      fetchIntegrityData();
     } finally {
-      setSavingId(null);
+      setAddingRow(false);
     }
-  }, [editValue, toast, unregisteredIds, filteredResults, startInlineEdit, fetchIntegrityData, setOptimisticResults]);
-
-  const navigateToUnregistered = useCallback((direction: 'next' | 'prev') => {
-    if (!editingId) return;
-    
-    const currentIndex = unregisteredIds.indexOf(editingId);
-    if (currentIndex === -1) return;
-    
-    const targetIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-    const targetId = unregisteredIds[targetIndex];
-    
-    if (targetId) {
-      const targetResult = filteredResults.find((r) => r.id === targetId);
-      if (targetResult) {
-        cancelInlineEdit();
-        setTimeout(() => startInlineEdit(targetId, targetResult.business_number), 50);
-      }
-    }
-  }, [editingId, unregisteredIds, filteredResults, cancelInlineEdit, startInlineEdit]);
+  };
 
   // ===========================================
-  // Excel Upload Handling
+  // Excel Upload Handlers
   // ===========================================
   const parseUploadFile = useCallback(async (file: File) => {
     try {
@@ -566,11 +861,9 @@ export default function SettlementIntegrityManager() {
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
 
-      // 컬럼 이름 추출 및 매핑
       const items: MatchingUploadItem[] = [];
 
       for (const row of jsonData) {
-        // 업체명 컬럼 찾기 (여러 가능한 이름)
         const companyNameKeys = ['업체명', 'CSO관리업체', 'CSO관리업체명', '관리업체명', '회사명'];
         let companyName = '';
         for (const key of companyNameKeys) {
@@ -580,7 +873,6 @@ export default function SettlementIntegrityManager() {
           }
         }
 
-        // 사업자번호 컬럼 찾기
         const bizNumKeys = ['사업자번호', '사업자등록번호', '사업자_번호'];
         let bizNum = '';
         for (const key of bizNumKeys) {
@@ -604,7 +896,7 @@ export default function SettlementIntegrityManager() {
         toast({
           variant: 'destructive',
           title: '파싱 오류',
-          description: '유효한 매칭 데이터를 찾을 수 없습니다. 컬럼명을 확인해주세요.',
+          description: '유효한 매칭 데이터를 찾을 수 없습니다.',
         });
       }
     } catch (error) {
@@ -632,7 +924,7 @@ export default function SettlementIntegrityManager() {
       'application/vnd.ms-excel': ['.xls'],
     },
     maxFiles: 1,
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 10 * 1024 * 1024,
   });
 
   const handleUpload = async () => {
@@ -642,7 +934,6 @@ export default function SettlementIntegrityManager() {
     setUploadProgress(0);
 
     try {
-      // Progress simulation
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => Math.min(prev + 10, 90));
       }, 200);
@@ -690,16 +981,15 @@ export default function SettlementIntegrityManager() {
     try {
       const XLSX = await import('xlsx');
 
-      const exportData = filteredResults
-        .filter((r) => r.status !== 'normal')
+      const exportData = filteredData
+        .filter((r) => r.registration_status === 'unregistered' || r.cso_company_names.length === 0)
         .map((r) => ({
-          '엑셀 업체명': r.cso_company_name,
-          '매칭 사업자번호': r.business_number || '-',
-          '상태': r.status === 'unregistered' ? '미등록' :
-                 r.status === 'pending_join' ? '가입대기' :
-                 r.status === 'missing_match' ? '매칭누락' : '정상',
-          'ERP 등록명': r.erp_company_name || '-',
-          '마지막 정산월': r.last_settlement_month || '-',
+          '사업자번호': formatBusinessNumber(r.business_number),
+          '사업자명': r.business_name || '-',
+          '회원가입상태': r.registration_status === 'registered' ? '정상' :
+                        r.registration_status === 'unregistered' ? '미등록' : '승인대기',
+          'CSO관리업체명': r.cso_company_names.join(', ') || '-',
+          '마지막정산월': r.last_settlement_month || '-',
           '정산건수': r.row_count,
         }));
 
@@ -724,302 +1014,16 @@ export default function SettlementIntegrityManager() {
     }
   };
 
-  const closeUploadDialog = () => {
-    setShowUploadDialog(false);
-    setUploadFile(null);
-    setUploadPreview([]);
-  };
-
   // ===========================================
-  // 직접 매칭 등록/수정 핸들링 (다이얼로그 방식)
+  // Search Handlers
   // ===========================================
-  const openEditDialog = (result: IntegrityCheckResult) => {
-    setEditTarget(result);
-    setEditBusinessNumber(result.business_number || '');
-    setShowEditDialog(true);
-  };
-
-  const closeEditDialog = () => {
-    setShowEditDialog(false);
-    setEditTarget(null);
-    setEditBusinessNumber('');
-  };
-
-  const handleSaveMatching = async () => {
-    if (!editTarget) return;
-
-    // 사업자번호 유효성 검사
-    const cleanedBizNum = editBusinessNumber.replace(/\D/g, '');
-    if (cleanedBizNum.length !== 10) {
-      toast({
-        variant: 'destructive',
-        title: '입력 오류',
-        description: '사업자번호는 10자리 숫자여야 합니다.',
-      });
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const res = await fetch('/api/admin/cso-matching/upsert', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: [{
-            cso_company_name: editTarget.cso_company_name,
-            business_number: cleanedBizNum,
-          }],
-        }),
-      });
-
-      const result = await res.json();
-
-      if (result.success) {
-        toast({
-          title: '매칭 저장 완료',
-          description: `"${editTarget.cso_company_name}"의 매칭 정보가 저장되었습니다.`,
-        });
-        closeEditDialog();
-        fetchIntegrityData();
-      } else {
-        toast({
-          variant: 'destructive',
-          title: '저장 실패',
-          description: result.error,
-        });
-      }
-    } catch (error) {
-      console.error('Save matching error:', error);
-      toast({
-        variant: 'destructive',
-        title: '오류',
-        description: '매칭 정보 저장 중 오류가 발생했습니다.',
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // ===========================================
-  // 매칭 삭제 핸들링
-  // ===========================================
-  const openDeleteDialog = (result: IntegrityCheckResult) => {
-    setDeleteTarget(result);
-    setShowDeleteDialog(true);
-  };
-
-  const closeDeleteDialog = () => {
-    setShowDeleteDialog(false);
-    setDeleteTarget(null);
-  };
-
-  const handleDeleteMatching = async () => {
-    if (!deleteTarget) return;
-
-    setDeleting(true);
-    try {
-      const res = await fetch('/api/admin/cso-matching/upsert', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cso_company_name: deleteTarget.cso_company_name,
-        }),
-      });
-
-      const result = await res.json();
-
-      if (result.success) {
-        toast({
-          title: '삭제 완료',
-          description: `"${deleteTarget.cso_company_name}"의 매칭 정보가 삭제되었습니다.`,
-        });
-        closeDeleteDialog();
-        fetchIntegrityData();
-      } else {
-        toast({
-          variant: 'destructive',
-          title: '삭제 실패',
-          description: result.error,
-        });
-      }
-    } catch (error) {
-      console.error('Delete matching error:', error);
-      toast({
-        variant: 'destructive',
-        title: '오류',
-        description: '매칭 정보 삭제 중 오류가 발생했습니다.',
-      });
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  // ===========================================
-  // 검색 핸들링 (Enter/클릭 트리거)
-  // ===========================================
-  const handleSearch = () => {
-    setSearchQuery(searchInput);
-  };
-
+  const handleSearch = () => setSearchQuery(searchInput);
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
+    if (e.key === 'Enter') handleSearch();
   };
-
   const clearSearch = () => {
     setSearchInput('');
     setSearchQuery('');
-  };
-
-  // ===========================================
-  // 사업자번호 기준 거래처 관리 (1:N 매핑)
-  // ===========================================
-  const openAddDialog = useCallback((businessNumber?: string) => {
-    setAddBusinessNumber(businessNumber || '');
-    setAddCompanyName('');
-    // 해당 사업자번호에 연결된 기존 거래처 목록 조회
-    if (businessNumber) {
-      const linked = checkResults
-        .filter((r) => r.business_number === businessNumber)
-        .map((r) => r.cso_company_name);
-      setLinkedCompanies(linked);
-    } else {
-      setLinkedCompanies([]);
-    }
-    setShowAddDialog(true);
-  }, [checkResults]);
-
-  const closeAddDialog = () => {
-    setShowAddDialog(false);
-    setAddBusinessNumber('');
-    setAddCompanyName('');
-    setLinkedCompanies([]);
-  };
-
-  // 사업자번호 변경 시 연결된 거래처 목록 업데이트
-  const handleBizNumChange = (value: string) => {
-    const cleanedBizNum = value.replace(/\D/g, '');
-    setAddBusinessNumber(cleanedBizNum);
-    
-    if (cleanedBizNum.length === 10) {
-      const linked = checkResults
-        .filter((r) => r.business_number === cleanedBizNum)
-        .map((r) => r.cso_company_name);
-      setLinkedCompanies(linked);
-    } else {
-      setLinkedCompanies([]);
-    }
-  };
-
-  const handleAddCompany = async () => {
-    const cleanedBizNum = addBusinessNumber.replace(/\D/g, '');
-    if (cleanedBizNum.length !== 10) {
-      toast({
-        variant: 'destructive',
-        title: '입력 오류',
-        description: '사업자번호는 10자리 숫자여야 합니다.',
-      });
-      return;
-    }
-
-    if (!addCompanyName.trim()) {
-      toast({
-        variant: 'destructive',
-        title: '입력 오류',
-        description: 'CSO관리업체명을 입력해주세요.',
-      });
-      return;
-    }
-
-    setAddingCompany(true);
-    try {
-      const res = await fetch('/api/admin/cso-matching/upsert', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: [{
-            cso_company_name: addCompanyName.trim(),
-            business_number: cleanedBizNum,
-          }],
-        }),
-      });
-
-      const result = await res.json();
-
-      if (result.success) {
-        toast({
-          title: '거래처 추가 완료',
-          description: `"${addCompanyName}"이(가) 사업자번호 ${formatBusinessNumber(cleanedBizNum)}에 연결되었습니다.`,
-        });
-        // 목록 업데이트
-        setLinkedCompanies([...linkedCompanies, addCompanyName.trim()]);
-        setAddCompanyName('');
-        fetchIntegrityData();
-      } else {
-        toast({
-          variant: 'destructive',
-          title: '추가 실패',
-          description: result.error,
-        });
-      }
-    } catch (error) {
-      console.error('Add company error:', error);
-      toast({
-        variant: 'destructive',
-        title: '오류',
-        description: '거래처 추가 중 오류가 발생했습니다.',
-      });
-    } finally {
-      setAddingCompany(false);
-    }
-  };
-
-  // 연결된 거래처 삭제
-  const handleRemoveLinkedCompany = async (companyName: string) => {
-    try {
-      const res = await fetch('/api/admin/cso-matching/upsert', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cso_company_name: companyName,
-        }),
-      });
-
-      const result = await res.json();
-
-      if (result.success) {
-        toast({
-          title: '삭제 완료',
-          description: `"${companyName}" 매칭이 삭제되었습니다.`,
-        });
-        setLinkedCompanies(linkedCompanies.filter((c) => c !== companyName));
-        fetchIntegrityData();
-      } else {
-        toast({
-          variant: 'destructive',
-          title: '삭제 실패',
-          description: result.error,
-        });
-      }
-    } catch (error) {
-      console.error('Remove company error:', error);
-      toast({
-        variant: 'destructive',
-        title: '오류',
-        description: '거래처 삭제 중 오류가 발생했습니다.',
-      });
-    }
-  };
-
-  // ===========================================
-  // 첫 번째 미등록 항목 빠른 편집 시작
-  // ===========================================
-  const startQuickEdit = () => {
-    const firstUnregistered = filteredResults.find((r) => r.status === 'unregistered');
-    if (firstUnregistered) {
-      startInlineEdit(firstUnregistered.id, firstUnregistered.business_number);
-    }
   };
 
   // ===========================================
@@ -1035,23 +1039,17 @@ export default function SettlementIntegrityManager() {
             정산서 무결성 검증
           </h1>
           <p className="text-muted-foreground">
-            CSO관리업체명과 회원 사업자번호 매칭 상태를 검수합니다.
+            사업자번호별 CSO관리업체명 매핑 상태를 관리합니다.
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {stats.unregistered > 0 && (
-            <Button variant="default" onClick={startQuickEdit} className="bg-red-600 hover:bg-red-700">
-              <Pencil className="h-4 w-4 mr-2" />
-              미등록 빠른 입력 ({stats.unregistered})
-            </Button>
-          )}
-          <Button variant="outline" onClick={() => openAddDialog()}>
+          <Button variant="outline" onClick={() => setShowAddDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            거래처 추가
+            새 매핑 추가
           </Button>
           <Button variant="outline" onClick={() => setShowUploadDialog(true)}>
             <Upload className="h-4 w-4 mr-2" />
-            매칭 데이터 업로드
+            엑셀 업로드
           </Button>
           <Button variant="outline" onClick={fetchIntegrityData} disabled={loading}>
             <RefreshCw className={cn('h-4 w-4 mr-2', loading && 'animate-spin')} />
@@ -1060,20 +1058,9 @@ export default function SettlementIntegrityManager() {
         </div>
       </div>
 
-      {/* 키보드 단축키 안내 */}
-      <Alert className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20">
-        <AlertCircle className="h-4 w-4 text-blue-600" />
-        <AlertTitle className="text-blue-700">키보드 단축키</AlertTitle>
-        <AlertDescription className="text-sm text-blue-600">
-          <span className="font-mono bg-blue-100 px-1 rounded">Enter</span> / <span className="font-mono bg-blue-100 px-1 rounded">Tab</span>: 저장 후 다음 미등록 항목으로 이동 | 
-          <span className="font-mono bg-blue-100 px-1 rounded ml-2">Esc</span>: 편집 취소 | 
-          <span className="font-mono bg-blue-100 px-1 rounded ml-2">Ctrl+↓/↑</span>: 미등록 항목 간 이동
-        </AlertDescription>
-      </Alert>
-
-      {/* Stats Cards - 클릭 시 필터링 */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <Card
           className={cn(
             "cursor-pointer transition-all hover:shadow-md",
             filterStatus === 'all' && "ring-2 ring-primary"
@@ -1087,138 +1074,101 @@ export default function SettlementIntegrityManager() {
             <div className="text-2xl font-bold">{stats.total}</div>
           </CardContent>
         </Card>
-        <Card 
+        <Card
           className={cn(
             "border-green-200 bg-green-50/50 dark:bg-green-950/20 cursor-pointer transition-all hover:shadow-md",
-            filterStatus === 'normal' && "ring-2 ring-green-500"
+            filterStatus === 'registered' && "ring-2 ring-green-500"
           )}
-          onClick={() => setFilterStatus('normal')}
+          onClick={() => setFilterStatus('registered')}
         >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-1">
-              <CheckCircle className="h-4 w-4" />
+              <UserCheck className="h-4 w-4" />
               정상
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700 dark:text-green-400">
-              {stats.normal}
+              {stats.registered}
             </div>
           </CardContent>
         </Card>
-        <Card 
+        <Card
           className={cn(
-            "border-red-200 bg-red-50/50 dark:bg-red-950/20 cursor-pointer transition-all hover:shadow-md",
-            filterStatus === 'unregistered' && "ring-2 ring-red-500"
+            "border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 cursor-pointer transition-all hover:shadow-md",
+            filterStatus === 'unregistered' && "ring-2 ring-amber-500"
           )}
           onClick={() => setFilterStatus('unregistered')}
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-red-700 dark:text-red-400 flex items-center gap-1">
-              <AlertCircle className="h-4 w-4" />
+            <CardTitle className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1">
+              <UserX className="h-4 w-4" />
               미등록
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-700 dark:text-red-400">
+            <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">
               {stats.unregistered}
             </div>
           </CardContent>
         </Card>
-        <Card 
+        <Card
           className={cn(
             "border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 cursor-pointer transition-all hover:shadow-md",
-            filterStatus === 'pending_join' && "ring-2 ring-orange-500"
+            filterStatus === 'pending_approval' && "ring-2 ring-orange-500"
           )}
-          onClick={() => setFilterStatus('pending_join')}
+          onClick={() => setFilterStatus('pending_approval')}
         >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-400 flex items-center gap-1">
-              <UserPlus className="h-4 w-4" />
-              가입대기
+              <Clock className="h-4 w-4" />
+              승인대기
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">
-              {stats.pendingJoin}
+              {stats.pending_approval}
             </div>
           </CardContent>
         </Card>
-        <Card 
+        <Card
           className={cn(
-            "border-yellow-200 bg-yellow-50/50 dark:bg-yellow-950/20 cursor-pointer transition-all hover:shadow-md",
-            filterStatus === 'missing_match' && "ring-2 ring-yellow-500"
+            "border-red-200 bg-red-50/50 dark:bg-red-950/20 cursor-pointer transition-all hover:shadow-md",
+            filterStatus === 'no_cso' && "ring-2 ring-red-500"
           )}
-          onClick={() => setFilterStatus('missing_match')}
+          onClick={() => setFilterStatus('no_cso')}
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-yellow-700 dark:text-yellow-500 flex items-center gap-1">
-              <Link2Off className="h-4 w-4" />
-              매칭누락
+            <CardTitle className="text-sm font-medium text-red-700 dark:text-red-400 flex items-center gap-1">
+              <AlertCircle className="h-4 w-4" />
+              CSO미매핑
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-500">
-              {stats.missingMatch}
-            </div>
-          </CardContent>
-        </Card>
-        <Card 
-          className={cn(
-            "border-2 cursor-pointer transition-all hover:shadow-md",
-            stats.issues > 0 
-              ? "border-red-500 bg-red-100/50 dark:bg-red-950/30" 
-              : "border-green-500 bg-green-100/50 dark:bg-green-950/30",
-            filterStatus === 'issues' && "ring-2 ring-red-500"
-          )}
-          onClick={() => setFilterStatus('issues')}
-        >
-          <CardHeader className="pb-2">
-            <CardTitle className={cn(
-              "text-sm font-medium flex items-center gap-1",
-              stats.issues > 0 ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400"
-            )}>
-              <AlertTriangle className="h-4 w-4" />
-              문제 총계
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={cn(
-              "text-2xl font-bold",
-              stats.issues > 0 ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400"
-            )}>
-              {stats.issues}
+            <div className="text-2xl font-bold text-red-700 dark:text-red-400">
+              {stats.no_cso}
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Issue Alert */}
-      {stats.issues > 0 && (
+      {(stats.unregistered > 0 || stats.no_cso > 0) && (
         <Alert variant="destructive" className="border-2 border-red-500 bg-red-50 dark:bg-red-950/50">
           <AlertTriangle className="h-5 w-5" />
-          <AlertTitle className="text-lg font-bold">주의: 데이터 불일치 발견</AlertTitle>
+          <AlertTitle className="text-lg font-bold">주의: 매핑 필요</AlertTitle>
           <AlertDescription className="mt-2">
-            <p className="font-medium">
-              총 {stats.issues}건의 문제 항목이 발견되었습니다. 즉시 조치가 필요합니다.
-            </p>
-            <ul className="mt-2 space-y-1 text-sm">
+            <ul className="space-y-1 text-sm">
               {stats.unregistered > 0 && (
                 <li>
-                  <span className="font-semibold text-red-700">미등록 {stats.unregistered}건:</span>{' '}
-                  정산서 업체명이 매칭 테이블에 없음 - 사업자번호 입력 필요
+                  <span className="font-semibold text-amber-700">미등록 {stats.unregistered}건:</span>{' '}
+                  회원가입되지 않은 사업자번호입니다.
                 </li>
               )}
-              {stats.pendingJoin > 0 && (
+              {stats.no_cso > 0 && (
                 <li>
-                  <span className="font-semibold text-orange-700">가입대기 {stats.pendingJoin}건:</span>{' '}
-                  매칭 정보는 있으나 회원 계정 없음 - 회원가입 유도 필요
-                </li>
-              )}
-              {stats.missingMatch > 0 && (
-                <li>
-                  <span className="font-semibold text-yellow-700">매칭누락 {stats.missingMatch}건:</span>{' '}
-                  회원 계정은 있으나 매칭 테이블에 정보 없음 - 매칭 정보 추가 필요
+                  <span className="font-semibold text-red-700">CSO미매핑 {stats.no_cso}건:</span>{' '}
+                  CSO관리업체명이 연결되지 않았습니다.
                 </li>
               )}
             </ul>
@@ -1235,7 +1185,7 @@ export default function SettlementIntegrityManager() {
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="업체명 또는 사업자번호로 검색 (Enter)"
+                    placeholder="사업자번호, 사업자명, CSO업체명 검색 (Enter)"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
@@ -1259,7 +1209,7 @@ export default function SettlementIntegrityManager() {
               </div>
               {searchQuery && (
                 <p className="text-sm text-muted-foreground mt-2">
-                  &quot;{searchQuery}&quot; 검색 결과: {filteredResults.length}건
+                  &quot;{searchQuery}&quot; 검색 결과: {filteredData.length}건
                 </p>
               )}
             </div>
@@ -1267,19 +1217,17 @@ export default function SettlementIntegrityManager() {
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="">전체 정산월</option>
                 {availableMonths.map((month) => (
-                  <option key={month} value={month}>
-                    {month}
-                  </option>
+                  <option key={month} value={month}>{month}</option>
                 ))}
               </select>
               <Button
                 variant="outline"
                 onClick={handleExportIssues}
-                disabled={stats.issues === 0}
+                disabled={stats.unregistered + stats.no_cso === 0}
               >
                 <Download className="h-4 w-4 mr-2" />
                 문제항목 다운로드
@@ -1293,20 +1241,11 @@ export default function SettlementIntegrityManager() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <Filter className="h-5 w-5" />
             검증 결과
-            <Badge variant="secondary" className="ml-2">
-              {filteredResults.length}건
-            </Badge>
-            {editingId && (
-              <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">
-                편집 중
-              </Badge>
-            )}
+            <Badge variant="secondary" className="ml-2">{filteredData.length}건</Badge>
           </CardTitle>
           <CardDescription>
-            정산서의 CSO관리업체명과 회원 데이터의 매칭 상태를 확인합니다. 
-            <span className="text-blue-600 font-medium ml-1">테이블에서 직접 사업자번호를 입력할 수 있습니다.</span>
+            CSO관리업체명 태그를 클릭하여 편집하고, × 버튼으로 삭제, + 버튼으로 추가할 수 있습니다.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -1319,106 +1258,120 @@ export default function SettlementIntegrityManager() {
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
-                    <TableHead className="w-[200px]">엑셀 업체명</TableHead>
-                    <TableHead className="w-[160px]">매칭 사업자번호</TableHead>
-                    <TableHead className="w-[120px]">DB 상태</TableHead>
-                    <TableHead className="w-[200px]">ERP 등록명</TableHead>
-                    <TableHead className="w-[100px]">마지막 정산월</TableHead>
+                    <TableHead className="w-[140px]">사업자번호</TableHead>
+                    <TableHead className="w-[150px]">사업자명</TableHead>
+                    <TableHead className="w-[100px]">회원가입상태</TableHead>
+                    <TableHead className="min-w-[300px]">CSO관리업체명</TableHead>
+                    <TableHead className="w-[100px]">마지막정산월</TableHead>
                     <TableHead className="w-[80px] text-right">정산건수</TableHead>
-                    <TableHead className="w-[100px] text-center">관리</TableHead>
+                    <TableHead className="w-[60px] text-center">관리</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredResults.map((result) => (
-                    <TableRow
-                      key={result.id}
-                      className={cn(
-                        result.status === 'unregistered' &&
-                          'bg-red-100/80 dark:bg-red-950/50 hover:bg-red-200/80 dark:hover:bg-red-950/70 border-l-4 border-l-red-500',
-                        result.status === 'pending_join' &&
-                          'bg-orange-100/80 dark:bg-orange-950/50 hover:bg-orange-200/80 dark:hover:bg-orange-950/70 border-l-4 border-l-orange-500',
-                        result.status === 'missing_match' &&
-                          'bg-yellow-100/80 dark:bg-yellow-950/50 hover:bg-yellow-200/80 dark:hover:bg-yellow-950/70 border-l-4 border-l-yellow-500',
-                        result.status === 'normal' &&
-                          'hover:bg-muted/50',
-                        editingId === result.id && 'ring-2 ring-blue-400 ring-inset'
-                      )}
-                    >
-                      <TableCell className="font-medium">
-                        {result.cso_company_name}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        <InlineEditCell
-                          result={result}
-                          isEditing={editingId === result.id}
-                          editValue={editingId === result.id ? editValue : ''}
-                          isSaving={savingId === result.id}
-                          onStartEdit={() => startInlineEdit(result.id, result.business_number)}
-                          onValueChange={setEditValue}
-                          onSave={() => saveInlineEdit(result)}
-                          onCancel={cancelInlineEdit}
-                          onNavigate={navigateToUnregistered}
-                          openAddDialog={openAddDialog}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={result.status} />
-                      </TableCell>
-                      <TableCell>
-                        {result.erp_company_name || (
-                          <span className="text-muted-foreground">-</span>
+                  {filteredData.map((row) => {
+                    const isUnregistered = row.registration_status === 'unregistered';
+                    const hasNoCso = row.cso_company_names.length === 0;
+
+                    return (
+                      <TableRow
+                        key={row.id}
+                        className={cn(
+                          isUnregistered && 'bg-amber-50 dark:bg-amber-950/30',
+                          hasNoCso && !isUnregistered && 'bg-red-50 dark:bg-red-950/30',
+                          row.saveState === 'saving' && 'border-l-4 border-l-yellow-400',
+                          row.saveState === 'saved' && 'border-l-4 border-l-green-400',
+                          row.saveState === 'error' && 'border-l-4 border-l-red-400'
                         )}
-                      </TableCell>
-                      <TableCell>
-                        {result.last_settlement_month ? (
-                          <Badge variant="outline" className="font-mono">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            {result.last_settlement_month}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {result.row_count.toLocaleString()}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
+                      >
+                        <TableCell className="font-mono text-sm">
+                          {row.is_readonly ? (
+                            <span className="text-gray-600">{formatBusinessNumber(row.business_number)}</span>
+                          ) : (
+                            <EditableCell
+                              value={row.business_number}
+                              onChange={() => {
+                                // TODO: 사업자번호 수정 시 회원 검증 + 저장
+                              }}
+                              format={formatBusinessNumber}
+                              className="font-mono"
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {row.is_readonly ? (
+                            <span className="text-sm">{row.business_name || '-'}</span>
+                          ) : (
+                            <EditableCell
+                              value={row.business_name || ''}
+                              onChange={() => {
+                                // TODO: 사업자명 수정
+                              }}
+                              placeholder="사업자명 입력"
+                              className={cn(isUnregistered && 'bg-amber-100')}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={row.registration_status} />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-2 items-center">
+                            {row.cso_company_names.map((csoName, idx) => {
+                              const existingBizNum = csoMapping[csoName];
+                              const isDuplicate = existingBizNum && existingBizNum !== row.business_number;
+                              return (
+                                <CSOTag
+                                  key={`${csoName}-${idx}`}
+                                  value={csoName}
+                                  isDuplicate={!!isDuplicate}
+                                  duplicateInfo={isDuplicate ? formatBusinessNumber(existingBizNum) : undefined}
+                                  onEdit={(newValue) => handleEditCSOTag(row.id, csoName, newValue)}
+                                  onDelete={() => handleDeleteCSOTag(row.id, csoName)}
+                                />
+                              );
+                            })}
+                            <AddCSOInput onAdd={(value) => handleAddCSOTag(row.id, value)} />
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {row.last_settlement_month ? (
+                            <Badge variant="outline" className="font-mono text-xs">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {row.last_settlement_month}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {row.row_count.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-center">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
-                            onClick={() => openEditDialog(result)}
-                            title="매칭 등록/수정 (다이얼로그)"
+                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100"
+                            onClick={() => {
+                              setDeleteTarget(row);
+                              setShowDeleteDialog(true);
+                            }}
+                            title="전체 매핑 삭제"
+                            disabled={row.cso_company_names.length === 0}
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                          {result.business_number && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100"
-                              onClick={() => openDeleteDialog(result)}
-                              title="매칭 삭제"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredResults.length === 0 && (
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {filteredData.length === 0 && (
                     <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        className="text-center py-12 text-muted-foreground"
-                      >
+                      <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                         {searchQuery
                           ? `"${searchQuery}" 검색 결과가 없습니다.`
                           : filterStatus !== 'all'
                           ? '해당 상태의 항목이 없습니다.'
-                          : '검증할 데이터가 없습니다.'}
+                          : '데이터가 없습니다.'}
                       </TableCell>
                     </TableRow>
                   )}
@@ -1430,7 +1383,7 @@ export default function SettlementIntegrityManager() {
       </Card>
 
       {/* Upload Dialog */}
-      <Dialog open={showUploadDialog} onOpenChange={closeUploadDialog}>
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1438,21 +1391,17 @@ export default function SettlementIntegrityManager() {
               CSO 매칭 데이터 업로드
             </DialogTitle>
             <DialogDescription>
-              [업체명 - 사업자번호] 형식의 엑셀 파일을 업로드하여 매칭 테이블을
-              업데이트합니다.
+              [업체명 - 사업자번호] 형식의 엑셀 파일을 업로드하여 매칭 테이블을 업데이트합니다.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Dropzone */}
             {!uploadFile ? (
               <div
                 {...getRootProps()}
                 className={cn(
                   'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
-                  isDragActive
-                    ? 'border-primary bg-primary/5'
-                    : 'border-muted-foreground/25 hover:border-primary/50'
+                  isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
                 )}
               >
                 <input {...getInputProps()} />
@@ -1461,12 +1410,8 @@ export default function SettlementIntegrityManager() {
                   <p className="text-primary">파일을 여기에 놓으세요...</p>
                 ) : (
                   <>
-                    <p className="text-muted-foreground">
-                      파일을 드래그하거나 클릭하여 선택
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      .xlsx, .xls (최대 10MB)
-                    </p>
+                    <p className="text-muted-foreground">파일을 드래그하거나 클릭하여 선택</p>
+                    <p className="text-sm text-muted-foreground mt-2">.xlsx, .xls (최대 10MB)</p>
                   </>
                 )}
               </div>
@@ -1477,18 +1422,14 @@ export default function SettlementIntegrityManager() {
                   <div>
                     <p className="font-medium">{uploadFile.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {(uploadFile.size / 1024).toFixed(1)} KB |{' '}
-                      {uploadPreview.length}건 감지됨
+                      {(uploadFile.size / 1024).toFixed(1)} KB | {uploadPreview.length}건 감지됨
                     </p>
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => {
-                    setUploadFile(null);
-                    setUploadPreview([]);
-                  }}
+                  onClick={() => { setUploadFile(null); setUploadPreview([]); }}
                   disabled={uploading}
                 >
                   <X className="h-4 w-4" />
@@ -1499,23 +1440,18 @@ export default function SettlementIntegrityManager() {
             {uploading && (
               <div className="space-y-2">
                 <Progress value={uploadProgress} />
-                <p className="text-sm text-center text-muted-foreground">
-                  업로드 중... {uploadProgress}%
-                </p>
+                <p className="text-sm text-center text-muted-foreground">업로드 중... {uploadProgress}%</p>
               </div>
             )}
 
-            {/* Preview */}
             {uploadPreview.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium mb-2">
-                  미리보기 (처음 10건)
-                </h4>
+                <h4 className="text-sm font-medium mb-2">미리보기 (처음 10건)</h4>
                 <ScrollArea className="h-[200px] border rounded-md">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>업체명</TableHead>
+                        <TableHead>CSO업체명</TableHead>
                         <TableHead>사업자번호</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1523,17 +1459,12 @@ export default function SettlementIntegrityManager() {
                       {uploadPreview.slice(0, 10).map((item, idx) => (
                         <TableRow key={idx}>
                           <TableCell>{item.cso_company_name}</TableCell>
-                          <TableCell className="font-mono">
-                            {formatBusinessNumber(item.business_number)}
-                          </TableCell>
+                          <TableCell className="font-mono">{formatBusinessNumber(item.business_number)}</TableCell>
                         </TableRow>
                       ))}
                       {uploadPreview.length > 10 && (
                         <TableRow>
-                          <TableCell
-                            colSpan={2}
-                            className="text-center text-muted-foreground"
-                          >
+                          <TableCell colSpan={2} className="text-center text-muted-foreground">
                             ... 외 {uploadPreview.length - 10}건
                           </TableCell>
                         </TableRow>
@@ -1543,289 +1474,141 @@ export default function SettlementIntegrityManager() {
                 </ScrollArea>
               </div>
             )}
-
-            {/* Instructions */}
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>업로드 안내</AlertTitle>
-              <AlertDescription className="text-sm">
-                <ul className="list-disc list-inside space-y-1 mt-2">
-                  <li>
-                    필수 컬럼: <strong>업체명</strong> (또는 CSO관리업체),{' '}
-                    <strong>사업자번호</strong> (또는 사업자등록번호)
-                  </li>
-                  <li>기존 업체명의 사업자번호는 자동으로 업데이트됩니다 (Upsert)</li>
-                  <li>사업자번호는 10자리 숫자만 추출됩니다</li>
-                </ul>
-              </AlertDescription>
-            </Alert>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={closeUploadDialog} disabled={uploading}>
+            <Button variant="outline" onClick={() => setShowUploadDialog(false)} disabled={uploading}>
               취소
             </Button>
-            <Button
-              onClick={handleUpload}
-              disabled={uploading || uploadPreview.length === 0}
-            >
-              {uploading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Upload className="h-4 w-4 mr-2" />
-              )}
+            <Button onClick={handleUpload} disabled={uploading || uploadPreview.length === 0}>
+              {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
               {uploadPreview.length}건 업로드
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Matching Dialog (직접 매칭 등록/수정) */}
-      <Dialog open={showEditDialog} onOpenChange={closeEditDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Pencil className="h-5 w-5" />
-              매칭 정보 {editTarget?.business_number ? '수정' : '등록'}
-            </DialogTitle>
-            <DialogDescription>
-              CSO관리업체명에 매칭할 사업자번호를 입력하세요.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            {/* 업체명 표시 */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">CSO관리업체명</label>
-              <div className="p-3 bg-muted rounded-md font-medium">
-                {editTarget?.cso_company_name}
-              </div>
-            </div>
-
-            {/* 현재 상태 표시 */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">현재 상태</label>
-              <div className="flex items-center gap-2">
-                {editTarget && <StatusBadge status={editTarget.status} />}
-                {editTarget?.erp_company_name && (
-                  <span className="text-sm text-muted-foreground">
-                    (ERP: {editTarget.erp_company_name})
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* 사업자번호 입력 */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                매칭할 사업자번호 <span className="text-red-500">*</span>
-              </label>
-              <Input
-                placeholder="000-00-00000"
-                value={formatBusinessNumber(editBusinessNumber)}
-                onChange={(e) => setEditBusinessNumber(e.target.value.replace(/\D/g, ''))}
-                maxLength={12}
-                className="font-mono text-lg"
-              />
-              <p className="text-xs text-muted-foreground">
-                10자리 숫자를 입력하세요. 하이픈(-)은 자동으로 추가됩니다.
-              </p>
-            </div>
-
-            {/* 기존 정보 안내 */}
-            {editTarget?.business_number && (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>기존 매칭 정보</AlertTitle>
-                <AlertDescription className="font-mono">
-                  {formatBusinessNumber(editTarget.business_number)}
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={closeEditDialog} disabled={saving}>
-              취소
-            </Button>
-            <Button
-              onClick={handleSaveMatching}
-              disabled={saving || editBusinessNumber.replace(/\D/g, '').length !== 10}
-            >
-              {saving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              저장
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={closeDeleteDialog}>
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <Trash2 className="h-5 w-5" />
-              매칭 정보 삭제
+              전체 매핑 삭제
             </DialogTitle>
             <DialogDescription>
-              이 작업은 되돌릴 수 없습니다. 정말 삭제하시겠습니까?
+              해당 사업자번호의 모든 CSO관리업체명 매핑을 삭제합니다.
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-4">
             <div className="p-4 border rounded-lg bg-red-50 dark:bg-red-950/30 space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">업체명</span>
-                <span className="font-medium">{deleteTarget?.cso_company_name}</span>
+                <span className="text-sm text-muted-foreground">사업자번호</span>
+                <span className="font-mono">{deleteTarget && formatBusinessNumber(deleteTarget.business_number)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">사업자번호</span>
-                <span className="font-mono">
-                  {deleteTarget?.business_number ? formatBusinessNumber(deleteTarget.business_number) : '-'}
-                </span>
+                <span className="text-sm text-muted-foreground">사업자명</span>
+                <span>{deleteTarget?.business_name || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">CSO업체명</span>
+                <span>{deleteTarget?.cso_company_names.length || 0}개</span>
               </div>
             </div>
             <p className="mt-4 text-sm text-muted-foreground">
-              매칭 정보를 삭제하면 해당 업체는 &quot;미등록&quot; 상태로 변경되며,
-              회원은 정산 데이터를 조회할 수 없게 됩니다.
+              이 작업은 되돌릴 수 없습니다. 정말 삭제하시겠습니까?
             </p>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={closeDeleteDialog} disabled={deleting}>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={deleting}>
               취소
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteMatching}
-              disabled={deleting}
-            >
-              {deleting ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4 mr-2" />
-              )}
-              삭제
+            <Button variant="destructive" onClick={handleDeleteRow} disabled={deleting}>
+              {deleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              전체 삭제
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Add Company Dialog (사업자번호 기준 거래처 관리) */}
-      <Dialog open={showAddDialog} onOpenChange={closeAddDialog}>
-        <DialogContent className="max-w-lg">
+      {/* Add New Row Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5" />
-              거래처 추가 / 관리
+              새 매핑 추가
             </DialogTitle>
             <DialogDescription>
-              사업자번호에 연결할 CSO관리업체명(거래처)을 추가하거나 관리합니다.
+              사업자번호와 CSO관리업체명을 입력하여 새 매핑을 추가합니다.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* 사업자번호 입력 */}
             <div className="space-y-2">
               <label className="text-sm font-medium">
                 사업자번호 <span className="text-red-500">*</span>
               </label>
-              <Input
-                placeholder="000-00-00000"
-                value={formatBusinessNumber(addBusinessNumber)}
-                onChange={(e) => handleBizNumChange(e.target.value)}
-                maxLength={12}
-                className="font-mono text-lg"
-              />
-              <p className="text-xs text-muted-foreground">
-                10자리 숫자를 입력하세요. 하이픈(-)은 자동으로 추가됩니다.
-              </p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="000-00-00000"
+                  value={formatBusinessNumber(newBusinessNumber)}
+                  onChange={(e) => setNewBusinessNumber(e.target.value.replace(/\D/g, ''))}
+                  maxLength={12}
+                  className="font-mono"
+                />
+                <Button
+                  variant="outline"
+                  onClick={handleVerifyBusinessNumber}
+                  disabled={verifyingBizNum || newBusinessNumber.replace(/\D/g, '').length !== 10}
+                >
+                  {verifyingBizNum ? <Loader2 className="h-4 w-4 animate-spin" /> : '검증'}
+                </Button>
+              </div>
+              {verifiedUser && (
+                <p className="text-sm text-green-600">
+                  ✓ {verifiedUser.company_name} ({verifiedUser.is_approved ? '승인완료' : '승인대기'})
+                </p>
+              )}
             </div>
 
-            {/* 연결된 거래처 목록 */}
-            {addBusinessNumber.replace(/\D/g, '').length === 10 && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  연결된 거래처 ({linkedCompanies.length}개)
-                </label>
-                {linkedCompanies.length > 0 ? (
-                  <div className="border rounded-md divide-y max-h-[150px] overflow-y-auto">
-                    {linkedCompanies.map((company) => (
-                      <div
-                        key={company}
-                        className="flex items-center justify-between p-2 hover:bg-muted/50"
-                      >
-                        <span className="text-sm">{company}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-100"
-                          onClick={() => handleRemoveLinkedCompany(company)}
-                          title="매칭 삭제"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground p-3 border rounded-md bg-muted/30">
-                    연결된 거래처가 없습니다.
-                  </p>
-                )}
-              </div>
-            )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                사업자명 {!verifiedUser && <span className="text-red-500">*</span>}
+              </label>
+              <Input
+                placeholder="사업자명 입력"
+                value={newBusinessName}
+                onChange={(e) => setNewBusinessName(e.target.value)}
+                disabled={!!verifiedUser}
+                className={verifiedUser ? 'bg-gray-100' : ''}
+              />
+            </div>
 
-            {/* 새 거래처 추가 */}
-            {addBusinessNumber.replace(/\D/g, '').length === 10 && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">새 거래처 추가</label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="CSO관리업체명 입력"
-                    value={addCompanyName}
-                    onChange={(e) => setAddCompanyName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && addCompanyName.trim()) {
-                        handleAddCompany();
-                      }
-                    }}
-                    className="flex-1"
-                  />
-                  <Button
-                    onClick={handleAddCompany}
-                    disabled={addingCompany || !addCompanyName.trim()}
-                  >
-                    {addingCompany ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Plus className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* 안내 */}
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>1:N 매핑 안내</AlertTitle>
-              <AlertDescription className="text-sm">
-                <ul className="list-disc list-inside space-y-1 mt-2">
-                  <li>하나의 사업자번호에 여러 거래처(CSO관리업체명)를 연결할 수 있습니다.</li>
-                  <li>회원은 자신의 사업자번호에 연결된 모든 거래처의 정산 데이터를 조회합니다.</li>
-                </ul>
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                CSO관리업체명 <span className="text-red-500">*</span>
+              </label>
+              <Input
+                placeholder="CSO관리업체명 입력"
+                value={newCsoName}
+                onChange={(e) => setNewCsoName(e.target.value)}
+              />
+            </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={closeAddDialog}>
-              닫기
+            <Button variant="outline" onClick={() => setShowAddDialog(false)} disabled={addingRow}>
+              취소
+            </Button>
+            <Button
+              onClick={handleAddNewRow}
+              disabled={addingRow || newBusinessNumber.replace(/\D/g, '').length !== 10 || !newCsoName.trim()}
+            >
+              {addingRow ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+              추가
             </Button>
           </DialogFooter>
         </DialogContent>
