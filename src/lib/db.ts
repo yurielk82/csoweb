@@ -336,17 +336,18 @@ export async function insertSettlements(data: Partial<Settlement>[]): Promise<{
 
 export async function getSettlementsByBusinessNumber(
   businessNumber: string,
-  settlementMonth?: string
+  settlementMonth?: string,
+  selectColumns?: string
 ): Promise<Settlement[]> {
   // 모든 데이터 페이지네이션으로 가져오기
   const allRows: Settlement[] = [];
   const pageSize = 1000;
   let page = 0;
-  
+
   while (true) {
     let query = supabase
       .from('settlements')
-      .select('*')
+      .select(selectColumns || '*')
       .eq('business_number', businessNumber);
 
     if (settlementMonth) {
@@ -366,14 +367,14 @@ export async function getSettlementsByBusinessNumber(
   return allRows;
 }
 
-export async function getAllSettlements(settlementMonth?: string): Promise<Settlement[]> {
+export async function getAllSettlements(settlementMonth?: string, selectColumns?: string): Promise<Settlement[]> {
   // 모든 데이터 페이지네이션으로 가져오기
   const allRows: Settlement[] = [];
   const pageSize = 1000;
   let page = 0;
-  
+
   while (true) {
-    let query = supabase.from('settlements').select('*');
+    let query = supabase.from('settlements').select(selectColumns || '*');
     
     if (settlementMonth) {
       query = query.eq('정산월', settlementMonth);
@@ -1144,27 +1145,25 @@ export async function getMatchedCSOCompanyNames(businessNumber: string): Promise
  */
 export async function getSettlementsByCSOMatching(
   businessNumber: string,
-  settlementMonth?: string
+  settlementMonth?: string,
+  selectColumns?: string
 ): Promise<Settlement[]> {
   // 1. 매칭된 CSO관리업체명 목록 조회
   const matchedNames = await getMatchedCSOCompanyNames(businessNumber);
-  
+
   if (matchedNames.length === 0) {
-    console.log(`No matched CSO names found for business_number: ${businessNumber}`);
     return [];
   }
-
-  console.log(`Found ${matchedNames.length} matched CSO names for ${businessNumber}:`, matchedNames);
 
   // 2. 해당 업체명들의 정산 데이터 조회
   const allRows: Settlement[] = [];
   const pageSize = 1000;
   let page = 0;
-  
+
   while (true) {
     let query = supabase
       .from('settlements')
-      .select('*')
+      .select(selectColumns || '*')
       .in('CSO관리업체', matchedNames);
 
     if (settlementMonth) {
