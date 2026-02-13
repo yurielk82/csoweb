@@ -63,6 +63,29 @@ export default function MonthlySummaryPage() {
     return value.toLocaleString('ko-KR');
   };
 
+  // 전체 월에서 합계가 0인 컬럼 필터링 + 순서 재배치 (건수→수량→금액→수수료→합계)
+  const getVisibleColumns = (): SummaryColumn[] => {
+    if (!data?.months || !data?.summary_columns) return [];
+
+    // 1. 모든 월에서 값이 0인 컬럼 제거
+    const nonZeroColumns = data.summary_columns.filter(col => {
+      return data.months.some(month => (month.summaries[col.column_key] || 0) !== 0);
+    });
+
+    // 2. 우선순위 기반 정렬: 수량 → 금액 → 수수료(합계 아닌것) → 합계
+    const getOrder = (name: string): number => {
+      if (name.includes('수량')) return 1;
+      if (name.includes('금액')) return 2;
+      if (name.includes('합계')) return 4;
+      if (name.includes('수수료')) return 3;
+      return 5;
+    };
+
+    return nonZeroColumns.sort((a, b) => getOrder(a.column_name) - getOrder(b.column_name));
+  };
+
+  const visibleColumns = data ? getVisibleColumns() : [];
+
   // 전체 합계 계산
   const calculateGrandTotal = (key: string): number => {
     if (!data?.months) return 0;
@@ -144,7 +167,7 @@ export default function MonthlySummaryPage() {
                 </CardTitle>
               </CardHeader>
             </Card>
-            {data.summary_columns.slice(0, 2).map(col => (
+            {visibleColumns.filter(col => col.column_name.includes('수수료') || col.column_name.includes('합계')).slice(0, 2).map(col => (
               <Card key={col.column_key} className="border-blue-200 bg-blue-50">
                 <CardHeader className="pb-2">
                   <CardDescription className="text-blue-600">{col.column_name} (전체)</CardDescription>
@@ -174,7 +197,7 @@ export default function MonthlySummaryPage() {
                     <tr className="border-b bg-muted/50">
                       <th className="px-4 py-3 text-left font-medium">정산월</th>
                       <th className="px-4 py-3 text-right font-medium">건수</th>
-                      {data.summary_columns.map(col => (
+                      {visibleColumns.map(col => (
                         <th key={col.column_key} className="px-4 py-3 text-right font-medium">
                           {col.column_name}
                         </th>
@@ -196,7 +219,7 @@ export default function MonthlySummaryPage() {
                         <td className="px-4 py-3 text-right text-muted-foreground">
                           {formatNumber(month.row_count)}
                         </td>
-                        {data.summary_columns.map(col => (
+                        {visibleColumns.map(col => (
                           <td 
                             key={col.column_key} 
                             className={`px-4 py-3 text-right font-medium ${
@@ -216,7 +239,7 @@ export default function MonthlySummaryPage() {
                       <td className="px-4 py-3 text-right">
                         {formatNumber(totalRowCount)}
                       </td>
-                      {data.summary_columns.map(col => (
+                      {visibleColumns.map(col => (
                         <td 
                           key={col.column_key} 
                           className={`px-4 py-3 text-right ${
@@ -242,7 +265,7 @@ export default function MonthlySummaryPage() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {data.summary_columns.map(col => (
+                {visibleColumns.map(col => (
                   <Badge key={col.column_key} variant="outline">
                     {col.column_name}
                   </Badge>
