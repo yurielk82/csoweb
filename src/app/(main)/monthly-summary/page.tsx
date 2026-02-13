@@ -72,7 +72,15 @@ export default function MonthlySummaryPage() {
       return data.months.some(month => (month.summaries[col.column_key] || 0) !== 0);
     });
 
-    // 2. 우선순위 기반 정렬: 수량 → 금액 → 수수료(합계 아닌것) → 합계
+    // 2. '제약수수료 합계'가 '제약수수료'와 중복되면 합계 컬럼 제거
+    const hasFeeColumn = nonZeroColumns.some(col =>
+      col.column_name.includes('제약수수료') && !col.column_name.includes('합계')
+    );
+    const filtered = hasFeeColumn
+      ? nonZeroColumns.filter(col => !(col.column_name.includes('제약수수료') && col.column_name.includes('합계')))
+      : nonZeroColumns;
+
+    // 3. 우선순위 기반 정렬: 수량 → 금액 → 수수료(합계 아닌것) → 합계
     const getOrder = (name: string): number => {
       if (name.includes('수량')) return 1;
       if (name.includes('금액')) return 2;
@@ -81,7 +89,7 @@ export default function MonthlySummaryPage() {
       return 5;
     };
 
-    return nonZeroColumns.sort((a, b) => getOrder(a.column_name) - getOrder(b.column_name));
+    return filtered.sort((a, b) => getOrder(a.column_name) - getOrder(b.column_name));
   };
 
   const visibleColumns = data ? getVisibleColumns() : [];
@@ -216,15 +224,15 @@ export default function MonthlySummaryPage() {
                             <Badge variant="secondary" className="ml-2 text-xs">최신</Badge>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right text-muted-foreground">
+                        <td className="px-4 py-3 text-right text-muted-foreground tabular-nums">
                           {formatNumber(month.row_count)}
                         </td>
                         {visibleColumns.map(col => (
                           <td 
                             key={col.column_key} 
-                            className={`px-4 py-3 text-right font-medium ${
-                              col.column_key.includes('수수료') || col.column_key.includes('합계') 
-                                ? 'text-blue-600' 
+                            className={`px-4 py-3 text-right font-medium tabular-nums ${
+                              col.column_key.includes('수수료') || col.column_key.includes('합계')
+                                ? 'text-blue-600'
                                 : ''
                             }`}
                           >
@@ -236,15 +244,15 @@ export default function MonthlySummaryPage() {
                     {/* 총합계 행 */}
                     <tr className="bg-gray-100 font-bold border-t-2">
                       <td className="px-4 py-3">총합계</td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right tabular-nums">
                         {formatNumber(totalRowCount)}
                       </td>
                       {visibleColumns.map(col => (
                         <td 
                           key={col.column_key} 
-                          className={`px-4 py-3 text-right ${
-                            col.column_key.includes('수수료') || col.column_key.includes('합계') 
-                              ? 'text-blue-700' 
+                          className={`px-4 py-3 text-right tabular-nums ${
+                            col.column_key.includes('수수료') || col.column_key.includes('합계')
+                              ? 'text-blue-700'
                               : ''
                           }`}
                         >
