@@ -359,7 +359,7 @@ export async function getSettlementsByBusinessNumber(
       .range(page * pageSize, (page + 1) * pageSize - 1);
     
     if (error || !data || data.length === 0) break;
-    allRows.push(...(data as Settlement[]));
+    allRows.push(...(data as unknown as Settlement[]));
     if (data.length < pageSize) break;
     page++;
   }
@@ -385,7 +385,7 @@ export async function getAllSettlements(settlementMonth?: string, selectColumns?
       .range(page * pageSize, (page + 1) * pageSize - 1);
     
     if (error || !data || data.length === 0) break;
-    allRows.push(...(data as Settlement[]));
+    allRows.push(...(data as unknown as Settlement[]));
     if (data.length < pageSize) break;
     page++;
   }
@@ -1180,7 +1180,7 @@ export async function getSettlementsByCSOMatching(
     }
     
     if (!data || data.length === 0) break;
-    allRows.push(...(data as Settlement[]));
+    allRows.push(...(data as unknown as Settlement[]));
     if (data.length < pageSize) break;
     page++;
   }
