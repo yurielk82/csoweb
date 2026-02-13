@@ -70,7 +70,8 @@ export default function DashboardPage() {
   const [yearMonths, setYearMonths] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [noticeSettings, setNoticeSettings] = useState<NoticeSettings | null>(null);
   
@@ -180,7 +181,7 @@ export default function DashboardPage() {
         page: page.toString(),
         page_size: '50',
       });
-      if (search) params.set('search', search);
+      if (searchQuery) params.set('search', searchQuery);
 
       const res = await fetch(`/api/settlements?${params}`);
       
@@ -220,11 +221,23 @@ export default function DashboardPage() {
     } finally {
       setDataLoading(false);
     }
-  }, [selectedMonth, page, search, errorType]);
+  }, [selectedMonth, page, searchQuery, errorType]);
 
   useEffect(() => {
     fetchSettlements();
   }, [fetchSettlements]);
+
+  // Handle search (Enter key or button click)
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+    setPage(1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+      handleSearch();
+    }
+  };
 
   // Handle column toggle
   const toggleColumn = (columnKey: string) => {
@@ -499,14 +512,24 @@ export default function DashboardPage() {
             </div>
             <div className="flex-1">
               <Label className="mb-2 block">검색</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="제품명, 거래처명 검색..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="제품명, 거래처명 입력 후 Enter를 누르세요"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="pl-10"
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleSearch}
+                  disabled={dataLoading}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </div>
@@ -678,8 +701,8 @@ export default function DashboardPage() {
                           <p className="text-sm text-muted-foreground/70">
                             {yearMonths.length === 0 
                               ? '아직 등록된 정산 데이터가 없습니다. 관리자에게 문의해주세요.'
-                              : search 
-                                ? `"${search}" 검색 결과가 없습니다. 다른 검색어를 입력해보세요.`
+                              : searchQuery
+                                ? `"${searchQuery}" 검색 결과가 없습니다. 다른 검색어를 입력해보세요.`
                                 : '해당 월에 매칭된 정산 내역이 없습니다.'}
                           </p>
                         </div>
