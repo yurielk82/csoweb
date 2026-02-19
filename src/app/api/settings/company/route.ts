@@ -1,27 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_cache, revalidateTag } from 'next/cache';
 import { getSession } from '@/lib/auth';
 import { getCompanyInfo, updateCompanyInfo } from '@/lib/db';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// 회사 정보를 footer-data 태그로 캐싱 (무기한, 수동 갱신만)
+const getCachedCompanyInfo = unstable_cache(
+  async () => getCompanyInfo(),
+  ['company-info'],
+  { tags: ['footer-data'] }
+);
 
 // 회사 정보 조회 (로그인 필요 없음 - 로그인 화면에서 사용)
 export async function GET() {
   try {
-    const companyInfo = await getCompanyInfo();
-    
-    console.log('GET /api/settings/company - Retrieved data:', JSON.stringify(companyInfo, null, 2));
-    
-    // 캐시 비활성화 헤더 추가
+    const companyInfo = await getCachedCompanyInfo();
+
     return NextResponse.json({
       success: true,
       data: companyInfo,
-    }, {
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      },
     });
   } catch (error) {
     console.error('Get company info error:', error);
@@ -49,11 +45,10 @@ export async function PUT(request: NextRequest) {
     console.log('PUT /api/settings/company - Saving data:', JSON.stringify(data, null, 2));
     
     await updateCompanyInfo(data);
-    
-    // 저장 후 다시 조회해서 확인
-    const savedData = await getCompanyInfo();
-    console.log('PUT /api/settings/company - After save:', JSON.stringify(savedData, null, 2));
-    
+
+    // 캐시 갱신: footer-data 태그 무효화
+    revalidateTag('footer-data');
+
     return NextResponse.json({
       success: true,
       message: '회사 정보가 저장되었습니다.',
