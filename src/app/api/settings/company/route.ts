@@ -3,6 +3,8 @@ import { unstable_cache, revalidateTag } from 'next/cache';
 import { getSession } from '@/lib/auth';
 import { getCompanyInfo, updateCompanyInfo } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 // 회사 정보를 footer-data 태그로 캐싱 (무기한, 수동 갱신만)
 const getCachedCompanyInfo = unstable_cache(
   async () => getCompanyInfo(),

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { getSession } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 // 허용된 태그 목록 (필요시 추가)
 const ALLOWED_TAGS = ['footer-data'];
 

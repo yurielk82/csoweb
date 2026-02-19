@@ -3,6 +3,8 @@ import { getSession } from '@/lib/auth';
 import { rejectUser, getUserByBusinessNumber } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();

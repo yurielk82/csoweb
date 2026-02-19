@@ -8,6 +8,8 @@ import {
 } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 
+export const dynamic = 'force-dynamic';
+
 interface MailMergeData {
   recipients: string[]; // 'all' | 'year_month:YYYY-MM' | business_numbers[]
   subject: string;

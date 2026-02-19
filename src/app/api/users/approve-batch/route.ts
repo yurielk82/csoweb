@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth';
 import { approveUser, getUserByBusinessNumber } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 
+export const dynamic = 'force-dynamic';
 // 대량 처리를 위한 타임아웃 연장
 export const maxDuration = 120; // 2분
 

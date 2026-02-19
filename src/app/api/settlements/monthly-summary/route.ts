@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getMonthlySummaryByBusinessNumber, getMonthlySummaryByCSOMatching } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * 월별 수수료 합계 조회 API
  * - 관리자가 설정한 is_summary 컬럼 기준으로 합계 계산

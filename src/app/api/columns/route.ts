@@ -3,6 +3,8 @@ import { getSession } from '@/lib/auth';
 import { getColumnSettings, updateColumnSettings, initializeColumnSettings } from '@/lib/db';
 import { DEFAULT_COLUMN_SETTINGS } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const session = await getSession();

@@ -3,6 +3,8 @@ import { getSession } from '@/lib/auth';
 import { getEmailLogs, getEmailStats } from '@/lib/db';
 import type { EmailTemplateType, EmailStatus } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
