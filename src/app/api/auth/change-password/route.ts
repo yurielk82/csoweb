@@ -1,14 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, setSession, hashPassword, isValidEmail } from '@/lib/auth';
-import { getUserByBusinessNumber, getUserByEmail, updateUserEmail } from '@/lib/db';
+import { getUserByBusinessNumber, getUserByEmail, updateUser } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-// 비밀번호 강제 변경 API (must_change_password 상태에서 사용)
+interface ChangePasswordBody {
+  new_password: string;
+  company_name?: string;
+  ceo_name?: string;
+  zipcode?: string;
+  address1?: string;
+  address2?: string;
+  phone1?: string;
+  phone2?: string;
+  email?: string;
+  email2?: string;
+}
+
+// 비밀번호 강제 변경 + 프로필 설정 API
 export async function POST(request: NextRequest) {
   try {
-    // 세션 확인
     const session = await getSession();
     if (!session) {
       return NextResponse.json(
@@ -17,7 +29,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { new_password, email } = await request.json();
+    const body: ChangePasswordBody = await request.json();
+    const { new_password } = body;
 
     // 비밀번호 유효성 검사
     if (!new_password || new_password.length < 6) {
@@ -36,38 +49,68 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 초기 비밀번호 패턴 차단: 기존(u+사업자번호) + 신규(뒤 5자리) 모두
+    // 초기 비밀번호 패턴 차단: u+사업자번호, 사업자번호 전체, 뒤 5자리
     const normalizedBN = session.business_number.replace(/-/g, '');
-    const legacyDefault = `u${normalizedBN}`;
-    const newDefault = normalizedBN.slice(-5);
-    if (new_password === legacyDefault || new_password === newDefault) {
+    const blockedPasswords = [
+      `u${normalizedBN}`,
+      normalizedBN,
+      normalizedBN.slice(-5),
+    ];
+    if (blockedPasswords.includes(new_password)) {
       return NextResponse.json(
         { success: false, error: '초기 비밀번호와 다른 비밀번호를 입력해주세요.' },
         { status: 400 }
       );
     }
 
-    // 이메일 업데이트 (optional, @temp.local → 실제 이메일)
+    // 프로필 업데이트 (seed 사용자 — @temp.local 이메일인 경우)
+    const isTempEmail = user.email.endsWith('@temp.local');
     let updatedEmail = session.email;
-    if (email) {
-      const trimmedEmail = email.trim();
+    let updatedCompanyName = session.company_name;
 
-      if (!isValidEmail(trimmedEmail)) {
+    if (isTempEmail) {
+      const { company_name, ceo_name, zipcode, address1, phone1, email } = body;
+
+      // 필수 필드 검증
+      if (!company_name?.trim()) {
         return NextResponse.json(
-          { success: false, error: '올바른 이메일 형식을 입력해주세요.' },
+          { success: false, error: '업체명을 입력해주세요.' },
           { status: 400 }
         );
       }
-
-      if (trimmedEmail.endsWith('@temp.local')) {
+      if (!ceo_name?.trim()) {
+        return NextResponse.json(
+          { success: false, error: '대표자명을 입력해주세요.' },
+          { status: 400 }
+        );
+      }
+      if (!zipcode || !address1) {
+        return NextResponse.json(
+          { success: false, error: '주소를 입력해주세요.' },
+          { status: 400 }
+        );
+      }
+      if (!phone1?.trim()) {
+        return NextResponse.json(
+          { success: false, error: '연락처를 입력해주세요.' },
+          { status: 400 }
+        );
+      }
+      if (!email?.trim() || !isValidEmail(email.trim())) {
+        return NextResponse.json(
+          { success: false, error: '올바른 이메일을 입력해주세요.' },
+          { status: 400 }
+        );
+      }
+      if (email.trim().endsWith('@temp.local')) {
         return NextResponse.json(
           { success: false, error: '실제 사용하는 이메일을 입력해주세요.' },
           { status: 400 }
         );
       }
 
-      // 이메일 중복 확인 (자신 제외)
-      const existingUser = await getUserByEmail(trimmedEmail);
+      // 이메일 중복 확인 (자기 자신 제외)
+      const existingUser = await getUserByEmail(email.trim());
       if (existingUser && existingUser.business_number !== session.business_number) {
         return NextResponse.json(
           { success: false, error: '이미 사용 중인 이메일입니다.' },
@@ -75,20 +118,32 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const emailUpdated = await updateUserEmail(session.business_number, trimmedEmail);
-      if (!emailUpdated) {
+      // 프로필 일괄 업데이트
+      const profileUpdated = await updateUser(session.business_number, {
+        company_name: company_name.trim(),
+        ceo_name: ceo_name.trim(),
+        zipcode,
+        address1,
+        address2: body.address2 || '',
+        phone1: phone1.trim(),
+        phone2: body.phone2 || '',
+        email: email.trim(),
+        email2: body.email2 || '',
+      });
+
+      if (!profileUpdated) {
         return NextResponse.json(
-          { success: false, error: '이메일 업데이트에 실패했습니다.' },
+          { success: false, error: '회원 정보 업데이트에 실패했습니다.' },
           { status: 500 }
         );
       }
-      updatedEmail = trimmedEmail;
+
+      updatedEmail = email.trim();
+      updatedCompanyName = company_name.trim();
     }
 
-    // 비밀번호 해싱
+    // 비밀번호 해싱 + must_change_password + password_changed_at 일괄 업데이트
     const passwordHash = await hashPassword(new_password);
-
-    // 비밀번호 + must_change_password + password_changed_at 일괄 업데이트
     const { error: updateError } = await supabase
       .from('users')
       .update({
@@ -107,11 +162,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 세션 업데이트 (must_change_password=false, email 갱신)
+    // 세션 갱신
     const updatedSession = {
       ...session,
       must_change_password: false,
       email: updatedEmail,
+      company_name: updatedCompanyName,
     };
 
     const response = NextResponse.json({
@@ -128,7 +184,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Change password error:', error);
     return NextResponse.json(
-      { success: false, error: '비밀번호 변경 중 오류가 발생했습니다.' },
+      { success: false, error: '처리 중 오류가 발생했습니다.' },
       { status: 500 }
     );
   }

@@ -4,7 +4,7 @@
  * cso_matching 테이블의 사업자번호로 사용자 계정을 생성합니다.
  * company_name은 cso_company_name(CSO관리업체명)을 매핑합니다.
  *
- * - 비밀번호: 사업자번호 뒤 5자리 (예: "1234567890" → "67890")
+ * - 비밀번호: 사업자번호 전체 숫자 (예: "1234567890")
  * - 이메일: {사업자번호}@temp.local (첫 로그인 시 실제 이메일 입력 강제)
  * - is_approved: true (즉시 로그인 가능)
  * - must_change_password: true (첫 로그인 시 비밀번호 변경 강제)
@@ -114,7 +114,7 @@ async function buildUserRecords(csoRecords: CSORecord[]): Promise<UserRecord[]> 
   for (let i = 0; i < csoRecords.length; i++) {
     const { business_number: bn, company_name } = csoRecords[i];
     const digits = bn.replace(/\D/g, '');
-    const password = digits.slice(-5);
+    const password = digits;
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
     records.push({
@@ -218,7 +218,7 @@ async function main() {
   console.log('========================================');
   console.log('\n계정 정보:');
   console.log('  - 아이디: 사업자번호');
-  console.log('  - 비밀번호: 사업자번호 뒤 5자리');
+  console.log('  - 비밀번호: 사업자번호 전체 (숫자 10자리)');
   console.log('  - 업체명: CSO관리업체명(cso_company_name) 매핑');
   console.log('  - 첫 로그인 시 이메일 입력 + 비밀번호 변경 필요');
 }
