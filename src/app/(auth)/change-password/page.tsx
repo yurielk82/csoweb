@@ -2,38 +2,43 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, Loader2, AlertTriangle } from 'lucide-react';
+import { Lock, Loader2, AlertTriangle, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function ChangePasswordPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [session, setSession] = useState<{ business_number: string; company_name: string; must_change_password: boolean } | null>(null);
+  const [session, setSession] = useState<{ business_number: string; company_name: string; email: string; must_change_password: boolean; is_admin: boolean } | null>(null);
+  const [needsEmail, setNeedsEmail] = useState(false);
   const [formData, setFormData] = useState({
+    email: '',
     new_password: '',
     confirm_password: '',
   });
 
   useEffect(() => {
-    // 세션 확인
     fetch('/api/auth/session')
       .then(res => res.json())
       .then(result => {
         if (result.success && result.data) {
-          // 비밀번호 변경이 필요하지 않으면 대시보드로 리다이렉트
           if (!result.data.must_change_password) {
             router.push(result.data.is_admin ? '/admin' : '/dashboard');
             return;
           }
           setSession(result.data);
+          // @temp.local 이메일이면 실제 이메일 입력 필요
+          if (result.data.email?.endsWith('@temp.local')) {
+            setNeedsEmail(true);
+          }
         } else {
-          // 로그인 필요
           router.push('/login');
         }
       })
@@ -47,7 +52,22 @@ export default function ChangePasswordPage() {
     e.preventDefault();
     setError('');
 
-    // 유효성 검사
+    // 이메일 유효성 검사
+    if (needsEmail) {
+      if (!formData.email.trim()) {
+        setError('이메일을 입력해주세요.');
+        return;
+      }
+      if (!EMAIL_REGEX.test(formData.email)) {
+        setError('올바른 이메일 형식을 입력해주세요.');
+        return;
+      }
+      if (formData.email.endsWith('@temp.local')) {
+        setError('실제 사용하는 이메일을 입력해주세요.');
+        return;
+      }
+    }
+
     if (formData.new_password.length < 6) {
       setError('비밀번호는 6자 이상이어야 합니다.');
       return;
@@ -58,9 +78,11 @@ export default function ChangePasswordPage() {
       return;
     }
 
-    // 초기 비밀번호와 동일한지 체크 (u + 사업자번호)
-    const defaultPassword = `u${session?.business_number.replace(/-/g, '')}`;
-    if (formData.new_password === defaultPassword) {
+    // 초기 비밀번호 패턴 차단: u+사업자번호 (기존) + 뒤 5자리 (신규)
+    const normalizedBN = session?.business_number.replace(/-/g, '') || '';
+    const legacyDefault = `u${normalizedBN}`;
+    const newDefault = normalizedBN.slice(-5);
+    if (formData.new_password === legacyDefault || formData.new_password === newDefault) {
       setError('초기 비밀번호와 다른 비밀번호를 입력해주세요.');
       return;
     }
@@ -68,12 +90,17 @@ export default function ChangePasswordPage() {
     setSaving(true);
 
     try {
+      const body: Record<string, string> = {
+        new_password: formData.new_password,
+      };
+      if (needsEmail) {
+        body.email = formData.email.trim();
+      }
+
       const response = await fetch('/api/auth/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          new_password: formData.new_password,
-        }),
+        body: JSON.stringify(body),
       });
 
       const result = await response.json();
@@ -83,7 +110,6 @@ export default function ChangePasswordPage() {
         return;
       }
 
-      // 성공 시 대시보드로 리다이렉트
       router.push(result.data?.redirect || '/dashboard');
     } catch {
       setError('비밀번호 변경 중 오류가 발생했습니다.');
@@ -109,9 +135,11 @@ export default function ChangePasswordPage() {
               <AlertTriangle className="h-8 w-8 text-yellow-600" />
             </div>
           </div>
-          <CardTitle className="text-2xl">비밀번호 변경 필요</CardTitle>
+          <CardTitle className="text-2xl">초기 설정 필요</CardTitle>
           <CardDescription>
-            보안을 위해 비밀번호를 변경해주세요.
+            {needsEmail
+              ? '이메일과 비밀번호를 설정해주세요.'
+              : '보안을 위해 비밀번호를 변경해주세요.'}
             <br />
             <span className="text-xs text-muted-foreground">
               {session?.company_name} ({session?.business_number})
@@ -123,9 +151,9 @@ export default function ChangePasswordPage() {
             <Alert variant="destructive" className="bg-yellow-50 border-yellow-200">
               <AlertTriangle className="h-4 w-4 text-yellow-600" />
               <AlertDescription className="text-yellow-800">
-                임시 비밀번호로 로그인하셨습니다. 
-                <br />
-                계속 사용하시려면 새 비밀번호를 설정해주세요.
+                {needsEmail
+                  ? '처음 로그인하셨습니다. 이메일과 새 비밀번호를 설정해주세요.'
+                  : '임시 비밀번호로 로그인하셨습니다. 새 비밀번호를 설정해주세요.'}
               </AlertDescription>
             </Alert>
 
@@ -134,7 +162,29 @@ export default function ChangePasswordPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            
+
+            {needsEmail && (
+              <div className="space-y-2">
+                <Label htmlFor="email">이메일</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="실제 사용하는 이메일 입력"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                    disabled={saving}
+                    className="pl-10"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  비밀번호 재설정 등에 사용됩니다.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="new_password">새 비밀번호</Label>
               <Input
@@ -170,7 +220,7 @@ export default function ChangePasswordPage() {
               ) : (
                 <Lock className="mr-2 h-4 w-4" />
               )}
-              비밀번호 변경
+              {needsEmail ? '설정 완료' : '비밀번호 변경'}
             </Button>
           </CardFooter>
         </form>
