@@ -150,3 +150,55 @@ Content-Type: application/json
 
 - 회원가입 시 사업자번호 유효성 검증
 - 사업자 상태(폐업/휴업) 사전 확인
+
+---
+
+## 내부 API
+
+### `POST /api/verify-biz` — 사업자번호 국세청 실시간 인증
+
+국세청 상태조회 API(`/status`)를 프록시하는 서버사이드 엔드포인트. 클라이언트에 API 키를 노출하지 않기 위해 사용.
+
+**Request Body:**
+```json
+{
+  "b_no": "000-00-00000"
+}
+```
+- 하이픈 포함/미포함 모두 허용 (서버에서 정규화)
+
+**Response (성공):**
+```json
+{
+  "success": true,
+  "data": {
+    "b_no": "0000000000",
+    "b_stt": "계속사업자",
+    "b_stt_cd": "01",
+    "tax_type": "부가가치세 일반과세자"
+  },
+  "verified_at": "2026. 02. 25. 14:30:22"
+}
+```
+
+**Response (실패):**
+```json
+{
+  "success": false,
+  "error": "에러 메시지",
+  "code": "ERROR_CODE"
+}
+```
+
+| code | HTTP | 설명 |
+|------|------|------|
+| `CONFIG_ERROR` | 500 | `NTS_API_KEY` 환경변수 미설정 |
+| `INVALID_REQUEST` | 400 | JSON 파싱 실패 |
+| `MISSING_BNO` | 400 | `b_no` 누락 |
+| `INVALID_FORMAT` | 400 | 10자리 숫자 아님 |
+| `NOT_REGISTERED` | 200 | 국세청 미등록 사업자 |
+| `NTS_API_ERROR` | 502 | 국세청 API 비정상 응답 |
+| `TIMEOUT` | 504 | 10초 타임아웃 초과 |
+| `NETWORK_ERROR` | 502 | 네트워크 오류 |
+
+**사용처:** 회원가입 페이지 (`/register`) — 사업자번호 10자리 입력 완료 시 자동 호출
