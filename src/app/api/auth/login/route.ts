@@ -48,21 +48,28 @@ export async function POST(request: NextRequest) {
       is_admin: user.is_admin,
       is_approved: user.is_approved,
       must_change_password: user.must_change_password || false,
+      profile_complete: user.profile_complete ?? true,
     };
-    
+
     await setSession(session);
-    
-    // 비밀번호 변경 필요 시 강제 리다이렉트
-    const redirectUrl = user.must_change_password 
-      ? '/change-password' 
-      : (user.is_admin ? '/admin' : '/dashboard');
-    
+
+    // 리다이렉트 3분기: 비밀번호 변경 → 프로필 완성 → 대시보드
+    let redirectUrl: string;
+    if (user.must_change_password) {
+      redirectUrl = '/change-password';
+    } else if (!user.profile_complete) {
+      redirectUrl = '/complete-profile';
+    } else {
+      redirectUrl = user.is_admin ? '/admin' : '/dashboard';
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         user: session,
         redirect: redirectUrl,
         must_change_password: user.must_change_password || false,
+        profile_complete: user.profile_complete ?? true,
       },
     });
   } catch (error) {

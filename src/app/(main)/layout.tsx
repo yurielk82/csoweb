@@ -21,6 +21,11 @@ export default async function MainLayout({
   if (session.must_change_password) {
     redirect('/change-password');
   }
+
+  // 프로필 미완성인 경우 강제 리다이렉트
+  if (!session.profile_complete) {
+    redirect('/complete-profile');
+  }
   
   return (
     <div className="min-h-screen bg-gray-50">

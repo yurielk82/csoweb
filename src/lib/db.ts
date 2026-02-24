@@ -89,6 +89,10 @@ export async function getUserByBusinessNumberAndEmail(businessNumber: string, em
   return getUserRepository().findByBusinessNumberAndEmail(businessNumber, email);
 }
 
+export async function completeUserProfile(businessNumber: string, data: UpdateUserData): Promise<boolean> {
+  return getUserRepository().completeProfile(businessNumber, data);
+}
+
 // ============================================
 // Settlement Operations
 // ============================================

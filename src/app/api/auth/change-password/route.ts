@@ -1,24 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, setSession, hashPassword, isValidEmail } from '@/lib/auth';
-import { getUserByBusinessNumber, getUserByEmail, updateUser } from '@/lib/db';
+import { getSession, setSession, hashPassword } from '@/lib/auth';
+import { getUserByBusinessNumber } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
 interface ChangePasswordBody {
   new_password: string;
-  company_name?: string;
-  ceo_name?: string;
-  zipcode?: string;
-  address1?: string;
-  address2?: string;
-  phone1?: string;
-  phone2?: string;
-  email?: string;
-  email2?: string;
 }
 
-// 비밀번호 강제 변경 + 프로필 설정 API
+// 비밀번호 강제 변경 API (비밀번호만 처리, 프로필은 /complete-profile에서 처리)
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
@@ -63,86 +54,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 프로필 미완성 여부: @temp.local 이메일 OR 필수 필드 누락
-    const needsProfile = user.email.endsWith('@temp.local') || !user.ceo_name || !user.address1 || !user.phone1;
-    let updatedEmail = session.email;
-    let updatedCompanyName = session.company_name;
-
-    if (needsProfile) {
-      const { company_name, ceo_name, zipcode, address1, phone1, email } = body;
-
-      // 필수 필드 검증
-      if (!company_name?.trim()) {
-        return NextResponse.json(
-          { success: false, error: '업체명을 입력해주세요.' },
-          { status: 400 }
-        );
-      }
-      if (!ceo_name?.trim()) {
-        return NextResponse.json(
-          { success: false, error: '대표자명을 입력해주세요.' },
-          { status: 400 }
-        );
-      }
-      if (!zipcode || !address1) {
-        return NextResponse.json(
-          { success: false, error: '주소를 입력해주세요.' },
-          { status: 400 }
-        );
-      }
-      if (!phone1?.trim()) {
-        return NextResponse.json(
-          { success: false, error: '연락처를 입력해주세요.' },
-          { status: 400 }
-        );
-      }
-      if (!email?.trim() || !isValidEmail(email.trim())) {
-        return NextResponse.json(
-          { success: false, error: '올바른 이메일을 입력해주세요.' },
-          { status: 400 }
-        );
-      }
-      if (email.trim().endsWith('@temp.local')) {
-        return NextResponse.json(
-          { success: false, error: '실제 사용하는 이메일을 입력해주세요.' },
-          { status: 400 }
-        );
-      }
-
-      // 이메일 중복 확인 (자기 자신 제외)
-      const existingUser = await getUserByEmail(email.trim());
-      if (existingUser && existingUser.business_number !== session.business_number) {
-        return NextResponse.json(
-          { success: false, error: '이미 사용 중인 이메일입니다.' },
-          { status: 409 }
-        );
-      }
-
-      // 프로필 일괄 업데이트
-      const profileUpdated = await updateUser(session.business_number, {
-        company_name: company_name.trim(),
-        ceo_name: ceo_name.trim(),
-        zipcode,
-        address1,
-        address2: body.address2 || '',
-        phone1: phone1.trim(),
-        phone2: body.phone2 || '',
-        email: email.trim(),
-        email2: body.email2 || '',
-      });
-
-      if (!profileUpdated) {
-        return NextResponse.json(
-          { success: false, error: '회원 정보 업데이트에 실패했습니다.' },
-          { status: 500 }
-        );
-      }
-
-      updatedEmail = email.trim();
-      updatedCompanyName = company_name.trim();
-    }
-
-    // 비밀번호 해싱 + must_change_password + password_changed_at 일괄 업데이트
+    // 비밀번호 해싱 + must_change_password=false + password_changed_at 업데이트
     const passwordHash = await hashPassword(new_password);
     const { error: updateError } = await supabase
       .from('users')
@@ -162,25 +74,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 세션 갱신
+    // 세션 갱신 (must_change_password만 false로, profile_complete는 유지)
     const updatedSession = {
       ...session,
       must_change_password: false,
-      email: updatedEmail,
-      company_name: updatedCompanyName,
     };
-
-    const response = NextResponse.json({
-      success: true,
-      message: '설정이 완료되었습니다.',
-      data: {
-        redirect: session.is_admin ? '/admin' : '/dashboard'
-      }
-    });
-
     await setSession(updatedSession);
 
-    return response;
+    // 프로필 미완성이면 /complete-profile로, 아니면 대시보드로
+    const redirectUrl = !user.profile_complete
+      ? '/complete-profile'
+      : (session.is_admin ? '/admin' : '/dashboard');
+
+    return NextResponse.json({
+      success: true,
+      message: '비밀번호가 변경되었습니다.',
+      data: { redirect: redirectUrl },
+    });
   } catch (error) {
     console.error('Change password error:', error);
     return NextResponse.json(

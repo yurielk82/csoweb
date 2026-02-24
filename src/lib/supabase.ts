@@ -50,6 +50,7 @@ export interface DbUser {
   is_admin: boolean;
   is_approved: boolean;
   must_change_password: boolean;
+  profile_complete: boolean;
   password_changed_at: string | null;
   created_at: string;
   updated_at: string;

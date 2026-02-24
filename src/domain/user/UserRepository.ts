@@ -19,5 +19,6 @@ export interface UserRepository {
   updateEmail(businessNumber: string, email: string): Promise<boolean>;
   resetPasswordToDefault(businessNumber: string, passwordHash: string): Promise<boolean>;
   completePasswordChange(businessNumber: string, passwordHash: string): Promise<boolean>;
+  completeProfile(businessNumber: string, data: UpdateUserData): Promise<boolean>;
   delete(businessNumber: string): Promise<boolean>;
 }

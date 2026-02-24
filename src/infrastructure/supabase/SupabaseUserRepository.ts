@@ -24,6 +24,7 @@ function mapDbUserToUser(dbUser: DbUser): User {
     is_admin: dbUser.is_admin,
     is_approved: dbUser.is_approved,
     must_change_password: dbUser.must_change_password || false,
+    profile_complete: dbUser.profile_complete ?? true,
     password_changed_at: dbUser.password_changed_at || undefined,
     created_at: dbUser.created_at,
     updated_at: dbUser.updated_at,
@@ -192,6 +193,19 @@ export class SupabaseUserRepository implements UserRepository {
         password_hash: passwordHash,
         must_change_password: false,
         password_changed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('business_number', businessNumber);
+
+    return !error;
+  }
+
+  async completeProfile(businessNumber: string, data: UpdateUserData): Promise<boolean> {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        ...data,
+        profile_complete: true,
         updated_at: new Date().toISOString(),
       })
       .eq('business_number', businessNumber);
