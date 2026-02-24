@@ -1,33 +1,53 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  Download, 
-  Search, 
-  FileSpreadsheet, 
-  ChevronLeft, 
+import {
+  Download,
+  Search,
+  FileSpreadsheet,
+  ChevronLeft,
   ChevronRight,
   Loader2,
   RefreshCw,
   AlertCircle,
   Building2,
-  X
+  X,
+  Pencil,
+  Save,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Loading } from '@/components/shared/loading';
+import { useToast } from '@/hooks/use-toast';
 import type { Settlement, ColumnSetting } from '@/types';
+
+const DEFAULT_NOTICE = `1. 세금계산서 작성일자: {{정산월}} 29일 이내
+2. 세금계산서 취합 마감일: {{정산월}} 29일 (기간내 미발행 할 경우 무통보 이월)
+3. 세금계산서 메일 주소: unioncsosale@ukp.co.kr
+4. 품목명: "마케팅 용역 수수료" 또는 "판매대행 수수료" ('00월'표기 금지)
+5. 대표자: {{대표자명}}
+6. 다음달 EDI 입력 마감일: {{정산월+1}} 11일 (수)까지 (설 연휴 등으로 일자변경 가능)`;
 
 interface SettlementResponse {
   settlements: Settlement[];
@@ -76,6 +96,12 @@ export default function AdminMasterPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [noticeSettings, setNoticeSettings] = useState<NoticeSettings | null>(null);
+  const { toast } = useToast();
+
+  // Notice 편집 Dialog 상태
+  const [noticeDialogOpen, setNoticeDialogOpen] = useState(false);
+  const [noticeEditContent, setNoticeEditContent] = useState('');
+  const [noticeSaving, setNoticeSaving] = useState(false);
 
   // CSO 검색 관련 상태
   const [csoList, setCsoList] = useState<CSOOption[]>([]);
@@ -291,6 +317,36 @@ export default function AdminMasterPage() {
       .replace(/{{정산월}}/g, settlementMonth)
       .replace(/{{정산월\+1}}/g, nextMonthStr)
       .replace(/{{대표자명}}/g, ceoName);
+  };
+
+  // Notice 편집 Dialog 열기
+  const openNoticeDialog = () => {
+    setNoticeEditContent(noticeSettings?.notice_content || DEFAULT_NOTICE);
+    setNoticeDialogOpen(true);
+  };
+
+  // Notice 저장
+  const handleNoticeSave = async () => {
+    setNoticeSaving(true);
+    try {
+      const res = await fetch('/api/settings/company', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notice_content: noticeEditContent }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setNoticeSettings(prev => prev ? { ...prev, notice_content: noticeEditContent } : { notice_content: noticeEditContent, ceo_name: '' });
+        setNoticeDialogOpen(false);
+        toast({ title: '저장 완료', description: 'Notice가 저장되었습니다.' });
+      } else {
+        toast({ variant: 'destructive', title: '저장 실패', description: result.error });
+      }
+    } catch {
+      toast({ variant: 'destructive', title: '오류', description: '저장 중 오류가 발생했습니다.' });
+    } finally {
+      setNoticeSaving(false);
+    }
   };
 
   // Get display columns in order
@@ -546,10 +602,21 @@ export default function AdminMasterPage() {
       {noticeSettings?.notice_content && (
         <Card className="border-amber-200 bg-amber-50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2 text-amber-800">
-              <AlertCircle className="h-4 w-4" />
-              Notice
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2 text-amber-800">
+                <AlertCircle className="h-4 w-4" />
+                Notice
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={openNoticeDialog}
+                className="h-7 px-2 text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+              >
+                <Pencil className="h-3.5 w-3.5 mr-1" />
+                편집
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="text-sm text-amber-900">
             <div className="whitespace-pre-line">
@@ -558,6 +625,63 @@ export default function AdminMasterPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Notice 편집 Dialog */}
+      <Dialog open={noticeDialogOpen} onOpenChange={setNoticeDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>정산서 Notice 편집</DialogTitle>
+            <DialogDescription>
+              정산서 조회 페이지에 표시될 안내사항을 수정합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Textarea
+              value={noticeEditContent}
+              onChange={(e) => setNoticeEditContent(e.target.value)}
+              rows={8}
+              className="font-mono text-sm"
+            />
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p className="font-medium">사용 가능한 변수:</p>
+              <ul className="list-disc list-inside ml-2">
+                <li>{`{{정산월}}`} — 현재 조회 중인 정산월 (예: 1월)</li>
+                <li>{`{{정산월+1}}`} — 다음달 (예: 2월)</li>
+                <li>{`{{대표자명}}`} — 기본 정보의 대표자명</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setNoticeEditContent(DEFAULT_NOTICE)}
+              className="mr-auto"
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1" />
+              기본값으로 초기화
+            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setNoticeDialogOpen(false)}
+                disabled={noticeSaving}
+              >
+                취소
+              </Button>
+              <Button onClick={handleNoticeSave} disabled={noticeSaving}>
+                {noticeSaving ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                저장
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Summary */}
       {data && (

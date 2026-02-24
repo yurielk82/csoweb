@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, Save, Loader2, Building2, Phone, Mail, Globe, MapPin, FileText, Bell, Plug, Server } from 'lucide-react';
+import { Settings, Save, Loader2, Building2, Phone, Mail, Globe, MapPin, FileText, Plug, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,13 +37,6 @@ interface CompanyInfo {
   email_send_delay_ms: number;
 }
 
-const DEFAULT_NOTICE = `1. 세금계산서 작성일자: {{정산월}} 29일 이내
-2. 세금계산서 취합 마감일: {{정산월}} 29일 (기간내 미발행 할 경우 무통보 이월)
-3. 세금계산서 메일 주소: unioncsosale@ukp.co.kr
-4. 품목명: "마케팅 용역 수수료" 또는 "판매대행 수수료" ('00월'표기 금지)
-5. 대표자: {{대표자명}}
-6. 다음달 EDI 입력 마감일: {{정산월+1}} 11일 (수)까지 (설 연휴 등으로 일자변경 가능)`;
-
 const defaultCompanyInfo: CompanyInfo = {
   company_name: '',
   ceo_name: '',
@@ -55,7 +48,7 @@ const defaultCompanyInfo: CompanyInfo = {
   website: '',
   copyright: '',
   additional_info: '',
-  notice_content: DEFAULT_NOTICE,
+  notice_content: '',
   email_provider: 'resend',
   smtp_host: '',
   smtp_port: 465,
@@ -331,48 +324,6 @@ export default function SettingsPage() {
               rows={3}
             />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Notice Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            정산서 Notice 설정
-          </CardTitle>
-          <CardDescription>
-            정산서 조회 페이지 &apos;조회 조건&apos; 아래에 표시될 안내사항입니다.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="notice_content">Notice 내용</Label>
-            <Textarea
-              id="notice_content"
-              value={formData.notice_content}
-              onChange={(e) => handleChange('notice_content', e.target.value)}
-              placeholder={DEFAULT_NOTICE}
-              rows={8}
-              className="font-mono text-sm"
-            />
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p><strong>사용 가능한 변수:</strong></p>
-              <ul className="list-disc list-inside ml-2">
-                <li>{`{{정산월}}`} - 현재 조회 중인 정산월 (예: 1월)</li>
-                <li>{`{{정산월+1}}`} - 다음달 (예: 2월)</li>
-                <li>{`{{대표자명}}`} - 기본 정보의 대표자명</li>
-              </ul>
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => handleChange('notice_content', DEFAULT_NOTICE)}
-          >
-            기본값으로 초기화
-          </Button>
         </CardContent>
       </Card>
 

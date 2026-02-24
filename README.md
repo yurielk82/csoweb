@@ -15,15 +15,16 @@
 <br />
 <div align="center">
   <h1>CSO 정산 포털</h1>
+  <p><code>v0.14.1</code></p>
   <p>
     CSO(위탁영업) 업체가 제약사 정산 수수료를 조회하는 B2B 포털
   </p>
   <p>
-    <a href="docs(h)/ARCHITECTURE(h).md">아키텍처</a>
+    <a href="docs/ARCHITECTURE.md">아키텍처</a>
     &middot;
-    <a href="docs(h)/API-DATABASE(h).md">API 레퍼런스</a>
+    <a href="docs/API-DATABASE.md">API 레퍼런스</a>
     &middot;
-    <a href="docs(h)/OPERATIONS(h).md">운영 가이드</a>
+    <a href="docs/OPERATIONS.md">운영 가이드</a>
   </p>
 </div>
 
@@ -97,7 +98,7 @@
 
 ## 시작하기
 
-로컬 환경에서 프로젝트를 실행하는 방법입니다. 상세한 가이드는 [ONBOARDING](docs(h)/ONBOARDING(h).md)을 참고하세요.
+로컬 환경에서 프로젝트를 실행하는 방법입니다. 상세한 가이드는 [ONBOARDING](docs/ONBOARDING.md)을 참고하세요.
 
 ### 사전 요구사항
 
@@ -124,7 +125,7 @@
    cp .env.local.example .env.local
    ```
    `.env.local`을 열어 Supabase URL, 키, JWT 시크릿 등 8개 변수를 채웁니다.
-   각 변수의 설명과 획득 경로는 [ONBOARDING](docs(h)/ONBOARDING(h).md#2단계-환경변수-설정)을 참고하세요.
+   각 변수의 설명과 획득 경로는 [ONBOARDING](docs/ONBOARDING.md#2단계-환경변수-설정)을 참고하세요.
 
 4. **개발 서버 실행**
    ```bash
@@ -158,7 +159,7 @@
   → 월별 합계 확인
 ```
 
-자세한 API 엔드포인트는 [API-DATABASE](docs(h)/API-DATABASE(h).md)를, 코드 구조는 [ARCHITECTURE](docs(h)/ARCHITECTURE(h).md)를 참고하세요.
+자세한 API 엔드포인트는 [API-DATABASE](docs/API-DATABASE.md)를, 코드 구조는 [ARCHITECTURE](docs/ARCHITECTURE.md)를 참고하세요.
 
 <p align="right">(<a href="#readme-top">맨 위로</a>)</p>
 
@@ -177,6 +178,7 @@
 - [x] 이메일 듀얼 프로바이더 (Resend + SMTP 하이웍스)
 - [x] 메일머지 SSE 실시간 진행률 + 수신자 수 표시
 - [x] 대시보드 시스템 정보 강화 (SMTP/NTS 상태, 버전 동기화)
+- [x] 정산서 Notice 편집을 마스터조회 페이지로 이동 (사용 맥락에서 인라인 편집)
 - [ ] CSO 필터링
 - [ ] DDD 레이어 전환 완료 (`lib/db.ts` 호환 레이어 제거)
 - [ ] 테스트 코드 추가
@@ -194,7 +196,7 @@
 4. 브랜치에 Push (`git push origin feature/amazing-feature`)
 5. Pull Request 생성
 
-코드 작성 시 DDD 레이어 구조를 따라주세요. 자세한 내용은 [ARCHITECTURE](docs(h)/ARCHITECTURE(h).md#코드-레이어-구조)를 참고하세요.
+코드 작성 시 DDD 레이어 구조를 따라주세요. 자세한 내용은 [ARCHITECTURE](docs/ARCHITECTURE.md#코드-레이어-구조)를 참고하세요.
 
 <p align="right">(<a href="#readme-top">맨 위로</a>)</p>
 
