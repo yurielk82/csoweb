@@ -63,12 +63,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 프로필 업데이트 (seed 사용자 — @temp.local 이메일인 경우)
-    const isTempEmail = user.email.endsWith('@temp.local');
+    // 프로필 미완성 여부: @temp.local 이메일 OR 필수 필드 누락
+    const needsProfile = user.email.endsWith('@temp.local') || !user.ceo_name || !user.address1 || !user.phone1;
     let updatedEmail = session.email;
     let updatedCompanyName = session.company_name;
 
-    if (isTempEmail) {
+    if (needsProfile) {
       const { company_name, ceo_name, zipcode, address1, phone1, email } = body;
 
       // 필수 필드 검증

@@ -74,31 +74,54 @@ export default function ChangePasswordPage() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/auth/session')
-      .then(res => res.json())
-      .then(result => {
-        if (result.success && result.data) {
-          if (!result.data.must_change_password) {
-            router.push(result.data.is_admin ? '/admin' : '/dashboard');
-            return;
-          }
-          setSession(result.data);
-          const isTempEmail = result.data.email?.endsWith('@temp.local');
-          setNeedsProfile(isTempEmail);
-          if (isTempEmail) {
+    async function init() {
+      try {
+        // 1. 세션 확인
+        const sessionRes = await fetch('/api/auth/session');
+        const sessionResult = await sessionRes.json();
+
+        if (!sessionResult.success || !sessionResult.data) {
+          router.push('/login');
+          return;
+        }
+
+        if (!sessionResult.data.must_change_password) {
+          router.push(sessionResult.data.is_admin ? '/admin' : '/dashboard');
+          return;
+        }
+
+        setSession(sessionResult.data);
+
+        // 2. DB에서 실제 프로필 조회하여 필수 필드 누락 여부 확인
+        const profileRes = await fetch('/api/users/profile');
+        const profileResult = await profileRes.json();
+
+        if (profileResult.success && profileResult.data) {
+          const p = profileResult.data;
+          const missingProfile = !p.ceo_name || !p.address1 || !p.phone1 || p.email?.endsWith('@temp.local');
+          setNeedsProfile(missingProfile);
+          if (missingProfile) {
             setFormData(prev => ({
               ...prev,
-              company_name: result.data.company_name || '',
+              company_name: p.company_name || '',
+              ceo_name: p.ceo_name || '',
+              zipcode: p.zipcode || '',
+              address1: p.address1 || '',
+              address2: p.address2 || '',
+              phone1: p.phone1 || '',
+              phone2: p.phone2 || '',
+              email: p.email?.endsWith('@temp.local') ? '' : (p.email || ''),
+              email2: p.email2 || '',
             }));
           }
-        } else {
-          router.push('/login');
         }
-      })
-      .catch(() => {
+      } catch {
         router.push('/login');
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    }
+    init();
   }, [router]);
 
   const formatPhoneNumber = (value: string) => {
