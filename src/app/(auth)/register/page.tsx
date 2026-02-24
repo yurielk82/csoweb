@@ -368,6 +368,7 @@ export default function RegisterPage() {
               {/* 국세청 인증 결과 UI */}
               <BizVerificationCard
                 verification={bizVerification}
+                digitCount={formData.business_number.replace(/\D/g, '').length}
                 onRetry={handleRetryVerification}
               />
             </div>
@@ -559,14 +560,40 @@ export default function RegisterPage() {
 // 사업자번호 국세청 인증 결과 카드 컴포넌트
 function BizVerificationCard({
   verification,
+  digitCount,
   onRetry,
 }: {
   verification: BizVerification;
+  digitCount: number;
   onRetry: () => void;
 }) {
   const { status, data, verifiedAt, errorMessage } = verification;
 
-  if (status === 'idle') return null;
+  // idle 상태: 입력 진행도에 따라 안내 메시지 표시
+  if (status === 'idle') {
+    if (digitCount === 0) {
+      return (
+        <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-500">
+          <Info className="h-4 w-4 shrink-0" />
+          <span>사업자등록번호 10자리를 입력하면 국세청에서 자동 인증합니다</span>
+        </div>
+      );
+    }
+    return (
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-500 space-y-2">
+        <div className="flex items-center gap-2">
+          <Info className="h-4 w-4 shrink-0" />
+          <span>{digitCount}/10자리 입력 — 입력이 완료되면 자동으로 국세청 인증이 시작됩니다</span>
+        </div>
+        <div className="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-blue-400 transition-all duration-300"
+            style={{ width: `${digitCount * 10}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   // 조회 중
   if (status === 'loading') {
@@ -615,7 +642,17 @@ function BizVerificationCard({
   // 등록된 사업자 (계속/휴업/폐업)
   if (data) {
     const config = BIZ_STATUS_CONFIG[data.b_stt_cd];
-    if (!config) return null;
+    if (!config) {
+      // 알 수 없는 상태코드 → 미등록/비정상으로 표시
+      return (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm">
+          <div className="flex items-center gap-2 text-red-700">
+            <XCircle className="h-4 w-4 shrink-0" />
+            <span>{data.b_stt || '확인할 수 없는 사업자 상태입니다.'}</span>
+          </div>
+        </div>
+      );
+    }
 
     const StatusIcon = config.icon;
     const isActive = data.b_stt_cd === '01';

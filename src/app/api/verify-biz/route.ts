@@ -118,6 +118,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<VerifyBiz
     }
 
     const item = ntsData.data[0];
+
+    // 미등록 사업자: b_stt_cd가 빈 문자열
+    if (!item.b_stt_cd) {
+      return NextResponse.json(
+        { success: false, error: item.b_stt || '국세청에 등록되지 않은 사업자등록번호입니다.', code: 'NOT_REGISTERED' },
+        { status: 200 }
+      );
+    }
+
     const verifiedAt = new Date().toLocaleString('ko-KR', {
       timeZone: 'Asia/Seoul',
       year: 'numeric',
