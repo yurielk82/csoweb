@@ -202,8 +202,7 @@
 
 ## 연락처
 
-<!-- 실제 연락처로 교체하세요 -->
-프로젝트 관리자 — [이메일](mailto:admin@example.com)
+영업관리팀 권대환 — [qwer@ukp.co.kr](mailto:qwer@ukp.co.kr)
 
 <p align="right">(<a href="#readme-top">맨 위로</a>)</p>
 
