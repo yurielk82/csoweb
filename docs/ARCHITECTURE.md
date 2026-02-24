@@ -52,8 +52,8 @@ src/
 │   ├── settlement/      SettlementRepository 인터페이스, Settlement 타입
 │   ├── cso-matching/    CSOMatchingRepository 인터페이스
 │   ├── column-setting/  ColumnSettingRepository 인터페이스
-│   ├── email/           EmailLog 타입
-│   ├── company/         CompanyInfo 타입
+│   ├── email/           EmailLog 타입, EmailService 인터페이스
+│   ├── company/         CompanyInfo 타입, EmailProvider 타입
 │   └── password-reset-token/
 │
 ├── application/         ← 유스케이스 (도메인 조합, 흐름 제어)
@@ -63,7 +63,7 @@ src/
 │
 ├── infrastructure/      ← 외부 서비스 구현체
 │   ├── supabase/        Repository 구현체 (Supabase 클라이언트 사용)
-│   ├── email/           ResendEmailService
+│   ├── email/           (제거됨 — lib/email.ts에서 듀얼 프로바이더 직접 처리)
 │   └── excel/           ExcelParser (엑셀 → 도메인 객체 변환)
 │
 └── app/                 ← Next.js App Router (프레젠테이션)
@@ -94,7 +94,7 @@ domain/ (인터페이스 정의) ← infrastructure/ (구현체)
 | UI 변경 | `app/` 또는 `components/` |
 | 새 외부 서비스 연동 | `infrastructure/` (새 서비스) → `domain/` (인터페이스) |
 | 엑셀 파싱 로직 변경 | `infrastructure/excel/` |
-| 이메일 템플릿 변경 | `infrastructure/email/` |
+| 이메일 템플릿 변경 | `lib/email.ts` (듀얼 프로바이더: Resend + SMTP) |
 
 ---
 

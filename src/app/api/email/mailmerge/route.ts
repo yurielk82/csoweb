@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { 
-  getUserByBusinessNumber, 
-  getAllUsers, 
+import {
+  getUserByBusinessNumber,
+  getAllUsers,
   getSettlementSummary,
-  getBusinessNumbersForSettlementMonth 
+  getBusinessNumbersForSettlementMonth
 } from '@/lib/db';
-import { sendEmail } from '@/lib/email';
+import { sendEmail, getEmailSendDelay } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,110 +35,193 @@ function formatCurrency(value: number): string {
   return value.toLocaleString('ko-KR') + '원';
 }
 
-export async function POST(request: NextRequest) {
+// C-1: 수신자 수 조회
+export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
-    
+
     if (!session || !session.is_admin) {
       return NextResponse.json(
         { success: false, error: '관리자 권한이 필요합니다.' },
         { status: 403 }
       );
     }
-    
+
+    const url = new URL(request.url);
+    const type = url.searchParams.get('type');
+    const ym = url.searchParams.get('year_month');
+
+    let count = 0;
+
+    if (type === 'all') {
+      const users = await getAllUsers();
+      count = users.filter(u => u.is_approved && !u.is_admin).length;
+    } else if (type === 'year_month' && ym) {
+      const bns = await getBusinessNumbersForSettlementMonth(ym);
+      count = bns.length;
+    }
+
+    return NextResponse.json({ success: true, data: { count } });
+  } catch (error) {
+    console.error('Mailmerge GET error:', error);
+    return NextResponse.json(
+      { success: false, error: '수신자 수 조회 중 오류가 발생했습니다.' },
+      { status: 500 }
+    );
+  }
+}
+
+// C-2: SSE 실시간 발송 진행률
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getSession();
+
+    if (!session || !session.is_admin) {
+      return NextResponse.json(
+        { success: false, error: '관리자 권한이 필요합니다.' },
+        { status: 403 }
+      );
+    }
+
     const { recipients, subject, body, year_month }: MailMergeData = await request.json();
-    
+
     if (!subject || !body) {
       return NextResponse.json(
         { success: false, error: '제목과 내용을 입력해주세요.' },
         { status: 400 }
       );
     }
-    
+
     // Determine recipient list
     let targetBusinessNumbers: string[] = [];
-    
+
     if (recipients.includes('all')) {
-      // All approved users
       const users = await getAllUsers();
       targetBusinessNumbers = users
         .filter(u => u.is_approved && !u.is_admin)
         .map(u => u.business_number);
     } else if (recipients.length === 1 && recipients[0].startsWith('year_month:')) {
-      // Users with data in specific settlement_month
       const ym = recipients[0].replace('year_month:', '');
       targetBusinessNumbers = await getBusinessNumbersForSettlementMonth(ym);
     } else {
-      // Specific business numbers
       targetBusinessNumbers = recipients;
     }
-    
+
     if (targetBusinessNumbers.length === 0) {
       return NextResponse.json(
         { success: false, error: '발송 대상이 없습니다.' },
         { status: 400 }
       );
     }
-    
-    // Send emails
-    let sent = 0;
-    let failed = 0;
-    const errors: string[] = [];
-    
-    for (const bn of targetBusinessNumbers) {
-      const user = await getUserByBusinessNumber(bn);
-      if (!user || !user.is_approved) continue;
-      
-      // Get settlement summary if year_month is specified
-      let summary = { 총_금액: 0, 총_수수료: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 데이터_건수: 0, 총_수량: 0 };
-      if (year_month) {
-        summary = await getSettlementSummary(bn, year_month);
-      }
-      
-      // Prepare template variables
-      const variables: Record<string, string | number> = {
-        '업체명': user.company_name,
-        '사업자번호': user.business_number,
-        '이메일': user.email,
-        '정산월': year_month || '',
-        '총_금액': formatCurrency(summary.총_금액),
-        '총_수수료': formatCurrency(summary.총_수수료),
-        '제약수수료_합계': formatCurrency(summary.제약수수료_합계),
-        '담당수수료_합계': formatCurrency(summary.담당수수료_합계),
-        '데이터_건수': summary.데이터_건수,
-        '총_수량': summary.총_수량.toLocaleString('ko-KR'),
-      };
-      
-      // Replace variables in subject and body
-      const personalizedSubject = replaceVariables(subject, variables);
-      const personalizedBody = replaceVariables(body, variables);
-      
-      // Send email
-      const result = await sendEmail(user.email, 'mail_merge', {
-        subject: personalizedSubject,
-        body: personalizedBody,
-      });
-      
-      if (result.success) {
-        sent++;
-      } else {
-        failed++;
-        errors.push(`${user.company_name}: ${result.error}`);
-      }
-      
-      // Rate limiting: 10 emails per second
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    return NextResponse.json({
-      success: true,
-      data: {
-        sent,
-        failed,
-        total: targetBusinessNumbers.length,
-        errors: errors.length > 0 ? errors.slice(0, 10) : undefined,
+
+    const delay = await getEmailSendDelay();
+    const encoder = new TextEncoder();
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (data: Record<string, unknown>) => {
+          try {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+          } catch {
+            // stream already closed
+          }
+        };
+
+        // 시작 이벤트
+        send({ type: 'start', total: targetBusinessNumbers.length, delay });
+
+        let sent = 0;
+        let failed = 0;
+
+        for (let i = 0; i < targetBusinessNumbers.length; i++) {
+          const bn = targetBusinessNumbers[i];
+          const user = await getUserByBusinessNumber(bn);
+          if (!user || !user.is_approved) {
+            failed++;
+            send({
+              type: 'progress',
+              current: i + 1,
+              total: targetBusinessNumbers.length,
+              sent,
+              failed,
+              company_name: bn,
+              status: 'skipped',
+            });
+            continue;
+          }
+
+          // Get settlement summary if year_month is specified
+          let summary = { 총_금액: 0, 총_수수료: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 데이터_건수: 0, 총_수량: 0 };
+          if (year_month) {
+            summary = await getSettlementSummary(bn, year_month);
+          }
+
+          // Prepare template variables
+          const variables: Record<string, string | number> = {
+            '업체명': user.company_name,
+            '사업자번호': user.business_number,
+            '이메일': user.email,
+            '정산월': year_month || '',
+            '총_금액': formatCurrency(summary.총_금액),
+            '총_수수료': formatCurrency(summary.총_수수료),
+            '제약수수료_합계': formatCurrency(summary.제약수수료_합계),
+            '담당수수료_합계': formatCurrency(summary.담당수수료_합계),
+            '데이터_건수': summary.데이터_건수,
+            '총_수량': summary.총_수량.toLocaleString('ko-KR'),
+          };
+
+          // Replace variables in subject and body
+          const personalizedSubject = replaceVariables(subject, variables);
+          const personalizedBody = replaceVariables(body, variables);
+
+          // Send email
+          const result = await sendEmail(user.email, 'mail_merge', {
+            subject: personalizedSubject,
+            body: personalizedBody,
+          });
+
+          if (result.success) {
+            sent++;
+          } else {
+            failed++;
+          }
+
+          // 진행률 이벤트
+          send({
+            type: 'progress',
+            current: i + 1,
+            total: targetBusinessNumbers.length,
+            sent,
+            failed,
+            company_name: user.company_name,
+            status: result.success ? 'sent' : 'failed',
+            error: result.error,
+          });
+
+          // 마지막 건이 아닌 경우 delay 적용
+          if (i < targetBusinessNumbers.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+
+        // 완료 이벤트
+        send({
+          type: 'complete',
+          sent,
+          failed,
+          total: targetBusinessNumbers.length,
+        });
+
+        controller.close();
       },
-      message: `${sent}건 발송 완료, ${failed}건 실패`,
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
     });
   } catch (error) {
     console.error('Mail merge error:', error);
@@ -153,16 +236,16 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const session = await getSession();
-    
+
     if (!session || !session.is_admin) {
       return NextResponse.json(
         { success: false, error: '관리자 권한이 필요합니다.' },
         { status: 403 }
       );
     }
-    
+
     const { subject, body, year_month } = await request.json();
-    
+
     // Sample data for preview
     const sampleVariables: Record<string, string | number> = {
       '업체명': 'ABC 상사',
@@ -176,10 +259,10 @@ export async function PUT(request: NextRequest) {
       '데이터_건수': 127,
       '총_수량': '1,250',
     };
-    
+
     const previewSubject = replaceVariables(subject || '', sampleVariables);
     const previewBody = replaceVariables(body || '', sampleVariables);
-    
+
     return NextResponse.json({
       success: true,
       data: {

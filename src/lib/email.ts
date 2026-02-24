@@ -1,30 +1,126 @@
 // ============================================
-// Email Service (Resend Integration)
+// Email Service (Dual Provider: Resend + SMTP)
 // ============================================
 
 import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { createEmailLog, updateEmailLog, getCompanyInfo } from './db';
 import type { EmailTemplateType } from '@/types';
+import type { EmailProvider } from '@/domain/company/types';
 
-const resend = process.env.RESEND_API_KEY 
+const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-// 기본 발신 이메일 주소 (Resend 도메인 사용 시 onboarding@resend.dev 형태)
 const DEFAULT_FROM_EMAIL = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@cso-portal.com';
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
-// 발신자 이름을 회사명으로 설정하는 함수
+// ============================================
+// 이메일 설정 캐시 (30초 TTL)
+// ============================================
+
+interface EmailSettings {
+  provider: EmailProvider;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_secure: boolean;
+  smtp_user: string;
+  smtp_password: string;
+  smtp_from_name: string;
+  smtp_from_email: string;
+  email_send_delay_ms: number;
+}
+
+let _cachedSettings: EmailSettings | null = null;
+let _cacheTimestamp = 0;
+const CACHE_TTL_MS = 30_000;
+
+async function getEmailSettings(): Promise<EmailSettings> {
+  const now = Date.now();
+  if (_cachedSettings && now - _cacheTimestamp < CACHE_TTL_MS) {
+    return _cachedSettings;
+  }
+
+  const info = await getCompanyInfo();
+  _cachedSettings = {
+    provider: info.email_provider || 'resend',
+    smtp_host: info.smtp_host || '',
+    smtp_port: info.smtp_port ?? 465,
+    smtp_secure: info.smtp_secure ?? true,
+    smtp_user: info.smtp_user || '',
+    smtp_password: info.smtp_password || '',
+    smtp_from_name: info.smtp_from_name || '',
+    smtp_from_email: info.smtp_from_email || '',
+    email_send_delay_ms: info.email_send_delay_ms ?? 6000,
+  };
+  _cacheTimestamp = now;
+  return _cachedSettings;
+}
+
+export function invalidateEmailSettingsCache(): void {
+  _cachedSettings = null;
+  _cacheTimestamp = 0;
+}
+
+export async function getEmailSendDelay(): Promise<number> {
+  const settings = await getEmailSettings();
+  return settings.email_send_delay_ms;
+}
+
+// ============================================
+// SMTP 전송
+// ============================================
+
+async function sendViaSMTP(
+  settings: EmailSettings,
+  from: string,
+  to: string,
+  subject: string,
+  html: string
+): Promise<void> {
+  const transporter = nodemailer.createTransport({
+    host: settings.smtp_host,
+    port: settings.smtp_port,
+    secure: settings.smtp_secure,
+    auth: {
+      user: settings.smtp_user,
+      pass: settings.smtp_password,
+    },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 30_000,
+  });
+
+  await transporter.sendMail({
+    from,
+    to,
+    subject,
+    html,
+  });
+}
+
+// ============================================
+// 발신자 이메일 생성
+// ============================================
+
 function getFromEmail(companyName: string): string {
   const senderName = companyName || 'CSO 정산서 포털';
-  // 이메일 주소에서 이름 부분 추출 (예: "Name <email@domain.com>" -> "email@domain.com")
   const emailMatch = DEFAULT_FROM_EMAIL.match(/<(.+)>/);
   const emailAddress = emailMatch ? emailMatch[1] : DEFAULT_FROM_EMAIL;
   return `${senderName} <${emailAddress}>`;
 }
 
+function getSmtpFromEmail(settings: EmailSettings): string {
+  const name = settings.smtp_from_name || 'CSO 정산서 포털';
+  const email = settings.smtp_from_email || settings.smtp_user;
+  return `${name} <${email}>`;
+}
+
+// ============================================
 // 회사 정보 타입
+// ============================================
+
 interface CompanyFooterInfo {
   company_name: string;
   ceo_name: string;
@@ -39,10 +135,9 @@ interface CompanyFooterInfo {
 // 공통 이메일 푸터 생성
 function generateEmailFooter(companyInfo: CompanyFooterInfo): string {
   const currentYear = new Date().getFullYear();
-  
-  // 회사 정보가 있는 항목만 표시
+
   const infoItems: string[] = [];
-  
+
   if (companyInfo.company_name) {
     infoItems.push(`<strong style="color: #374151;">${companyInfo.company_name}</strong>`);
   }
@@ -64,13 +159,13 @@ function generateEmailFooter(companyInfo: CompanyFooterInfo): string {
   if (companyInfo.email) {
     infoItems.push(`Email: ${companyInfo.email}`);
   }
-  
-  const companyInfoHtml = infoItems.length > 0 
-    ? `<p style="color: #6b7280; font-size: 11px; margin: 0 0 8px; line-height: 1.6;">${infoItems.join(' | ')}</p>` 
+
+  const companyInfoHtml = infoItems.length > 0
+    ? `<p style="color: #6b7280; font-size: 11px; margin: 0 0 8px; line-height: 1.6;">${infoItems.join(' | ')}</p>`
     : '';
-  
-  const websiteHtml = companyInfo.website 
-    ? `<p style="margin: 0 0 8px;"><a href="${companyInfo.website}" style="color: #3b82f6; font-size: 11px; text-decoration: none;">${companyInfo.website}</a></p>` 
+
+  const websiteHtml = companyInfo.website
+    ? `<p style="margin: 0 0 8px;"><a href="${companyInfo.website}" style="color: #3b82f6; font-size: 11px; text-decoration: none;">${companyInfo.website}</a></p>`
     : '';
 
   return `
@@ -96,7 +191,10 @@ function generateEmailFooter(companyInfo: CompanyFooterInfo): string {
   `;
 }
 
+// ============================================
 // Email Templates
+// ============================================
+
 function getRegistrationRequestEmail(data: {
   business_number: string;
   company_name: string;
@@ -117,7 +215,7 @@ function getRegistrationRequestEmail(data: {
     <tr>
       <td align="center" style="padding: 40px 20px;">
         <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
-          
+
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 32px 40px; text-align: center;">
@@ -128,14 +226,14 @@ function getRegistrationRequestEmail(data: {
               <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">관리자 확인이 필요합니다</p>
             </td>
           </tr>
-          
+
           <!-- Content -->
           <tr>
             <td style="padding: 40px;">
               <div style="background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
                 <p style="color: #92400e; font-size: 14px; margin: 0; font-weight: 600;">새로운 회원가입 신청이 접수되었습니다.</p>
               </div>
-              
+
               <div style="background: #f9fafb; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="8">
                   <tr>
@@ -156,20 +254,20 @@ function getRegistrationRequestEmail(data: {
                   </tr>
                 </table>
               </div>
-              
+
               <div style="text-align: center;">
-                <a href="${BASE_URL}/admin/approvals" 
-                   style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
-                          color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; 
+                <a href="${BASE_URL}/admin/approvals"
+                   style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                          color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px;
                           font-size: 15px; font-weight: 600; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);">
                   ✅ 승인 관리 페이지로 이동
                 </a>
               </div>
             </td>
           </tr>
-          
+
           ${generateEmailFooter(companyInfo)}
-          
+
         </table>
       </td>
     </tr>
@@ -198,7 +296,7 @@ function getApprovalCompleteEmail(data: {
     <tr>
       <td align="center" style="padding: 40px 20px;">
         <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
-          
+
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 32px 40px; text-align: center;">
@@ -209,7 +307,7 @@ function getApprovalCompleteEmail(data: {
               <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">${data.company_name}님, 환영합니다</p>
             </td>
           </tr>
-          
+
           <!-- Content -->
           <tr>
             <td style="padding: 40px;">
@@ -219,7 +317,7 @@ function getApprovalCompleteEmail(data: {
                   이제 정산서 포털에서 정산 내역을 조회하실 수 있습니다.
                 </p>
               </div>
-              
+
               <div style="background: #f9fafb; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
                 <p style="color: #374151; font-size: 14px; font-weight: 600; margin: 0 0 16px;">📋 로그인 정보</p>
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="8">
@@ -233,20 +331,20 @@ function getApprovalCompleteEmail(data: {
                   </tr>
                 </table>
               </div>
-              
+
               <div style="text-align: center;">
-                <a href="${BASE_URL}/login" 
-                   style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
-                          color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; 
+                <a href="${BASE_URL}/login"
+                   style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                          color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px;
                           font-size: 15px; font-weight: 600; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);">
                   🔑 로그인하러 가기
                 </a>
               </div>
             </td>
           </tr>
-          
+
           ${generateEmailFooter(companyInfo)}
-          
+
         </table>
       </td>
     </tr>
@@ -275,7 +373,7 @@ function getApprovalRejectedEmail(data: {
     <tr>
       <td align="center" style="padding: 40px 20px;">
         <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
-          
+
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 32px 40px; text-align: center;">
@@ -285,7 +383,7 @@ function getApprovalRejectedEmail(data: {
               <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700;">회원가입 거부 안내</h1>
             </td>
           </tr>
-          
+
           <!-- Content -->
           <tr>
             <td style="padding: 40px;">
@@ -295,14 +393,14 @@ function getApprovalRejectedEmail(data: {
               <p style="color: #4b5563; font-size: 14px; margin: 0 0 24px; line-height: 1.6;">
                 죄송합니다. 회원가입 신청이 승인되지 않았습니다.
               </p>
-              
+
               ${data.reason ? `
               <div style="background: #fef2f2; border-left: 4px solid #ef4444; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
                 <p style="color: #991b1b; font-size: 13px; font-weight: 600; margin: 0 0 8px;">📝 거부 사유</p>
                 <p style="color: #7f1d1d; font-size: 14px; margin: 0; line-height: 1.6;">${data.reason}</p>
               </div>
               ` : ''}
-              
+
               <div style="background: #f3f4f6; border-radius: 8px; padding: 16px;">
                 <p style="color: #6b7280; font-size: 13px; margin: 0;">
                   문의사항이 있으시면 아래 연락처로 문의해 주세요.
@@ -310,9 +408,9 @@ function getApprovalRejectedEmail(data: {
               </div>
             </td>
           </tr>
-          
+
           ${generateEmailFooter(companyInfo)}
-          
+
         </table>
       </td>
     </tr>
@@ -342,7 +440,7 @@ function getSettlementUploadedEmail(data: {
     <tr>
       <td align="center" style="padding: 40px 20px;">
         <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
-          
+
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 32px 40px; text-align: center;">
@@ -353,20 +451,20 @@ function getSettlementUploadedEmail(data: {
               <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">${data.year_month} 정산서</p>
             </td>
           </tr>
-          
+
           <!-- Content -->
           <tr>
             <td style="padding: 40px;">
               <p style="color: #1f2937; font-size: 18px; font-weight: 600; margin: 0 0 8px;">
                 안녕하세요, <span style="color: #3b82f6;">${data.company_name}</span>님
               </p>
-              
+
               <div style="background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 20px; margin: 24px 0;">
                 <p style="color: #1e40af; font-size: 14px; margin: 0;">
                   ${data.year_month} 정산서가 업로드되었습니다.
                 </p>
               </div>
-              
+
               <div style="background: #f9fafb; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="8">
                   <tr>
@@ -383,20 +481,20 @@ function getSettlementUploadedEmail(data: {
                   </tr>
                 </table>
               </div>
-              
+
               <div style="text-align: center;">
-                <a href="${BASE_URL}/dashboard" 
-                   style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); 
-                          color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; 
+                <a href="${BASE_URL}/dashboard"
+                   style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+                          color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px;
                           font-size: 15px; font-weight: 600; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);">
                   📈 정산서 조회하기
                 </a>
               </div>
             </td>
           </tr>
-          
+
           ${generateEmailFooter(companyInfo)}
-          
+
         </table>
       </td>
     </tr>
@@ -414,7 +512,7 @@ function getPasswordResetEmail(data: {
   expires_in_minutes: number;
 }, companyInfo: CompanyFooterInfo) {
   const resetUrl = `${BASE_URL}/reset-password?token=${data.reset_token}`;
-  
+
   return {
     subject: '🔐 [CSO 정산서 포털] 비밀번호 재설정 요청',
     html: `
@@ -430,7 +528,7 @@ function getPasswordResetEmail(data: {
     <tr>
       <td align="center" style="padding: 40px 20px;">
         <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
-          
+
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 32px 40px; text-align: center;">
@@ -451,7 +549,7 @@ function getPasswordResetEmail(data: {
               </table>
             </td>
           </tr>
-          
+
           <!-- Content -->
           <tr>
             <td style="padding: 40px;">
@@ -462,7 +560,7 @@ function getPasswordResetEmail(data: {
               <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px;">
                 사업자번호: ${data.business_number}
               </p>
-              
+
               <!-- Notice Box -->
               <div style="background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
                 <p style="color: #1e40af; font-size: 14px; margin: 0; line-height: 1.6;">
@@ -470,18 +568,18 @@ function getPasswordResetEmail(data: {
                   아래 버튼을 클릭하여 새 비밀번호를 설정해 주세요.
                 </p>
               </div>
-              
+
               <!-- CTA Button -->
               <div style="text-align: center; margin: 32px 0;">
-                <a href="${resetUrl}" 
-                   style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); 
-                          color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; 
+                <a href="${resetUrl}"
+                   style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+                          color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px;
                           font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
                           transition: all 0.2s ease;">
                   🔑 비밀번호 재설정하기
                 </a>
               </div>
-              
+
               <!-- URL Fallback -->
               <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
                 <p style="color: #6b7280; font-size: 12px; margin: 0 0 8px;">
@@ -491,7 +589,7 @@ function getPasswordResetEmail(data: {
                   ${resetUrl}
                 </p>
               </div>
-              
+
               <!-- Warning Box -->
               <div style="background: #fef3c7; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
@@ -513,7 +611,7 @@ function getPasswordResetEmail(data: {
                   </tr>
                 </table>
               </div>
-              
+
               <!-- Security Tips -->
               <div style="border-top: 1px solid #e5e7eb; padding-top: 24px;">
                 <p style="color: #374151; font-size: 13px; font-weight: 600; margin: 0 0 12px;">
@@ -527,9 +625,9 @@ function getPasswordResetEmail(data: {
               </div>
             </td>
           </tr>
-          
+
           ${generateEmailFooter(companyInfo)}
-          
+
         </table>
       </td>
     </tr>
@@ -558,7 +656,7 @@ function getMailMergeEmail(data: {
     <tr>
       <td align="center" style="padding: 40px 20px;">
         <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
-          
+
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); padding: 24px 40px; text-align: center;">
@@ -567,7 +665,7 @@ function getMailMergeEmail(data: {
               </h1>
             </td>
           </tr>
-          
+
           <!-- Content -->
           <tr>
             <td style="padding: 40px;">
@@ -576,9 +674,9 @@ function getMailMergeEmail(data: {
               </div>
             </td>
           </tr>
-          
+
           ${generateEmailFooter(companyInfo)}
-          
+
         </table>
       </td>
     </tr>
@@ -589,7 +687,10 @@ function getMailMergeEmail(data: {
   };
 }
 
-// Send email function
+// ============================================
+// Send email function (프로바이더 스위칭)
+// ============================================
+
 export async function sendEmail(
   to: string,
   templateType: EmailTemplateType,
@@ -597,6 +698,7 @@ export async function sendEmail(
 ): Promise<{ success: boolean; error?: string }> {
   // 회사 정보 조회
   let companyInfo: CompanyFooterInfo;
+  let emailSettings: EmailSettings;
   try {
     const info = await getCompanyInfo();
     companyInfo = {
@@ -609,8 +711,8 @@ export async function sendEmail(
       email: info.email,
       website: info.website,
     };
+    emailSettings = await getEmailSettings();
   } catch {
-    // 회사 정보 조회 실패 시 기본값 사용
     companyInfo = {
       company_name: 'CSO 정산서 포털',
       ceo_name: '',
@@ -621,14 +723,25 @@ export async function sendEmail(
       email: '',
       website: '',
     };
+    emailSettings = {
+      provider: 'resend',
+      smtp_host: '',
+      smtp_port: 465,
+      smtp_secure: true,
+      smtp_user: '',
+      smtp_password: '',
+      smtp_from_name: '',
+      smtp_from_email: '',
+      email_send_delay_ms: 6000,
+    };
   }
 
   let emailContent: { subject: string; html: string };
-  
+
   switch (templateType) {
     case 'registration_request':
       emailContent = getRegistrationRequestEmail(
-        data as Parameters<typeof getRegistrationRequestEmail>[0], 
+        data as Parameters<typeof getRegistrationRequestEmail>[0],
         companyInfo
       );
       break;
@@ -665,24 +778,45 @@ export async function sendEmail(
     default:
       return { success: false, error: 'Unknown template type' };
   }
-  
+
   // Create log entry
   const log = await createEmailLog({
     recipient_email: to,
     subject: emailContent.subject,
     template_type: templateType,
   });
-  
-  // 발신자 이메일 (회사명 사용)
+
+  // 프로바이더별 발송
+  if (emailSettings.provider === 'smtp') {
+    const fromEmail = getSmtpFromEmail(emailSettings);
+
+    if (!emailSettings.smtp_host || !emailSettings.smtp_user) {
+      console.error('[Email Error] SMTP 설정이 불완전합니다.');
+      await updateEmailLog(log.id, { status: 'failed', error_message: 'SMTP 설정 미완료' });
+      return { success: false, error: 'SMTP 설정이 불완전합니다.' };
+    }
+
+    try {
+      await sendViaSMTP(emailSettings, fromEmail, to, emailContent.subject, emailContent.html);
+      await updateEmailLog(log.id, { status: 'sent' });
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown SMTP error';
+      console.error(`[Email SMTP Error] From: ${fromEmail}, To: ${to}, Error: ${errorMessage}`);
+      await updateEmailLog(log.id, { status: 'failed', error_message: errorMessage });
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  // Resend 프로바이더
   const fromEmail = getFromEmail(companyInfo.company_name);
-  
-  // If Resend is not configured, simulate success for demo
+
   if (!resend) {
     console.log(`[Email Demo] From: ${fromEmail}, To: ${to}, Subject: ${emailContent.subject}`);
     await updateEmailLog(log.id, { status: 'sent' });
     return { success: true };
   }
-  
+
   try {
     await resend.emails.send({
       from: fromEmail,
@@ -690,15 +824,15 @@ export async function sendEmail(
       subject: emailContent.subject,
       html: emailContent.html,
     });
-    
+
     await updateEmailLog(log.id, { status: 'sent' });
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error(`[Email Error] From: ${fromEmail}, To: ${to}, Error: ${errorMessage}`);
-    await updateEmailLog(log.id, { 
-      status: 'failed', 
-      error_message: errorMessage 
+    await updateEmailLog(log.id, {
+      status: 'failed',
+      error_message: errorMessage
     });
     return { success: false, error: errorMessage };
   }
@@ -720,7 +854,9 @@ export async function sendSettlementNotifications(
 ): Promise<{ sent: number; failed: number }> {
   let sent = 0;
   let failed = 0;
-  
+
+  const delay = await getEmailSendDelay();
+
   for (const recipient of recipients) {
     const count = counts.get(recipient.email) || 0;
     const result = await sendEmail(recipient.email, 'settlement_uploaded', {
@@ -728,16 +864,15 @@ export async function sendSettlementNotifications(
       year_month: yearMonth,
       count,
     });
-    
+
     if (result.success) {
       sent++;
     } else {
       failed++;
     }
-    
-    // Rate limiting: 10 emails per second
-    await new Promise(resolve => setTimeout(resolve, 100));
+
+    await new Promise(resolve => setTimeout(resolve, delay));
   }
-  
+
   return { sent, failed };
 }

@@ -25,6 +25,15 @@ const DEFAULT_COMPANY_INFO: CompanyInfo = {
   copyright: '',
   additional_info: '',
   notice_content: DEFAULT_NOTICE_CONTENT,
+  email_provider: 'resend',
+  smtp_host: '',
+  smtp_port: 465,
+  smtp_secure: true,
+  smtp_user: '',
+  smtp_password: '',
+  smtp_from_name: '',
+  smtp_from_email: '',
+  email_send_delay_ms: 6000,
 };
 
 export class SupabaseCompanyRepository implements CompanyRepository {
@@ -56,6 +65,15 @@ export class SupabaseCompanyRepository implements CompanyRepository {
       copyright: data.copyright || '',
       additional_info: data.additional_info || '',
       notice_content: data.notice_content || DEFAULT_NOTICE_CONTENT,
+      email_provider: data.email_provider || 'resend',
+      smtp_host: data.smtp_host || '',
+      smtp_port: data.smtp_port ?? 465,
+      smtp_secure: data.smtp_secure ?? true,
+      smtp_user: data.smtp_user || '',
+      smtp_password: data.smtp_password || '',
+      smtp_from_name: data.smtp_from_name || '',
+      smtp_from_email: data.smtp_from_email || '',
+      email_send_delay_ms: data.email_send_delay_ms ?? 6000,
     };
   }
 

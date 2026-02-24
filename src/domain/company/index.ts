@@ -1,2 +1,2 @@
-export type { CompanyInfo } from './types';
+export type { CompanyInfo, EmailProvider } from './types';
 export type { CompanyRepository } from './CompanyRepository';

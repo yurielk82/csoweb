@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  Upload, 
-  Users, 
-  Columns, 
-  Mail, 
+import {
+  Upload,
+  Users,
+  Columns,
+  Mail,
   MailPlus,
   FileSpreadsheet,
   TrendingUp,
@@ -32,8 +32,14 @@ interface DashboardStats {
 interface SystemStatus {
   supabase: boolean;
   resend: boolean;
+  smtp: {
+    configured: boolean;
+    host: string | null;
+  };
+  email_provider: string;
   version: string;
   environment: string;
+  nts_api: boolean;
 }
 
 export default function AdminDashboardPage() {
@@ -47,8 +53,11 @@ export default function AdminDashboardPage() {
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     supabase: false,
     resend: false,
-    version: 'v2.0',
+    smtp: { configured: false, host: null },
+    email_provider: 'resend',
+    version: 'v0.14.0',
     environment: 'Production',
+    nts_api: false,
   });
 
   useEffect(() => {
@@ -57,11 +66,11 @@ export default function AdminDashboardPage() {
         // Fetch pending approvals
         const usersRes = await fetch('/api/users?pending=true');
         const usersData = await usersRes.json();
-        
+
         // Fetch all users
         const allUsersRes = await fetch('/api/users');
         const allUsersData = await allUsersRes.json();
-        
+
         // Fetch email stats
         const emailRes = await fetch('/api/email/logs?limit=100');
         const emailData = await emailRes.json();
@@ -72,11 +81,11 @@ export default function AdminDashboardPage() {
         if (statusData.success) {
           setSystemStatus(statusData.data);
         }
-        
+
         setStats({
           pendingApprovals: usersData.success ? usersData.data.length : 0,
           totalUsers: allUsersData.success ? allUsersData.data.filter((u: { is_admin: boolean }) => !u.is_admin).length : 0,
-          totalSettlements: 0, // Would need separate API
+          totalSettlements: 0,
           recentEmails: emailData.success ? emailData.data.stats : { sent: 0, failed: 0 },
         });
       } catch (error) {
@@ -145,6 +154,8 @@ export default function AdminDashboardPage() {
       color: 'bg-pink-500',
     },
   ];
+
+  const activeProvider = systemStatus.email_provider;
 
   return (
     <div className="space-y-6">
@@ -230,7 +241,7 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Recent Activity */}
+      {/* System Info */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
@@ -242,7 +253,7 @@ export default function AdminDashboardPage() {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between py-2 border-b">
               <span className="text-muted-foreground">버전</span>
-              <span>{systemStatus.version}</span>
+              <span className="font-mono">{systemStatus.version}</span>
             </div>
             <div className="flex justify-between py-2 border-b">
               <span className="text-muted-foreground">데이터베이스</span>
@@ -250,10 +261,36 @@ export default function AdminDashboardPage() {
                 Supabase {systemStatus.supabase ? '연결됨' : '미연결'}
               </Badge>
             </div>
-            <div className="flex justify-between py-2 border-b">
+            <div className="flex justify-between items-start py-2 border-b">
               <span className="text-muted-foreground">이메일 서비스</span>
-              <Badge className={systemStatus.resend ? 'bg-blue-600' : 'bg-gray-400'}>
-                Resend {systemStatus.resend ? '연결됨' : '미연결'}
+              <div className="flex flex-col items-end gap-1">
+                {activeProvider === 'smtp' ? (
+                  <>
+                    <Badge className={systemStatus.smtp.configured ? 'bg-blue-600' : 'bg-gray-400'}>
+                      SMTP (활성) {systemStatus.smtp.configured ? '설정됨' : '미설정'}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      Resend {systemStatus.resend ? '설정됨' : '미설정'}
+                    </Badge>
+                  </>
+                ) : (
+                  <>
+                    <Badge className={systemStatus.resend ? 'bg-blue-600' : 'bg-gray-400'}>
+                      Resend (활성) {systemStatus.resend ? '설정됨' : '미설정'}
+                    </Badge>
+                    {systemStatus.smtp.configured && (
+                      <Badge variant="outline" className="text-xs">
+                        SMTP 설정됨
+                      </Badge>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="flex justify-between py-2 border-b">
+              <span className="text-muted-foreground">국세청 API</span>
+              <Badge className={systemStatus.nts_api ? 'bg-blue-600' : 'bg-gray-400'}>
+                NTS {systemStatus.nts_api ? '설정됨' : '미설정'}
               </Badge>
             </div>
             <div className="flex justify-between py-2">

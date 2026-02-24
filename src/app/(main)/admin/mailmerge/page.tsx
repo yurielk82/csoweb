@@ -1,19 +1,20 @@
 'use client';
 
-import { useState } from 'react';
-import { MailPlus, Send, Eye, Loader2, Users } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { MailPlus, Send, Eye, Loader2, Users, X, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import { Progress } from '@/components/ui/progress';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select';
 import {
   Dialog,
@@ -25,19 +26,20 @@ import {
 } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 
 // Generate year-month options
 function generateYearMonthOptions() {
   const options: string[] = [];
   const now = new Date();
-  
+
   for (let i = 0; i < 12; i++) {
     const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     options.push(yearMonth);
   }
-  
+
   return options;
 }
 
@@ -53,6 +55,24 @@ const AVAILABLE_VARIABLES = [
   { key: '총_수량', description: '총 수량 합계' },
   { key: '데이터_건수', description: '정산 데이터 행 개수' },
 ];
+
+interface ProgressEvent {
+  type: 'start' | 'progress' | 'complete';
+  current?: number;
+  total: number;
+  sent?: number;
+  failed?: number;
+  company_name?: string;
+  status?: 'sent' | 'failed' | 'skipped';
+  error?: string;
+  delay?: number;
+}
+
+interface SendLog {
+  company_name: string;
+  status: 'sent' | 'failed' | 'skipped';
+  error?: string;
+}
 
 export default function MailMergePage() {
   const { toast } = useToast();
@@ -73,14 +93,68 @@ export default function MailMergePage() {
 
   const [preview, setPreview] = useState<{ subject: string; body: string } | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+
+  // 수신자 수
+  const [recipientCount, setRecipientCount] = useState<number | null>(null);
+  const [loadingCount, setLoadingCount] = useState(false);
+
+  // 발송 진행 상태
   const [sending, setSending] = useState(false);
+  const [progress, setProgress] = useState<{
+    current: number;
+    total: number;
+    sent: number;
+    failed: number;
+    delay: number;
+  } | null>(null);
+  const [sendLogs, setSendLogs] = useState<SendLog[]>([]);
   const [result, setResult] = useState<{
     sent: number;
     failed: number;
     total: number;
   } | null>(null);
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+
   const yearMonthOptions = generateYearMonthOptions();
+
+  // 수신자 수 조회
+  const fetchRecipientCount = useCallback(async () => {
+    setLoadingCount(true);
+    try {
+      const params = new URLSearchParams();
+      if (recipientType === 'all') {
+        params.set('type', 'all');
+      } else if (recipientType === 'year_month' && selectedYearMonth) {
+        params.set('type', 'year_month');
+        params.set('year_month', selectedYearMonth);
+      } else {
+        setRecipientCount(null);
+        setLoadingCount(false);
+        return;
+      }
+
+      const res = await fetch(`/api/email/mailmerge?${params.toString()}`);
+      const data = await res.json();
+      if (data.success) {
+        setRecipientCount(data.data.count);
+      }
+    } catch {
+      setRecipientCount(null);
+    } finally {
+      setLoadingCount(false);
+    }
+  }, [recipientType, selectedYearMonth]);
+
+  useEffect(() => {
+    fetchRecipientCount();
+  }, [fetchRecipientCount]);
+
+  // 로그 스크롤
+  useEffect(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [sendLogs]);
 
   const insertVariable = (key: string, target: 'subject' | 'body') => {
     const variable = `{{${key}}}`;
@@ -127,47 +201,134 @@ export default function MailMergePage() {
   const handleSend = async () => {
     setSending(true);
     setResult(null);
+    setProgress(null);
+    setSendLogs([]);
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
     try {
-      const recipients = recipientType === 'all' 
-        ? ['all'] 
+      const recipientsList = recipientType === 'all'
+        ? ['all']
         : [`year_month:${selectedYearMonth}`];
 
       const response = await fetch('/api/email/mailmerge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          recipients,
+          recipients: recipientsList,
           subject,
           body,
           year_month: recipientType === 'year_month' ? selectedYearMonth : undefined,
         }),
+        signal: abortController.signal,
       });
 
-      const data = await response.json();
+      // SSE 스트림인 경우
+      if (response.headers.get('Content-Type')?.includes('text/event-stream')) {
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
 
-      if (data.success) {
-        setResult(data.data);
+        if (!reader) {
+          throw new Error('응답 스트림을 읽을 수 없습니다.');
+        }
+
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const dataMatch = line.match(/^data: (.+)$/m);
+            if (!dataMatch) continue;
+
+            try {
+              const event: ProgressEvent = JSON.parse(dataMatch[1]);
+
+              if (event.type === 'start') {
+                setProgress({
+                  current: 0,
+                  total: event.total,
+                  sent: 0,
+                  failed: 0,
+                  delay: event.delay || 6000,
+                });
+              } else if (event.type === 'progress') {
+                setProgress(prev => ({
+                  current: event.current || 0,
+                  total: event.total,
+                  sent: event.sent || 0,
+                  failed: event.failed || 0,
+                  delay: prev?.delay || 6000,
+                }));
+                if (event.company_name && event.status) {
+                  setSendLogs(prev => [...prev, {
+                    company_name: event.company_name!,
+                    status: event.status!,
+                    error: event.error,
+                  }]);
+                }
+              } else if (event.type === 'complete') {
+                setResult({
+                  sent: event.sent || 0,
+                  failed: event.failed || 0,
+                  total: event.total,
+                });
+              }
+            } catch {
+              // JSON 파싱 실패 무시
+            }
+          }
+        }
+      } else {
+        // SSE가 아닌 일반 JSON 응답 (에러)
+        const data = await response.json();
+        if (!data.success) {
+          toast({
+            variant: 'destructive',
+            title: '발송 실패',
+            description: data.error,
+          });
+        }
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
         toast({
-          title: '발송 완료',
-          description: data.message,
+          title: '발송 취소',
+          description: '발송이 취소되었습니다. 이미 발송된 건은 취소되지 않습니다.',
         });
       } else {
         toast({
           variant: 'destructive',
-          title: '발송 실패',
-          description: data.error,
+          title: '오류',
+          description: '이메일 발송 중 오류가 발생했습니다.',
         });
       }
-    } catch {
-      toast({
-        variant: 'destructive',
-        title: '오류',
-        description: '이메일 발송 중 오류가 발생했습니다.',
-      });
     } finally {
       setSending(false);
+      abortControllerRef.current = null;
     }
+  };
+
+  const handleCancel = () => {
+    abortControllerRef.current?.abort();
+  };
+
+  const progressPercent = progress ? Math.round((progress.current / progress.total) * 100) : 0;
+  const remainingTime = progress && progress.delay > 0
+    ? Math.ceil(((progress.total - progress.current) * progress.delay) / 1000)
+    : 0;
+
+  const formatTime = (seconds: number): string => {
+    if (seconds < 60) return `${seconds}초`;
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return sec > 0 ? `${min}분 ${sec}초` : `${min}분`;
   };
 
   return (
@@ -187,6 +348,11 @@ export default function MailMergePage() {
           <CardTitle className="text-base flex items-center gap-2">
             <Users className="h-4 w-4" />
             수신 대상 선택
+            {recipientCount !== null && (
+              <Badge variant="secondary" className="ml-2">
+                {loadingCount ? '...' : `${recipientCount}개 업체`}
+              </Badge>
+            )}
           </CardTitle>
           <CardDescription>이메일을 받을 업체를 선택하세요.</CardDescription>
         </CardHeader>
@@ -234,6 +400,7 @@ export default function MailMergePage() {
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="이메일 제목"
+              disabled={sending}
             />
           </div>
 
@@ -247,6 +414,7 @@ export default function MailMergePage() {
               placeholder="이메일 내용"
               rows={12}
               className="font-mono text-sm"
+              disabled={sending}
             />
           </div>
 
@@ -259,7 +427,7 @@ export default function MailMergePage() {
                   key={v.key}
                   variant="secondary"
                   className="cursor-pointer hover:bg-secondary/80"
-                  onClick={() => insertVariable(v.key, 'body')}
+                  onClick={() => !sending && insertVariable(v.key, 'body')}
                 >
                   {`{{${v.key}}}`}
                 </Badge>
@@ -272,14 +440,86 @@ export default function MailMergePage() {
         </CardContent>
       </Card>
 
+      {/* Progress Card (발송 중일 때만 표시) */}
+      {(sending || result) && progress && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center justify-between">
+              <span>
+                {result
+                  ? `발송 완료 (${result.sent + result.failed}/${progress.total})`
+                  : `발송 중... (${progress.current}/${progress.total})`
+                }
+              </span>
+              {sending && (
+                <Button variant="destructive" size="sm" onClick={handleCancel}>
+                  <X className="h-4 w-4 mr-1" />
+                  취소
+                </Button>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Progress Bar */}
+            <div className="space-y-2">
+              <Progress value={progressPercent} className="h-3" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{progressPercent}%</span>
+                <div className="flex gap-4">
+                  <span className="text-green-600">성공: {progress.sent}건</span>
+                  {progress.failed > 0 && (
+                    <span className="text-red-600">실패: {progress.failed}건</span>
+                  )}
+                  {sending && remainingTime > 0 && (
+                    <span>남은 시간: ~{formatTime(remainingTime)}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Send Logs */}
+            {sendLogs.length > 0 && (
+              <ScrollArea className="h-48 rounded-md border p-3">
+                <div className="space-y-1 text-sm">
+                  {sendLogs.map((log, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      {log.status === 'sent' ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                      ) : log.status === 'failed' ? (
+                        <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                      ) : (
+                        <Clock className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                      )}
+                      <span className={log.status === 'failed' ? 'text-red-600' : ''}>
+                        {log.company_name}
+                      </span>
+                      {log.status === 'sent' && (
+                        <span className="text-muted-foreground">— 발송 완료</span>
+                      )}
+                      {log.status === 'failed' && (
+                        <span className="text-red-500">— {log.error || '발송 실패'}</span>
+                      )}
+                      {log.status === 'skipped' && (
+                        <span className="text-muted-foreground">— 건너뜀</span>
+                      )}
+                    </div>
+                  ))}
+                  <div ref={logsEndRef} />
+                </div>
+              </ScrollArea>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Actions */}
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={handlePreview}>
+        <Button variant="outline" onClick={handlePreview} disabled={sending}>
           <Eye className="h-4 w-4 mr-2" />
           미리보기
         </Button>
-        <Button 
-          onClick={handleSend} 
+        <Button
+          onClick={handleSend}
           disabled={sending || (recipientType === 'year_month' && !selectedYearMonth)}
         >
           {sending ? (
@@ -291,8 +531,8 @@ export default function MailMergePage() {
         </Button>
       </div>
 
-      {/* Result */}
-      {result && (
+      {/* Final Result */}
+      {result && !sending && (
         <Alert variant={result.failed > 0 ? 'destructive' : 'default'}>
           <AlertTitle>발송 결과</AlertTitle>
           <AlertDescription>
