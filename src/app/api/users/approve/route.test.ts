@@ -1,0 +1,83 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NextRequest } from 'next/server';
+import { mockAdminSession, mockRegularSession, mockRegularUser } from '@/__tests__/helpers/mock-data';
+
+vi.mock('@/lib/auth', () => ({
+  getSession: vi.fn(),
+}));
+
+vi.mock('@/lib/db', () => ({
+  approveUser: vi.fn(),
+  getUserByBusinessNumber: vi.fn(),
+}));
+
+vi.mock('@/lib/email', () => ({
+  sendEmail: vi.fn(() => ({ success: true })),
+}));
+
+const { getSession } = await import('@/lib/auth');
+const { approveUser, getUserByBusinessNumber } = await import('@/lib/db');
+const { POST } = await import('./route');
+
+const mockGetSession = getSession as ReturnType<typeof vi.fn>;
+const mockApprove = approveUser as ReturnType<typeof vi.fn>;
+const mockGetUser = getUserByBusinessNumber as ReturnType<typeof vi.fn>;
+
+function createRequest(body: Record<string, unknown>): NextRequest {
+  return new NextRequest('http://localhost:3000/api/users/approve', {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('POST /api/users/approve', () => {
+  it('비관리자는 403을 반환한다', async () => {
+    mockGetSession.mockResolvedValue(mockRegularSession);
+
+    const res = await POST(createRequest({ business_number: '9876543210' }));
+    expect(res.status).toBe(403);
+  });
+
+  it('사업자번호 누락 시 400을 반환한다', async () => {
+    mockGetSession.mockResolvedValue(mockAdminSession);
+
+    const res = await POST(createRequest({}));
+    expect(res.status).toBe(400);
+  });
+
+  it('존재하지 않는 사용자는 404를 반환한다', async () => {
+    mockGetSession.mockResolvedValue(mockAdminSession);
+    mockGetUser.mockResolvedValue(null);
+
+    const res = await POST(createRequest({ business_number: '0000000000' }));
+    expect(res.status).toBe(404);
+  });
+
+  it('승인 실패 시 500을 반환한다', async () => {
+    mockGetSession.mockResolvedValue(mockAdminSession);
+    mockGetUser.mockResolvedValue(mockRegularUser);
+    mockApprove.mockResolvedValue(null);
+
+    const res = await POST(createRequest({ business_number: '9876543210' }));
+    expect(res.status).toBe(500);
+  });
+
+  it('승인 성공 시 200 + 이메일 발송', async () => {
+    mockGetSession.mockResolvedValue(mockAdminSession);
+    mockGetUser.mockResolvedValue(mockRegularUser);
+    mockApprove.mockResolvedValue({ ...mockRegularUser, is_approved: true });
+
+    const res = await POST(createRequest({ business_number: '9876543210' }));
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.success).toBe(true);
+    expect(json.message).toContain(mockRegularUser.company_name);
+    expect(json.emailSent).toBe(true);
+  });
+});

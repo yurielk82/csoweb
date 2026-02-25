@@ -5,6 +5,17 @@
 
 ---
 
+## [0.15.1] - 2026-02-25
+
+### Added
+
+- Tier 1~2 테스트 커버리지 확장 — 10개 테스트 파일, 40개 케이스 추가 (총 150개)
+  - **Application Use Case**: GetMonthlySummaryUseCase (4개)
+  - **API Route**: auth/logout (2), auth/session (3), settlements/export (4), settlements/stats (3), settlements/year-months (3), users (4), users/approve (5), users/reject (5), columns (7)
+  - 신규 커버: auth/logout 100%, auth/session 100%, columns 80%, settlements/export 91%, users/approve 86%, users/reject 89%
+
+---
+
 ## [0.15.0] - 2026-02-25
 
 ### Added
