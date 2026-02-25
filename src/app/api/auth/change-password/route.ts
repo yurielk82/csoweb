@@ -24,9 +24,9 @@ export async function POST(request: NextRequest) {
     const { new_password } = body;
 
     // 비밀번호 유효성 검사
-    if (!new_password || new_password.length < 6) {
+    if (!new_password || new_password.length < 8 || !/[a-zA-Z]/.test(new_password) || !/[0-9]/.test(new_password)) {
       return NextResponse.json(
-        { success: false, error: '비밀번호는 6자 이상이어야 합니다.' },
+        { success: false, error: '비밀번호는 영문+숫자 조합 8자 이상이어야 합니다.' },
         { status: 400 }
       );
     }

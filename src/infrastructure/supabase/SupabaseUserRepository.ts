@@ -26,6 +26,8 @@ function mapDbUserToUser(dbUser: DbUser): User {
     must_change_password: dbUser.must_change_password || false,
     profile_complete: dbUser.profile_complete ?? true,
     password_changed_at: dbUser.password_changed_at || undefined,
+    failed_login_attempts: dbUser.failed_login_attempts ?? 0,
+    locked_at: dbUser.locked_at || undefined,
     created_at: dbUser.created_at,
     updated_at: dbUser.updated_at,
   };
@@ -217,6 +219,55 @@ export class SupabaseUserRepository implements UserRepository {
     const { error } = await supabase
       .from('users')
       .delete()
+      .eq('business_number', businessNumber);
+
+    return !error;
+  }
+
+  async incrementFailedLogin(businessNumber: string): Promise<number> {
+    // 현재 실패 횟수 조회
+    const { data: user, error: fetchError } = await supabase
+      .from('users')
+      .select('failed_login_attempts')
+      .eq('business_number', businessNumber)
+      .single();
+
+    if (fetchError || !user) return 0;
+
+    const newCount = (user.failed_login_attempts ?? 0) + 1;
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        failed_login_attempts: newCount,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('business_number', businessNumber);
+
+    if (error) return 0;
+    return newCount;
+  }
+
+  async lockAccount(businessNumber: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        locked_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('business_number', businessNumber);
+
+    return !error;
+  }
+
+  async resetFailedLogin(businessNumber: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        failed_login_attempts: 0,
+        locked_at: null,
+        updated_at: new Date().toISOString(),
+      })
       .eq('business_number', businessNumber);
 
     return !error;
