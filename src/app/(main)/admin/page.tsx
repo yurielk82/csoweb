@@ -278,11 +278,9 @@ export default function AdminDashboardPage() {
                     <Badge className={systemStatus.resend ? 'bg-blue-600' : 'bg-gray-400'}>
                       Resend (활성) {systemStatus.resend ? '설정됨' : '미설정'}
                     </Badge>
-                    {systemStatus.smtp.configured && (
-                      <Badge variant="outline" className="text-xs">
-                        SMTP 설정됨
-                      </Badge>
-                    )}
+                    <Badge variant="outline" className={`text-xs ${!systemStatus.smtp.configured ? 'text-muted-foreground' : ''}`}>
+                      SMTP {systemStatus.smtp.configured ? '설정됨' : '미설정'}
+                    </Badge>
                   </>
                 )}
               </div>
