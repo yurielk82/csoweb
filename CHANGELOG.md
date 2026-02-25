@@ -5,6 +5,21 @@
 
 ---
 
+## [0.15.0] - 2026-02-25
+
+### Added
+
+- 테스트 인프라 풀세트 구축 — Vitest + Testing Library + Playwright
+  - 14개 테스트 파일, 108개 테스트 케이스 전체 통과
+  - **Unit (45개)**: `lib/auth` (해싱, JWT, 포맷, 검증), `lib/utils` (cn), `lib/excel` (validateExcelFile, exportToExcel, getYearMonthsFromData)
+  - **Application Use Case (30개)**: RegisterUser, ApproveUser, GetSettlements (관리자/일반/매칭없음 분기), UploadSettlements, ExportSettlements, UpsertMatching
+  - **API 통합 (21개)**: login (400/401/403/200 + 리다이렉트 3분기), register (밸리데이션 + 중복 체크), settlements (인증/권한/검색/페이지네이션)
+  - **컴포넌트 (12개)**: AuthContext (세션 관리, localStorage 동기화), Header (로딩/관리자/일반 메뉴)
+  - **E2E (7개)**: 로그인/로그아웃 플로우, 정산서 접근 (Playwright)
+- 테스트 헬퍼: 7개 Repository mock 팩토리, 테스트 픽스처, NextRequest 생성 헬퍼
+- npm scripts 8개 추가 (`test`, `test:watch`, `test:unit`, `test:integration`, `test:component`, `test:coverage`, `test:ui`, `test:e2e`)
+- 설정 파일: `vitest.config.ts`, `playwright.config.ts`, `src/__tests__/setup.ts`
+
 ## [0.14.1] - 2026-02-25
 
 ### Changed
