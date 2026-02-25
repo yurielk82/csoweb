@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getColumnSettings, updateColumnSettings, initializeColumnSettings } from '@/lib/db';
+import { getColumnSettingRepository } from '@/infrastructure/supabase';
 import { DEFAULT_COLUMN_SETTINGS } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -17,9 +17,9 @@ export async function GET() {
     }
     
     // Initialize default column settings if needed
-    await initializeColumnSettings(DEFAULT_COLUMN_SETTINGS);
+    await getColumnSettingRepository().initialize(DEFAULT_COLUMN_SETTINGS);
     
-    const columns = await getColumnSettings();
+    const columns = await getColumnSettingRepository().findAll();
     
     return NextResponse.json({
       success: true,
@@ -54,7 +54,7 @@ export async function PUT(request: NextRequest) {
       );
     }
     
-    await updateColumnSettings(columns);
+    await getColumnSettingRepository().update(columns);
     
     return NextResponse.json({
       success: true,
@@ -82,7 +82,7 @@ export async function DELETE() {
     }
     
     // Re-initialize with defaults
-    await updateColumnSettings(DEFAULT_COLUMN_SETTINGS.map((c, index) => ({
+    await getColumnSettingRepository().update(DEFAULT_COLUMN_SETTINGS.map((c, index) => ({
       ...c,
       display_order: index + 1,
     })));

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { getCompanyInfo } from '@/lib/db';
+import { getCompanyRepository } from '@/infrastructure/supabase';
 import packageJson from '../../../../../package.json';
 
 export const dynamic = 'force-dynamic';
@@ -28,7 +28,7 @@ export async function GET() {
     let smtpHost: string | null = null;
     let emailProvider = 'resend';
     try {
-      const companyInfo = await getCompanyInfo();
+      const companyInfo = await getCompanyRepository().get();
       smtpConfigured = !!(companyInfo.smtp_host && companyInfo.smtp_user);
       smtpHost = companyInfo.smtp_host || null;
       emailProvider = companyInfo.email_provider || 'resend';

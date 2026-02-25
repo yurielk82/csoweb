@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, hashPassword, normalizeBusinessNumber } from '@/lib/auth';
-import { getUserByBusinessNumber, resetPasswordToDefault } from '@/lib/db';
+import { getUserRepository } from '@/infrastructure/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
     const normalizedBN = normalizeBusinessNumber(business_number);
     
     // 사용자 존재 확인
-    const user = await getUserByBusinessNumber(normalizedBN);
+    const userRepo = getUserRepository();
+    const user = await userRepo.findByBusinessNumber(normalizedBN);
     if (!user) {
       return NextResponse.json(
         { success: false, error: '사용자를 찾을 수 없습니다.' },
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
     const passwordHash = await hashPassword(newPassword);
     
     // 비밀번호 초기화 (must_change_password = true 설정)
-    const success = await resetPasswordToDefault(normalizedBN, passwordHash);
+    const success = await userRepo.resetPasswordToDefault(normalizedBN, passwordHash);
     
     if (!success) {
       return NextResponse.json(

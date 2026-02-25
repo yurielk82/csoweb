@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { getSession } from '@/lib/auth';
-import { getCompanyInfo } from '@/lib/db';
+import { getCompanyRepository, getUserRepository } from '@/infrastructure/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (provider === 'smtp') {
-      const companyInfo = await getCompanyInfo();
+      const companyInfo = await getCompanyRepository().get();
       const { smtp_host, smtp_port, smtp_secure, smtp_user, smtp_password } = companyInfo;
 
       if (!smtp_host || !smtp_user || !smtp_password) {
@@ -64,8 +64,7 @@ export async function POST(request: NextRequest) {
 
       // 테스트 메일 발송 (선택적)
       if (send_test_email && session.business_number) {
-        const { getUserByBusinessNumber } = await import('@/lib/db');
-        const user = await getUserByBusinessNumber(session.business_number);
+        const user = await getUserRepository().findByBusinessNumber(session.business_number);
         if (user?.email) {
           const fromName = companyInfo.smtp_from_name || 'CSO 정산서 포털';
           const fromEmail = companyInfo.smtp_from_email || smtp_user;

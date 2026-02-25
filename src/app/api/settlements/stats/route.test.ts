@@ -5,16 +5,18 @@ vi.mock('@/lib/auth', () => ({
   getSession: vi.fn(),
 }));
 
-vi.mock('@/lib/db', () => ({
-  getSettlementStatsByMonth: vi.fn(),
+const mockSettlementRepo = {
+  getStatsByMonth: vi.fn(),
+};
+
+vi.mock('@/infrastructure/supabase', () => ({
+  getSettlementRepository: vi.fn(() => mockSettlementRepo),
 }));
 
 const { getSession } = await import('@/lib/auth');
-const { getSettlementStatsByMonth } = await import('@/lib/db');
 const { GET } = await import('./route');
 
 const mockGetSession = getSession as ReturnType<typeof vi.fn>;
-const mockGetStats = getSettlementStatsByMonth as ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -41,7 +43,7 @@ describe('GET /api/settlements/stats', () => {
   it('관리자는 통계를 반환한다', async () => {
     const stats = { totalRows: 500, totalBusinesses: 10, months: [] };
     mockGetSession.mockResolvedValue(mockAdminSession);
-    mockGetStats.mockResolvedValue(stats);
+    mockSettlementRepo.getStatsByMonth.mockResolvedValue(stats);
 
     const res = await GET();
     const json = await res.json();

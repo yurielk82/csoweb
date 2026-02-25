@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, hashPassword, verifyPassword } from '@/lib/auth';
-import { getUserByBusinessNumber, updateUserPassword, updateUser } from '@/lib/db';
+import { getUserRepository } from '@/infrastructure/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,14 +16,15 @@ export async function GET() {
       );
     }
     
-    const user = await getUserByBusinessNumber(session.business_number);
+    const userRepo = getUserRepository();
+    const user = await userRepo.findByBusinessNumber(session.business_number);
     if (!user) {
       return NextResponse.json(
         { success: false, error: '사용자를 찾을 수 없습니다.' },
         { status: 404 }
       );
     }
-    
+
     // password_hash 제외하고 반환
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password_hash, ...userData } = user;
@@ -66,14 +67,15 @@ export async function PUT(request: NextRequest) {
       new_password 
     } = await request.json();
     
-    const user = await getUserByBusinessNumber(session.business_number);
+    const userRepo = getUserRepository();
+    const user = await userRepo.findByBusinessNumber(session.business_number);
     if (!user) {
       return NextResponse.json(
         { success: false, error: '사용자를 찾을 수 없습니다.' },
         { status: 404 }
       );
     }
-    
+
     // 기본 정보 변경 (업체명, 대표자명, 주소, 연락처 등)
     const updateData: Record<string, string | undefined> = {};
     if (company_name !== undefined && company_name !== user.company_name) updateData.company_name = company_name;
@@ -99,7 +101,7 @@ export async function PUT(request: NextRequest) {
       
       // 새 비밀번호 해시
       const newHash = await hashPassword(new_password);
-      const success = await updateUserPassword(session.business_number, newHash);
+      const success = await userRepo.updatePassword(session.business_number, newHash);
       
       if (success) {
         return NextResponse.json({
@@ -116,7 +118,7 @@ export async function PUT(request: NextRequest) {
     
     // 기본 정보 변경
     if (Object.keys(updateData).length > 0) {
-      const success = await updateUser(session.business_number, updateData);
+      const success = await userRepo.update(session.business_number, updateData);
       if (success) {
         return NextResponse.json({
           success: true,

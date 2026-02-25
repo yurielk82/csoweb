@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  getUserByBusinessNumber, 
-  getUserByEmail, 
-  createUser 
-} from '@/lib/db';
+import { getUserRepository } from '@/infrastructure/supabase';
 import { 
   hashPassword, 
   normalizeBusinessNumber, 
@@ -60,8 +56,10 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    const userRepo = getUserRepository();
+
     // Check if business number already exists
-    const existingByBN = await getUserByBusinessNumber(normalizedBN);
+    const existingByBN = await userRepo.findByBusinessNumber(normalizedBN);
     if (existingByBN) {
       return NextResponse.json(
         { success: false, error: '이미 등록된 사업자번호입니다.' },
@@ -70,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Check if email already exists
-    const existingByEmail = await getUserByEmail(email);
+    const existingByEmail = await userRepo.findByEmail(email);
     if (existingByEmail) {
       return NextResponse.json(
         { success: false, error: '이미 등록된 이메일 주소입니다.' },
@@ -80,7 +78,7 @@ export async function POST(request: NextRequest) {
     
     // Create user
     const passwordHash = await hashPassword(password);
-    const user = await createUser({
+    const user = await userRepo.create({
       business_number: normalizedBN,
       company_name,
       ceo_name,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { rejectUser, getUserByBusinessNumber } from '@/lib/db';
+import { getUserRepository } from '@/infrastructure/supabase';
 import { sendEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
@@ -25,22 +25,23 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const user = await getUserByBusinessNumber(business_number);
-    
+    const userRepo = getUserRepository();
+    const user = await userRepo.findByBusinessNumber(business_number);
+
     if (!user) {
       return NextResponse.json(
         { success: false, error: '사용자를 찾을 수 없습니다.' },
         { status: 404 }
       );
     }
-    
+
     // Send rejection notification email before deleting
     await sendEmail(user.email, 'approval_rejected', {
       company_name: user.company_name,
       reason: reason || undefined,
     });
-    
-    const rejected = await rejectUser(business_number);
+
+    const rejected = await userRepo.reject(business_number);
     
     if (!rejected) {
       return NextResponse.json(

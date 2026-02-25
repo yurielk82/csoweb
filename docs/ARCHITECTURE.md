@@ -150,20 +150,17 @@ domain/ (인터페이스 정의) ← infrastructure/ (구현체)
 
 ---
 
-## Compatibility Layer 주의사항
+## 데이터 접근 패턴
 
-`src/lib/db.ts`는 DDD 전환 과정에서 만든 **호환 레이어**입니다. 기존 코드가 `import { getUser } from '@/lib/db'` 형태로 쓰던 것을 깨뜨리지 않기 위해 남겨둔 래퍼입니다.
-
-내부적으로는 `infrastructure/supabase/`의 Repository를 호출합니다.
-
-**새 코드를 작성할 때는 `lib/db.ts`를 거치지 말고 `infrastructure/` 레이어를 직접 사용하세요.**
+모든 라우트는 `infrastructure/supabase/`의 Repository Factory 또는 `application/` Use Case를 직접 사용합니다.
 
 ```typescript
-// 권장하지 않음 (레거시)
-import { getUserByBusinessNumber } from '@/lib/db'
-
-// 권장 (직접 사용)
+// Repository Factory 직접 사용 (단순 CRUD)
 import { getUserRepository } from '@/infrastructure/supabase'
 const userRepo = getUserRepository()
 const user = await userRepo.findByBusinessNumber('1234567890')
+
+// Application Use Case 사용 (비즈니스 로직)
+import { authenticateUser } from '@/application/auth'
+const result = await authenticateUser(businessNumber, password)
 ```

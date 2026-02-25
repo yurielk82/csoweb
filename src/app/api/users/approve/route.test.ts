@@ -2,13 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { mockAdminSession, mockRegularSession, mockRegularUser } from '@/__tests__/helpers/mock-data';
 
+const mockUserRepo = {
+  approve: vi.fn(),
+  findByBusinessNumber: vi.fn(),
+};
+
 vi.mock('@/lib/auth', () => ({
   getSession: vi.fn(),
 }));
 
-vi.mock('@/lib/db', () => ({
-  approveUser: vi.fn(),
-  getUserByBusinessNumber: vi.fn(),
+vi.mock('@/infrastructure/supabase', () => ({
+  getUserRepository: vi.fn(() => mockUserRepo),
 }));
 
 vi.mock('@/lib/email', () => ({
@@ -16,12 +20,9 @@ vi.mock('@/lib/email', () => ({
 }));
 
 const { getSession } = await import('@/lib/auth');
-const { approveUser, getUserByBusinessNumber } = await import('@/lib/db');
 const { POST } = await import('./route');
 
 const mockGetSession = getSession as ReturnType<typeof vi.fn>;
-const mockApprove = approveUser as ReturnType<typeof vi.fn>;
-const mockGetUser = getUserByBusinessNumber as ReturnType<typeof vi.fn>;
 
 function createRequest(body: Record<string, unknown>): NextRequest {
   return new NextRequest('http://localhost:3000/api/users/approve', {
@@ -52,7 +53,7 @@ describe('POST /api/users/approve', () => {
 
   it('존재하지 않는 사용자는 404를 반환한다', async () => {
     mockGetSession.mockResolvedValue(mockAdminSession);
-    mockGetUser.mockResolvedValue(null);
+    mockUserRepo.findByBusinessNumber.mockResolvedValue(null);
 
     const res = await POST(createRequest({ business_number: '0000000000' }));
     expect(res.status).toBe(404);
@@ -60,8 +61,8 @@ describe('POST /api/users/approve', () => {
 
   it('승인 실패 시 500을 반환한다', async () => {
     mockGetSession.mockResolvedValue(mockAdminSession);
-    mockGetUser.mockResolvedValue(mockRegularUser);
-    mockApprove.mockResolvedValue(null);
+    mockUserRepo.findByBusinessNumber.mockResolvedValue(mockRegularUser);
+    mockUserRepo.approve.mockResolvedValue(null);
 
     const res = await POST(createRequest({ business_number: '9876543210' }));
     expect(res.status).toBe(500);
@@ -69,8 +70,8 @@ describe('POST /api/users/approve', () => {
 
   it('승인 성공 시 200 + 이메일 발송', async () => {
     mockGetSession.mockResolvedValue(mockAdminSession);
-    mockGetUser.mockResolvedValue(mockRegularUser);
-    mockApprove.mockResolvedValue({ ...mockRegularUser, is_approved: true });
+    mockUserRepo.findByBusinessNumber.mockResolvedValue(mockRegularUser);
+    mockUserRepo.approve.mockResolvedValue({ ...mockRegularUser, is_approved: true });
 
     const res = await POST(createRequest({ business_number: '9876543210' }));
     const json = await res.json();

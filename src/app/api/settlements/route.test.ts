@@ -7,21 +7,28 @@ vi.mock('@/lib/auth', () => ({
   getSession: vi.fn(),
 }));
 
-vi.mock('@/lib/db', () => ({
-  getAllSettlements: vi.fn(),
-  getAvailableSettlementMonths: vi.fn(),
-  getSettlementsByCSOMatching: vi.fn(),
-  getColumnSettings: vi.fn(),
+const mockSettlementRepo = {
+  findAll: vi.fn(),
+  findByCSOMatching: vi.fn(),
+  getAvailableMonths: vi.fn(),
+};
+const mockCSOMatchingRepo = {
+  getMatchedCompanyNames: vi.fn(),
+};
+const mockColumnSettingRepo = {
+  findAll: vi.fn(),
+};
+
+vi.mock('@/infrastructure/supabase', () => ({
+  getSettlementRepository: vi.fn(() => mockSettlementRepo),
+  getCSOMatchingRepository: vi.fn(() => mockCSOMatchingRepo),
+  getColumnSettingRepository: vi.fn(() => mockColumnSettingRepo),
 }));
 
 const { getSession } = await import('@/lib/auth');
-const { getAllSettlements, getSettlementsByCSOMatching, getColumnSettings } = await import('@/lib/db');
 const { GET } = await import('./route');
 
 const mockGetSession = getSession as ReturnType<typeof vi.fn>;
-const mockGetAllSettlements = getAllSettlements as ReturnType<typeof vi.fn>;
-const mockGetSettlementsByCSOMatching = getSettlementsByCSOMatching as ReturnType<typeof vi.fn>;
-const mockGetColumnSettings = getColumnSettings as ReturnType<typeof vi.fn>;
 
 function createGetRequest(params: Record<string, string> = {}): NextRequest {
   const url = new URL('http://localhost:3000/api/settlements');
@@ -33,7 +40,7 @@ function createGetRequest(params: Record<string, string> = {}): NextRequest {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockGetColumnSettings.mockResolvedValue(mockColumnSettings);
+  mockColumnSettingRepo.findAll.mockResolvedValue(mockColumnSettings);
 });
 
 describe('GET /api/settlements', () => {
@@ -49,7 +56,7 @@ describe('GET /api/settlements', () => {
 
   it('관리자는 전체 정산서를 조회한다', async () => {
     mockGetSession.mockResolvedValue(mockAdminSession);
-    mockGetAllSettlements.mockResolvedValue(mockSettlements);
+    mockSettlementRepo.findAll.mockResolvedValue(mockSettlements);
 
     const res = await GET(createGetRequest({ settlement_month: '2025-02' }));
     const json = await res.json();
@@ -63,19 +70,21 @@ describe('GET /api/settlements', () => {
 
   it('일반 회원은 CSO 매칭 기반으로 조회한다', async () => {
     mockGetSession.mockResolvedValue(mockRegularSession);
-    mockGetSettlementsByCSOMatching.mockResolvedValue([mockSettlements[0]]);
+    mockCSOMatchingRepo.getMatchedCompanyNames.mockResolvedValue(['CSO업체A']);
+    mockSettlementRepo.findByCSOMatching.mockResolvedValue([mockSettlements[0]]);
 
     const res = await GET(createGetRequest());
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(mockGetSettlementsByCSOMatching).toHaveBeenCalled();
+    expect(mockCSOMatchingRepo.getMatchedCompanyNames).toHaveBeenCalled();
+    expect(mockSettlementRepo.findByCSOMatching).toHaveBeenCalled();
     expect(json.data.settlements).toHaveLength(1);
   });
 
   it('search 파라미터로 필터링한다', async () => {
     mockGetSession.mockResolvedValue(mockAdminSession);
-    mockGetAllSettlements.mockResolvedValue(mockSettlements);
+    mockSettlementRepo.findAll.mockResolvedValue(mockSettlements);
 
     const res = await GET(createGetRequest({ search: '서울' }));
     const json = await res.json();
@@ -87,7 +96,7 @@ describe('GET /api/settlements', () => {
 
   it('페이지네이션이 적용된다', async () => {
     mockGetSession.mockResolvedValue(mockAdminSession);
-    mockGetAllSettlements.mockResolvedValue(mockSettlements);
+    mockSettlementRepo.findAll.mockResolvedValue(mockSettlements);
 
     const res = await GET(createGetRequest({ page: '1', page_size: '2' }));
     const json = await res.json();
@@ -99,7 +108,7 @@ describe('GET /api/settlements', () => {
 
   it('합계(totals)가 전체 데이터 기준으로 계산된다', async () => {
     mockGetSession.mockResolvedValue(mockAdminSession);
-    mockGetAllSettlements.mockResolvedValue(mockSettlements);
+    mockSettlementRepo.findAll.mockResolvedValue(mockSettlements);
 
     const res = await GET(createGetRequest());
     const json = await res.json();

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getUserByBusinessNumber, updateUser, deleteUser } from '@/lib/db';
+import { getUserRepository } from '@/infrastructure/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,15 +34,16 @@ export async function PUT(
       is_approved 
     } = await request.json();
     
-    const user = await getUserByBusinessNumber(businessNumber);
+    const userRepo = getUserRepository();
+    const user = await userRepo.findByBusinessNumber(businessNumber);
     if (!user) {
       return NextResponse.json(
         { success: false, error: '사용자를 찾을 수 없습니다.' },
         { status: 404 }
       );
     }
-    
-    const success = await updateUser(businessNumber, {
+
+    const success = await userRepo.update(businessNumber, {
       company_name,
       ceo_name,
       zipcode,
@@ -101,7 +102,7 @@ export async function DELETE(
       );
     }
     
-    const success = await deleteUser(businessNumber);
+    const success = await getUserRepository().delete(businessNumber);
     
     if (success) {
       return NextResponse.json({

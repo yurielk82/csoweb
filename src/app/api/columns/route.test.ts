@@ -6,10 +6,14 @@ vi.mock('@/lib/auth', () => ({
   getSession: vi.fn(),
 }));
 
-vi.mock('@/lib/db', () => ({
-  getColumnSettings: vi.fn(),
-  updateColumnSettings: vi.fn(),
-  initializeColumnSettings: vi.fn(),
+const mockColumnSettingRepo = {
+  findAll: vi.fn(),
+  update: vi.fn(),
+  initialize: vi.fn(),
+};
+
+vi.mock('@/infrastructure/supabase', () => ({
+  getColumnSettingRepository: vi.fn(() => mockColumnSettingRepo),
 }));
 
 vi.mock('@/types', () => ({
@@ -19,12 +23,9 @@ vi.mock('@/types', () => ({
 }));
 
 const { getSession } = await import('@/lib/auth');
-const { getColumnSettings, updateColumnSettings } = await import('@/lib/db');
 const { GET, PUT, DELETE } = await import('./route');
 
 const mockGetSession = getSession as ReturnType<typeof vi.fn>;
-const mockGetColumns = getColumnSettings as ReturnType<typeof vi.fn>;
-const mockUpdateColumns = updateColumnSettings as ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -40,7 +41,7 @@ describe('GET /api/columns', () => {
 
   it('인증된 사용자는 컬럼 설정을 반환한다', async () => {
     mockGetSession.mockResolvedValue(mockRegularSession);
-    mockGetColumns.mockResolvedValue(mockColumnSettings);
+    mockColumnSettingRepo.findAll.mockResolvedValue(mockColumnSettings);
 
     const res = await GET();
     const json = await res.json();
@@ -75,7 +76,7 @@ describe('PUT /api/columns', () => {
 
   it('관리자는 컬럼 설정을 업데이트한다', async () => {
     mockGetSession.mockResolvedValue(mockAdminSession);
-    mockUpdateColumns.mockResolvedValue(undefined);
+    mockColumnSettingRepo.update.mockResolvedValue(undefined);
 
     const res = await PUT(new NextRequest('http://localhost:3000/api/columns', {
       method: 'PUT',
@@ -86,7 +87,7 @@ describe('PUT /api/columns', () => {
 
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
-    expect(mockUpdateColumns).toHaveBeenCalledWith(mockColumnSettings);
+    expect(mockColumnSettingRepo.update).toHaveBeenCalledWith(mockColumnSettings);
   });
 });
 
@@ -100,7 +101,7 @@ describe('DELETE /api/columns', () => {
 
   it('관리자는 기본값으로 초기화한다', async () => {
     mockGetSession.mockResolvedValue(mockAdminSession);
-    mockUpdateColumns.mockResolvedValue(undefined);
+    mockColumnSettingRepo.update.mockResolvedValue(undefined);
 
     const res = await DELETE();
     const json = await res.json();

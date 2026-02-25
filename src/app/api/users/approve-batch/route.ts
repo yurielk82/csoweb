@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { approveUser, getUserByBusinessNumber } from '@/lib/db';
+import { getUserRepository } from '@/infrastructure/supabase';
 import { sendEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
@@ -41,16 +41,18 @@ export async function POST(request: NextRequest) {
       emailFailed: [],
     };
 
+    const userRepo = getUserRepository();
+
     // 승인 처리 (병렬)
     const approvalPromises = business_numbers.map(async (business_number: string) => {
       try {
-        const user = await getUserByBusinessNumber(business_number);
+        const user = await userRepo.findByBusinessNumber(business_number);
         if (!user) {
           results.failed.push(business_number);
           return null;
         }
 
-        const approved = await approveUser(business_number);
+        const approved = await userRepo.approve(business_number);
         if (!approved) {
           results.failed.push(business_number);
           return null;

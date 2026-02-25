@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unstable_cache, revalidateTag } from 'next/cache';
 import { getSession } from '@/lib/auth';
-import { getCompanyInfo, updateCompanyInfo } from '@/lib/db';
+import { getCompanyRepository } from '@/infrastructure/supabase';
 import { invalidateEmailSettingsCache } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
@@ -10,7 +10,7 @@ const PASSWORD_MASK = '••••••••';
 
 // 회사 정보를 footer-data 태그로 캐싱 (무기한, 수동 갱신만)
 const getCachedCompanyInfo = unstable_cache(
-  async () => getCompanyInfo(),
+  async () => getCompanyRepository().get(),
   ['company-info'],
   { tags: ['footer-data'] }
 );
@@ -60,7 +60,7 @@ export async function PUT(request: NextRequest) {
 
     console.log('PUT /api/settings/company - Saving data (password masked)');
 
-    await updateCompanyInfo(data);
+    await getCompanyRepository().update(data);
 
     // 캐시 갱신: footer-data 태그 무효화
     revalidateTag('footer-data');

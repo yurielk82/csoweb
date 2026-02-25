@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, setSession, hashPassword } from '@/lib/auth';
-import { getUserByBusinessNumber } from '@/lib/db';
-import { supabase } from '@/lib/supabase';
+import { getUserRepository } from '@/infrastructure/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +31,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 사용자 조회
-    const user = await getUserByBusinessNumber(session.business_number);
+    const userRepo = getUserRepository();
+    const user = await userRepo.findByBusinessNumber(session.business_number);
     if (!user) {
       return NextResponse.json(
         { success: false, error: '사용자를 찾을 수 없습니다.' },
@@ -54,20 +54,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 비밀번호 해싱 + must_change_password=false + password_changed_at 업데이트
+    // 비밀번호 해싱 + must_change_password=false 업데이트
     const passwordHash = await hashPassword(new_password);
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        password_hash: passwordHash,
-        must_change_password: false,
-        password_changed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('business_number', session.business_number);
+    const success = await userRepo.completePasswordChange(session.business_number, passwordHash);
 
-    if (updateError) {
-      console.error('Failed to update password:', updateError);
+    if (!success) {
+      console.error('Failed to update password for:', session.business_number);
       return NextResponse.json(
         { success: false, error: '비밀번호 변경에 실패했습니다.' },
         { status: 500 }

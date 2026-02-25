@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, setSession, isValidEmail } from '@/lib/auth';
-import { getUserByBusinessNumber, getUserByEmail, completeUserProfile } from '@/lib/db';
+import { getUserRepository } from '@/infrastructure/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +28,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 사용자 조회
-    const user = await getUserByBusinessNumber(session.business_number);
+    const userRepo = getUserRepository();
+    const user = await userRepo.findByBusinessNumber(session.business_number);
     if (!user) {
       return NextResponse.json(
         { success: false, error: '사용자를 찾을 수 없습니다.' },
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 이메일 중복 확인 (자기 자신 제외)
-    const existingUser = await getUserByEmail(email.trim());
+    const existingUser = await userRepo.findByEmail(email.trim());
     if (existingUser && existingUser.business_number !== session.business_number) {
       return NextResponse.json(
         { success: false, error: '이미 사용 중인 이메일입니다.' },
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 프로필 업데이트 + profile_complete=true
-    const profileUpdated = await completeUserProfile(session.business_number, {
+    const profileUpdated = await userRepo.completeProfile(session.business_number, {
       company_name: company_name.trim(),
       ceo_name: ceo_name.trim(),
       zipcode,

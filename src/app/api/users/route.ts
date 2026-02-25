@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getAllUsers, getPendingUsers } from '@/lib/db';
+import { getUserRepository } from '@/infrastructure/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,9 +18,10 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const pending = searchParams.get('pending') === 'true';
     
-    const users = pending 
-      ? await getPendingUsers() 
-      : await getAllUsers();
+    const userRepo = getUserRepository();
+    const users = pending
+      ? await userRepo.findPending()
+      : await userRepo.findAll();
     
     // Remove password hash from response
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

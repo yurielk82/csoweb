@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getSettlementStatsByMonth } from '@/lib/db';
+import { getSettlementRepository } from '@/infrastructure/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +15,7 @@ export async function GET() {
       );
     }
     
-    const stats = await getSettlementStatsByMonth();
+    const stats = await getSettlementRepository().getStatsByMonth();
     
     return NextResponse.json({
       success: true,

@@ -2,11 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { mockRegularUser } from '@/__tests__/helpers/mock-data';
 
+const mockUserRepo = {
+  findByBusinessNumber: vi.fn(),
+  findByEmail: vi.fn(),
+  create: vi.fn(),
+};
+
 // Mock dependencies
-vi.mock('@/lib/db', () => ({
-  getUserByBusinessNumber: vi.fn(),
-  getUserByEmail: vi.fn(),
-  createUser: vi.fn(),
+vi.mock('@/infrastructure/supabase', () => ({
+  getUserRepository: vi.fn(() => mockUserRepo),
 }));
 
 vi.mock('@/lib/auth', () => ({
@@ -21,12 +25,7 @@ vi.mock('@/lib/email', () => ({
   notifyAdmin: vi.fn(),
 }));
 
-const { getUserByBusinessNumber, getUserByEmail, createUser } = await import('@/lib/db');
 const { POST } = await import('./route');
-
-const mockGetUserByBN = getUserByBusinessNumber as ReturnType<typeof vi.fn>;
-const mockGetUserByEmail = getUserByEmail as ReturnType<typeof vi.fn>;
-const mockCreateUser = createUser as ReturnType<typeof vi.fn>;
 
 const validBody = {
   business_number: '5555555555',
@@ -49,9 +48,9 @@ function createRegisterRequest(body: Record<string, unknown>): NextRequest {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockGetUserByBN.mockResolvedValue(null);
-  mockGetUserByEmail.mockResolvedValue(null);
-  mockCreateUser.mockResolvedValue({ ...mockRegularUser, ...validBody, created_at: '2025-02-01T00:00:00Z' });
+  mockUserRepo.findByBusinessNumber.mockResolvedValue(null);
+  mockUserRepo.findByEmail.mockResolvedValue(null);
+  mockUserRepo.create.mockResolvedValue({ ...mockRegularUser, ...validBody, created_at: '2025-02-01T00:00:00Z' });
 });
 
 describe('POST /api/auth/register', () => {
@@ -88,7 +87,7 @@ describe('POST /api/auth/register', () => {
   });
 
   it('중복 사업자번호는 409를 반환한다', async () => {
-    mockGetUserByBN.mockResolvedValue(mockRegularUser);
+    mockUserRepo.findByBusinessNumber.mockResolvedValue(mockRegularUser);
 
     const res = await POST(createRegisterRequest(validBody));
     const json = await res.json();
@@ -98,7 +97,7 @@ describe('POST /api/auth/register', () => {
   });
 
   it('중복 이메일은 409를 반환한다', async () => {
-    mockGetUserByEmail.mockResolvedValue(mockRegularUser);
+    mockUserRepo.findByEmail.mockResolvedValue(mockRegularUser);
 
     const res = await POST(createRegisterRequest(validBody));
     const json = await res.json();
@@ -114,6 +113,6 @@ describe('POST /api/auth/register', () => {
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
     expect(json.message).toContain('회원가입');
-    expect(mockCreateUser).toHaveBeenCalled();
+    expect(mockUserRepo.create).toHaveBeenCalled();
   });
 });

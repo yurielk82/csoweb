@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import {
-  getAllSettlements,
-  getAvailableSettlementMonths,
-  getSettlementsByCSOMatching,
-  getColumnSettings
-} from '@/lib/db';
+import { getSettlementRepository, getCSOMatchingRepository, getColumnSettingRepository } from '@/infrastructure/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +10,12 @@ const ALWAYS_NEEDED_COLUMNS = [
   '제품명', '거래처명', '영업사원',
   '수량', '금액', '제약수수료_합계', '담당수수료_합계',
 ];
+
+async function fetchSettlementsByCSOMatching(businessNumber: string, settlementMonth?: string, selectColumns?: string) {
+  const matchedNames = await getCSOMatchingRepository().getMatchedCompanyNames(businessNumber);
+  if (matchedNames.length === 0) return [];
+  return getSettlementRepository().findByCSOMatching(matchedNames, settlementMonth, selectColumns);
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
     const filterBusinessNumber = searchParams.get('business_number') || undefined;
 
     // 표시 가능한 컬럼만 조회하여 SELECT 최적화 (39개 → ~15개)
-    const columnSettings = await getColumnSettings();
+    const columnSettings = await getColumnSettingRepository().findAll();
     const visibleColumnKeys = columnSettings
       .filter(c => c.is_visible)
       .map(c => c.column_key);
@@ -46,12 +47,12 @@ export async function GET(request: NextRequest) {
 
     if (session.is_admin) {
       if (filterBusinessNumber) {
-        settlements = await getSettlementsByCSOMatching(filterBusinessNumber, settlementMonth, selectColumns);
+        settlements = await fetchSettlementsByCSOMatching(filterBusinessNumber, settlementMonth, selectColumns);
       } else {
-        settlements = await getAllSettlements(settlementMonth, selectColumns);
+        settlements = await getSettlementRepository().findAll(settlementMonth, selectColumns);
       }
     } else {
-      settlements = await getSettlementsByCSOMatching(
+      settlements = await fetchSettlementsByCSOMatching(
         session.business_number,
         settlementMonth,
         selectColumns
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
 // Get available settlement months
 export async function OPTIONS() {
   try {
-    const months = await getAvailableSettlementMonths();
+    const months = await getSettlementRepository().getAvailableMonths();
     return NextResponse.json({
       success: true,
       data: months,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { deleteSettlementsByMonth } from '@/lib/db';
+import { getSettlementRepository } from '@/infrastructure/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +22,7 @@ export async function DELETE(
     const { month } = params;
     const decodedMonth = decodeURIComponent(month);
     
-    const deletedCount = await deleteSettlementsByMonth(decodedMonth);
+    const deletedCount = await getSettlementRepository().deleteByMonth(decodedMonth);
     
     return NextResponse.json({
       success: true,

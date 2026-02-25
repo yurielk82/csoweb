@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword, normalizeBusinessNumber, isValidBusinessNumber, isValidEmail } from '@/lib/auth';
-import { getUserByBusinessNumberAndEmail, resetPasswordToDefault } from '@/lib/db';
+import { getUserRepository } from '@/infrastructure/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,8 +38,10 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    const userRepo = getUserRepository();
+
     // 사업자번호 + 이메일로 사용자 조회
-    const user = await getUserByBusinessNumberAndEmail(normalizedBN, email.toLowerCase().trim());
+    const user = await userRepo.findByBusinessNumberAndEmail(normalizedBN, email.toLowerCase().trim());
     
     if (!user) {
       // 보안: 존재 여부 노출 방지를 위해 동일한 메시지 사용
@@ -54,7 +56,7 @@ export async function POST(request: NextRequest) {
     const passwordHash = await hashPassword(newPassword);
     
     // 비밀번호 초기화 (must_change_password = true 설정)
-    const success = await resetPasswordToDefault(normalizedBN, passwordHash);
+    const success = await userRepo.resetPasswordToDefault(normalizedBN, passwordHash);
     
     if (!success) {
       return NextResponse.json(

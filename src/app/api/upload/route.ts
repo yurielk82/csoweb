@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { parseExcelFile } from '@/lib/excel';
-import { insertSettlements } from '@/lib/db';
+import { getSettlementRepository } from '@/infrastructure/supabase';
 
 // 메모리 제한 증가
 export const maxDuration = 60; // 60초 타임아웃
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Insert settlements (정산월 기준으로 자동 관리)
-    const { rowCount, settlementMonths } = await insertSettlements(data);
+    const { rowCount, settlementMonths } = await getSettlementRepository().insert(data);
     
     // 이메일 자동 발송 제거 - 별도 메뉴에서 수동 발송
     

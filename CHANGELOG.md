@@ -5,6 +5,30 @@
 
 ---
 
+## [0.16.0] - 2026-02-26
+
+### Changed
+
+- **DDD 레이어 전환 완료** — `lib/db.ts` 호환 레이어(346줄, 48개 함수) 완전 제거
+  - 28개 API 라우트: `@/lib/db` → Repository Factory 또는 Application Use Case 직접 호출로 전환
+  - `lib/email.ts`: `@/lib/db` 의존 제거, Repository Factory 직접 호출
+  - 10개 테스트 파일: mock 대상을 `@/lib/db` → `@/infrastructure/supabase` 또는 `@/application/auth`로 전환
+
+### Added
+
+- Auth Use Case 3개 신규 생성 (로그인 비즈니스 로직을 라우트에서 분리)
+  - `LoginUseCase` — 사용자 인증, 계정 잠금, 실패 카운트, 리다이렉트 결정
+  - `ForgotPasswordUseCase` — 비밀번호 재설정 요청 (사용자 조회 + 이메일 매칭 + 토큰 생성)
+  - `ResetPasswordVerifyUseCase` — 토큰 검증 + 비밀번호 변경 완료
+- Auth Use Case 테스트 3개 (21개 케이스)
+- 전체 테스트: 27개 파일, 171개 케이스
+
+### Removed
+
+- `src/lib/db.ts` — 모든 함수가 Repository 1줄 위임하는 호환 레이어 삭제
+
+---
+
 ## [0.15.1] - 2026-02-25
 
 ### Added

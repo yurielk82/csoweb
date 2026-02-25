@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import {
-  getUserByBusinessNumber,
-  getAllUsers,
-  getSettlementSummary,
-  getBusinessNumbersForSettlementMonth
-} from '@/lib/db';
+import { getUserRepository, getSettlementRepository } from '@/infrastructure/supabase';
 import { sendEmail, getEmailSendDelay } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
@@ -54,10 +49,10 @@ export async function GET(request: NextRequest) {
     let count = 0;
 
     if (type === 'all') {
-      const users = await getAllUsers();
+      const users = await getUserRepository().findAll();
       count = users.filter(u => u.is_approved && !u.is_admin).length;
     } else if (type === 'year_month' && ym) {
-      const bns = await getBusinessNumbersForSettlementMonth(ym);
+      const bns = await getSettlementRepository().getBusinessNumbersForMonth(ym);
       count = bns.length;
     }
 
@@ -96,13 +91,13 @@ export async function POST(request: NextRequest) {
     let targetBusinessNumbers: string[] = [];
 
     if (recipients.includes('all')) {
-      const users = await getAllUsers();
+      const users = await getUserRepository().findAll();
       targetBusinessNumbers = users
         .filter(u => u.is_approved && !u.is_admin)
         .map(u => u.business_number);
     } else if (recipients.length === 1 && recipients[0].startsWith('year_month:')) {
       const ym = recipients[0].replace('year_month:', '');
-      targetBusinessNumbers = await getBusinessNumbersForSettlementMonth(ym);
+      targetBusinessNumbers = await getSettlementRepository().getBusinessNumbersForMonth(ym);
     } else {
       targetBusinessNumbers = recipients;
     }
@@ -135,7 +130,7 @@ export async function POST(request: NextRequest) {
 
         for (let i = 0; i < targetBusinessNumbers.length; i++) {
           const bn = targetBusinessNumbers[i];
-          const user = await getUserByBusinessNumber(bn);
+          const user = await getUserRepository().findByBusinessNumber(bn);
           if (!user || !user.is_approved) {
             failed++;
             send({
@@ -153,7 +148,7 @@ export async function POST(request: NextRequest) {
           // Get settlement summary if year_month is specified
           let summary = { 총_금액: 0, 총_수수료: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 데이터_건수: 0, 총_수량: 0 };
           if (year_month) {
-            summary = await getSettlementSummary(bn, year_month);
+            summary = await getSettlementRepository().getSummary(bn, year_month);
           }
 
           // Prepare template variables

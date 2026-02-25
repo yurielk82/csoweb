@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getAllSettlements, getColumnSettings, getSettlementsByCSOMatching } from '@/lib/db';
+import { getSettlementRepository, getCSOMatchingRepository, getColumnSettingRepository } from '@/infrastructure/supabase';
 import { exportToExcel } from '@/lib/excel';
 
 export const dynamic = 'force-dynamic';
+
+async function fetchSettlementsByCSOMatching(businessNumber: string, settlementMonth?: string, selectColumns?: string) {
+  const matchedNames = await getCSOMatchingRepository().getMatchedCompanyNames(businessNumber);
+  if (matchedNames.length === 0) return [];
+  return getSettlementRepository().findByCSOMatching(matchedNames, settlementMonth, selectColumns);
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,7 +29,7 @@ export async function GET(request: NextRequest) {
     const filterBusinessNumber = searchParams.get('business_number') || undefined;
 
     // Get column settings for display names
-    const columnSettings = await getColumnSettings();
+    const columnSettings = await getColumnSettingRepository().findAll();
     const visibleColumns = columnSettings.filter(c => c.is_visible);
 
     // Determine which columns to export
@@ -51,12 +57,12 @@ export async function GET(request: NextRequest) {
 
     if (session.is_admin) {
       if (filterBusinessNumber) {
-        settlements = await getSettlementsByCSOMatching(filterBusinessNumber, settlementMonth, selectColumns);
+        settlements = await fetchSettlementsByCSOMatching(filterBusinessNumber, settlementMonth, selectColumns);
       } else {
-        settlements = await getAllSettlements(settlementMonth, selectColumns);
+        settlements = await getSettlementRepository().findAll(settlementMonth, selectColumns);
       }
     } else {
-      settlements = await getSettlementsByCSOMatching(
+      settlements = await fetchSettlementsByCSOMatching(
         session.business_number,
         settlementMonth,
         selectColumns

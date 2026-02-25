@@ -27,6 +27,9 @@ export function createMockUserRepository(): {
     completePasswordChange: vi.fn(),
     completeProfile: vi.fn(),
     delete: vi.fn(),
+    incrementFailedLogin: vi.fn(),
+    lockAccount: vi.fn(),
+    resetFailedLogin: vi.fn(),
   };
 }
 

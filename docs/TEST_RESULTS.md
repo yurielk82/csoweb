@@ -1,6 +1,6 @@
 # 테스트 결과 보고서
 
-> v0.15.0 — 2026-02-25 최초 구축
+> v0.16.0 — 2026-02-26 갱신 (lib/db.ts 제거 후 mock 전략 반영)
 
 ## 실행 환경
 
@@ -12,9 +12,8 @@
 ## 테스트 결과 요약
 
 ```
-Test Files  14 passed (14)
-     Tests  108 passed (108)
-  Duration  68.77s
+Test Files  27 passed (27)
+     Tests  171 passed (171)
 ```
 
 ## 카테고리별 상세
@@ -95,8 +94,15 @@ vi.mock('@/infrastructure/supabase', () => ({
 ### API Route
 
 ```typescript
-vi.mock('@/lib/db', () => ({ getUserByBusinessNumber: vi.fn() }));
-vi.mock('@/lib/auth', () => ({ verifyPassword: vi.fn(), setSession: vi.fn() }));
+// Repository Factory mock
+vi.mock('@/infrastructure/supabase', () => ({
+  getUserRepository: vi.fn(() => mockUserRepo),
+}));
+
+// Application Use Case mock
+vi.mock('@/application/auth', () => ({
+  authenticateUser: vi.fn(),
+}));
 ```
 
 ## 실행 방법

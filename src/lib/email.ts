@@ -4,7 +4,7 @@
 
 import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
-import { createEmailLog, updateEmailLog, getCompanyInfo } from './db';
+import { getEmailLogRepository, getCompanyRepository } from '@/infrastructure/supabase';
 import type { EmailTemplateType } from '@/types';
 import type { EmailProvider } from '@/domain/company/types';
 
@@ -42,7 +42,7 @@ async function getEmailSettings(): Promise<EmailSettings> {
     return _cachedSettings;
   }
 
-  const info = await getCompanyInfo();
+  const info = await getCompanyRepository().get();
   _cachedSettings = {
     provider: info.email_provider || 'resend',
     smtp_host: info.smtp_host || '',
@@ -700,7 +700,7 @@ export async function sendEmail(
   let companyInfo: CompanyFooterInfo;
   let emailSettings: EmailSettings;
   try {
-    const info = await getCompanyInfo();
+    const info = await getCompanyRepository().get();
     companyInfo = {
       company_name: info.company_name,
       ceo_name: info.ceo_name,
@@ -780,7 +780,7 @@ export async function sendEmail(
   }
 
   // Create log entry
-  const log = await createEmailLog({
+  const log = await getEmailLogRepository().create({
     recipient_email: to,
     subject: emailContent.subject,
     template_type: templateType,
@@ -792,18 +792,18 @@ export async function sendEmail(
 
     if (!emailSettings.smtp_host || !emailSettings.smtp_user) {
       console.error('[Email Error] SMTP 설정이 불완전합니다.');
-      await updateEmailLog(log.id, { status: 'failed', error_message: 'SMTP 설정 미완료' });
+      await getEmailLogRepository().update(log.id, { status: 'failed', error_message: 'SMTP 설정 미완료' });
       return { success: false, error: 'SMTP 설정이 불완전합니다.' };
     }
 
     try {
       await sendViaSMTP(emailSettings, fromEmail, to, emailContent.subject, emailContent.html);
-      await updateEmailLog(log.id, { status: 'sent' });
+      await getEmailLogRepository().update(log.id, { status: 'sent' });
       return { success: true };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown SMTP error';
       console.error(`[Email SMTP Error] From: ${fromEmail}, To: ${to}, Error: ${errorMessage}`);
-      await updateEmailLog(log.id, { status: 'failed', error_message: errorMessage });
+      await getEmailLogRepository().update(log.id, { status: 'failed', error_message: errorMessage });
       return { success: false, error: errorMessage };
     }
   }
@@ -813,7 +813,7 @@ export async function sendEmail(
 
   if (!resend) {
     console.log(`[Email Demo] From: ${fromEmail}, To: ${to}, Subject: ${emailContent.subject}`);
-    await updateEmailLog(log.id, { status: 'sent' });
+    await getEmailLogRepository().update(log.id, { status: 'sent' });
     return { success: true };
   }
 
@@ -825,12 +825,12 @@ export async function sendEmail(
       html: emailContent.html,
     });
 
-    await updateEmailLog(log.id, { status: 'sent' });
+    await getEmailLogRepository().update(log.id, { status: 'sent' });
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error(`[Email Error] From: ${fromEmail}, To: ${to}, Error: ${errorMessage}`);
-    await updateEmailLog(log.id, {
+    await getEmailLogRepository().update(log.id, {
       status: 'failed',
       error_message: errorMessage
     });

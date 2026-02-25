@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getEmailLogs, getEmailStats } from '@/lib/db';
+import { getEmailLogRepository } from '@/infrastructure/supabase';
 import type { EmailTemplateType, EmailStatus } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -21,13 +21,13 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') as EmailStatus | null;
     const limit = parseInt(searchParams.get('limit') || '100');
     
-    const logs = await getEmailLogs({
+    const logs = await getEmailLogRepository().findAll({
       template_type: templateType || undefined,
       status: status || undefined,
       limit,
     });
-    
-    const stats = await getEmailStats();
+
+    const stats = await getEmailLogRepository().getStats();
     
     return NextResponse.json({
       success: true,
