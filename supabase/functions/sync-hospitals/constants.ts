@@ -6,8 +6,8 @@
 // API 엔드포인트
 export const API_ENDPOINT = 'https://apis.data.go.kr/B551182/hospInfoServicev2';
 
-// 인증키 (디코딩된 상태로 저장, 호출 시 인코딩)
-export const API_SERVICE_KEY = '3f6de41241fa52e5707165b1367ed8ae949d04ad6906f0015b0f596538f8a832';
+// 인증키 (환경변수에서 로드)
+export const API_SERVICE_KEY = Deno.env.get('HIRA_API_KEY') || '';
 
 // API 설정
 export const API_CONFIG = {

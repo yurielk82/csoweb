@@ -49,6 +49,8 @@ export async function GET() {
         version: `v${packageJson.version}`,
         environment: process.env.NODE_ENV === 'production' ? 'Production' : 'Development',
         nts_api: !!process.env.NTS_API_KEY,
+        hira_hospital_api: !!process.env.HIRA_API_KEY,
+        hira_pharmacy_api: !!process.env.HIRA_API_KEY,
       },
     });
   } catch (error) {

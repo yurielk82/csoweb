@@ -40,6 +40,8 @@ interface SystemStatus {
   version: string;
   environment: string;
   nts_api: boolean;
+  hira_hospital_api: boolean;
+  hira_pharmacy_api: boolean;
 }
 
 export default function AdminDashboardPage() {
@@ -58,6 +60,8 @@ export default function AdminDashboardPage() {
     version: 'v0.14.0',
     environment: 'Production',
     nts_api: false,
+    hira_hospital_api: false,
+    hira_pharmacy_api: false,
   });
 
   useEffect(() => {
@@ -291,6 +295,18 @@ export default function AdminDashboardPage() {
               <span className="text-muted-foreground">국세청 API</span>
               <Badge className={systemStatus.nts_api ? 'bg-blue-600' : 'bg-gray-400'}>
                 NTS {systemStatus.nts_api ? '설정됨' : '미설정'}
+              </Badge>
+            </div>
+            <div className="flex justify-between py-2 border-b">
+              <span className="text-muted-foreground">심평원 병원정보 API</span>
+              <Badge className={systemStatus.hira_hospital_api ? 'bg-blue-600' : 'bg-gray-400'}>
+                HIRA {systemStatus.hira_hospital_api ? '설정됨' : '미설정'}
+              </Badge>
+            </div>
+            <div className="flex justify-between py-2 border-b">
+              <span className="text-muted-foreground">심평원 약국정보 API</span>
+              <Badge className={systemStatus.hira_pharmacy_api ? 'bg-blue-600' : 'bg-gray-400'}>
+                HIRA {systemStatus.hira_pharmacy_api ? '설정됨' : '미설정'}
               </Badge>
             </div>
             <div className="flex justify-between py-2">
