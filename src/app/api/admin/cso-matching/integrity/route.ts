@@ -301,7 +301,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Integrity check error:', error);
     return NextResponse.json(
-      { success: false, error: '무결성 검증 중 오류가 발생했습니다.' },
+      { success: false, error: '거래처 매핑 데이터 조회 중 오류가 발생했습니다.' },
       { status: 500 }
     );
   }

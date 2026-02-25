@@ -12,7 +12,7 @@ import {
   TrendingUp,
   Clock,
   AlertCircle,
-  ShieldCheck,
+  Link2,
   Database
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -116,8 +116,8 @@ export default function AdminDashboardPage() {
     },
     {
       href: '/admin/integrity',
-      icon: ShieldCheck,
-      title: '무결성 검증',
+      icon: Link2,
+      title: '거래처 매핑',
       description: 'CSO 관리업체 매칭 상태 검수',
       color: 'bg-red-500',
     },
