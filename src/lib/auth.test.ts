@@ -165,17 +165,26 @@ describe('isValidEmail', () => {
 });
 
 describe('isValidPassword', () => {
-  it('6자 이상이면 유효하다', () => {
-    expect(isValidPassword('123456')).toBe(true);
-    expect(isValidPassword('longpassword')).toBe(true);
+  it('8자 이상 영문+숫자 조합이면 유효하다', () => {
+    expect(isValidPassword('abcd1234')).toBe(true);
+    expect(isValidPassword('Password1')).toBe(true);
+    expect(isValidPassword('longpass99')).toBe(true);
   });
 
-  it('6자 미만이면 무효하다', () => {
-    expect(isValidPassword('12345')).toBe(false);
+  it('8자 미만이면 무효하다', () => {
+    expect(isValidPassword('abc123')).toBe(false);
     expect(isValidPassword('')).toBe(false);
   });
 
-  it('정확히 6자는 유효하다', () => {
-    expect(isValidPassword('abcdef')).toBe(true);
+  it('숫자만 있으면 무효하다', () => {
+    expect(isValidPassword('12345678')).toBe(false);
+  });
+
+  it('영문만 있으면 무효하다', () => {
+    expect(isValidPassword('abcdefgh')).toBe(false);
+  });
+
+  it('정확히 8자 영문+숫자는 유효하다', () => {
+    expect(isValidPassword('abcdef12')).toBe(true);
   });
 });

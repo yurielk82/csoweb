@@ -11,12 +11,21 @@ import {
 // Mock dependencies
 vi.mock('@/lib/db', () => ({
   getUserByBusinessNumber: vi.fn(),
+  incrementFailedLogin: vi.fn(() => 1),
+  lockAccount: vi.fn(),
+  resetFailedLogin: vi.fn(),
+  createPasswordResetToken: vi.fn(() => ({ token: 'mock-token' })),
 }));
 
 vi.mock('@/lib/auth', () => ({
   verifyPassword: vi.fn(),
   setSession: vi.fn(),
   normalizeBusinessNumber: vi.fn((bn: string) => bn.replace(/\D/g, '')),
+  formatBusinessNumber: vi.fn((bn: string) => bn),
+}));
+
+vi.mock('@/lib/email', () => ({
+  sendEmail: vi.fn(),
 }));
 
 const { getUserByBusinessNumber } = await import('@/lib/db');
@@ -74,11 +83,11 @@ describe('POST /api/auth/login', () => {
     const json = await res.json();
 
     expect(res.status).toBe(401);
-    expect(json.error).toContain('비밀번호가 일치하지');
+    expect(json.error).toContain('비밀번호가 일치하지 않습니다');
   });
 
   it('미승인 사용자는 403을 반환한다', async () => {
-    mockGetUser.mockResolvedValue(mockPendingUser);
+    mockGetUser.mockResolvedValue({ ...mockPendingUser, failed_login_attempts: 0 });
     mockVerifyPassword.mockResolvedValue(true);
 
     const res = await POST(createLoginRequest({
