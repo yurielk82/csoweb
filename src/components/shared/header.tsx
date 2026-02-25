@@ -20,7 +20,7 @@ import {
   UserCog,
   Search,
   Calculator,
-  ShieldCheck,
+  Link2,
   Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -75,11 +75,11 @@ export function Header() {
     { href: '/admin', label: '대시보드', icon: LayoutDashboard },
     { href: '/admin/master', label: '정산서 마스터 조회', icon: Search },
     { href: '/admin/upload', label: '정산서 업로드', icon: Upload },
-    { href: '/admin/integrity', label: '무결성 검증', icon: ShieldCheck },
     { href: '/admin/columns', label: '컬럼 설정', icon: Columns },
     { href: '/admin/data', label: '데이터 관리', icon: Database },
     { href: '/admin/approvals', label: '회원 승인', icon: Users },
     { href: '/admin/members', label: '회원 관리', icon: UserCog },
+    { href: '/admin/integrity', label: '거래처 매핑', icon: Link2 },
     { href: '/admin/emails', label: '이메일 이력', icon: Mail },
     { href: '/admin/mailmerge', label: '메일머지', icon: MailPlus },
   ];

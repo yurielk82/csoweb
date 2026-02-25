@@ -441,7 +441,7 @@ export default function SettlementIntegrityManager() {
       toast({
         variant: 'destructive',
         title: '오류',
-        description: '무결성 검증 데이터를 불러오는 중 오류가 발생했습니다.',
+        description: '거래처 매핑 데이터를 불러오는 중 오류가 발생했습니다.',
       });
     } finally {
       setLoading(false);
@@ -1075,7 +1075,7 @@ export default function SettlementIntegrityManager() {
       XLSX.utils.book_append_sheet(wb, ws, '문제항목');
 
       const today = new Date().toISOString().split('T')[0];
-      XLSX.writeFile(wb, `정산서_무결성검증_문제항목_${today}.xlsx`);
+      XLSX.writeFile(wb, `거래처매핑_문제항목_${today}.xlsx`);
 
       toast({
         title: '다운로드 완료',
@@ -1113,7 +1113,7 @@ export default function SettlementIntegrityManager() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Building2 className="h-6 w-6" />
-            정산서 무결성 검증
+            거래처 매핑
           </h1>
           <p className="text-muted-foreground">
             사업자번호별 CSO관리업체명 매핑 상태를 관리합니다.
