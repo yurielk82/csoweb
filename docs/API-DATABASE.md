@@ -130,7 +130,7 @@ password_reset_tokens (비밀번호 재설정)    ← users.email과 연결
 
 ### 핵심 테이블: settlements
 
-정산 데이터. 제약사 엑셀에서 업로드된 원본 데이터.
+정산 데이터. SIT솔루션 Compare&Chart에서 다운로드한 엑셀 원본 데이터.
 
 | 주요 컬럼 | 설명 |
 |-----------|------|
