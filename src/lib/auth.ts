@@ -90,5 +90,8 @@ export function isValidEmail(email: string): boolean {
 }
 
 export function isValidPassword(password: string): boolean {
-  return password.length >= 6;
+  if (password.length < 8) return false;
+  if (!/[a-zA-Z]/.test(password)) return false;
+  if (!/[0-9]/.test(password)) return false;
+  return true;
 }

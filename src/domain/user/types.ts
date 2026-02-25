@@ -21,6 +21,8 @@ export interface User {
   must_change_password: boolean;
   profile_complete: boolean;
   password_changed_at?: string;
+  failed_login_attempts: number;
+  locked_at?: string;
   created_at: string;
   updated_at: string;
 }

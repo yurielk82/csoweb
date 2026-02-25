@@ -65,8 +65,8 @@ export default function ChangePasswordPage() {
     e.preventDefault();
     setError('');
 
-    if (formData.new_password.length < 6) {
-      setError('비밀번호는 6자 이상이어야 합니다.');
+    if (formData.new_password.length < 8 || !/[a-zA-Z]/.test(formData.new_password) || !/[0-9]/.test(formData.new_password)) {
+      setError('비밀번호는 영문+숫자 조합 8자 이상이어야 합니다.');
       return;
     }
 
@@ -157,7 +157,7 @@ export default function ChangePasswordPage() {
               <Input
                 id="new_password"
                 type="password"
-                placeholder="6자 이상"
+                placeholder="영문+숫자 조합 8자 이상"
                 value={formData.new_password}
                 onChange={(e) => setFormData({ ...formData, new_password: e.target.value })}
                 required

@@ -259,8 +259,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('비밀번호는 6자 이상이어야 합니다.');
+    if (formData.password.length < 8 || !/[a-zA-Z]/.test(formData.password) || !/[0-9]/.test(formData.password)) {
+      setError('비밀번호는 영문+숫자 조합 8자 이상이어야 합니다.');
       setLoading(false);
       return;
     }
@@ -510,7 +510,7 @@ export default function RegisterPage() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="6자 이상"
+                  placeholder="영문+숫자 조합 8자 이상"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required

@@ -93,6 +93,18 @@ export async function completeUserProfile(businessNumber: string, data: UpdateUs
   return getUserRepository().completeProfile(businessNumber, data);
 }
 
+export async function incrementFailedLogin(businessNumber: string): Promise<number> {
+  return getUserRepository().incrementFailedLogin(businessNumber);
+}
+
+export async function lockAccount(businessNumber: string): Promise<boolean> {
+  return getUserRepository().lockAccount(businessNumber);
+}
+
+export async function resetFailedLogin(businessNumber: string): Promise<boolean> {
+  return getUserRepository().resetFailedLogin(businessNumber);
+}
+
 // ============================================
 // Settlement Operations
 // ============================================

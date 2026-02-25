@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword, isValidPassword } from '@/lib/auth';
-import { validatePasswordResetToken, markTokenAsUsed, completePasswordChange, getUserByBusinessNumber } from '@/lib/db';
+import { validatePasswordResetToken, markTokenAsUsed, completePasswordChange, resetFailedLogin, getUserByBusinessNumber } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     
     if (!isValidPassword(new_password)) {
       return NextResponse.json(
-        { success: false, error: '비밀번호는 6자 이상이어야 합니다.' },
+        { success: false, error: '비밀번호는 영문+숫자 조합 8자 이상이어야 합니다.' },
         { status: 400 }
       );
     }
@@ -113,8 +113,9 @@ export async function POST(request: NextRequest) {
     // 비밀번호 해싱
     const passwordHash = await hashPassword(new_password);
     
-    // 비밀번호 변경 (must_change_password = false 설정)
+    // 비밀번호 변경 (must_change_password = false 설정) + 계정 잠금 해제
     const success = await completePasswordChange(business_number, passwordHash);
+    await resetFailedLogin(business_number);
     
     if (!success) {
       return NextResponse.json(
