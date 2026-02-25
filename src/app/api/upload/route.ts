@@ -28,6 +28,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 파일 확장자 검증
+    const allowedExtensions = ['.xlsx', '.xls'];
+    const fileName = file.name.toLowerCase();
+    const fileExtension = fileName.substring(fileName.lastIndexOf('.'));
+    if (!allowedExtensions.includes(fileExtension)) {
+      return NextResponse.json(
+        { success: false, error: `허용되지 않는 파일 형식입니다. Excel 파일(.xlsx, .xls)만 업로드 가능합니다.` },
+        { status: 400 }
+      );
+    }
+
+    // MIME 타입 검증
+    const allowedMimeTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+    ];
+    if (file.type && !allowedMimeTypes.includes(file.type)) {
+      return NextResponse.json(
+        { success: false, error: `허용되지 않는 파일 형식입니다. Excel 파일(.xlsx, .xls)만 업로드 가능합니다.` },
+        { status: 400 }
+      );
+    }
+
     // 파일 크기 체크 (20MB 제한)
     const fileSizeMB = file.size / (1024 * 1024);
     if (file.size > 20 * 1024 * 1024) {

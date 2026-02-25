@@ -3,9 +3,10 @@ import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
 import type { UserSession } from '@/types';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'cso-settlement-portal-secret-key-2026'
-);
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET 환경변수가 설정되지 않았습니다.');
+}
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 const COOKIE_NAME = 'cso_session';
 const COOKIE_OPTIONS = {

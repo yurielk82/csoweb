@@ -87,7 +87,7 @@ export default function RegisterPage() {
   // 다음 주소 검색 스크립트 로드
   useEffect(() => {
     const script = document.createElement('script');
-    script.src = '//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
+    script.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
     script.async = true;
     document.head.appendChild(script);
     return () => {
