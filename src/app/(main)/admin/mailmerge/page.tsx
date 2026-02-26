@@ -44,7 +44,9 @@ const AVAILABLE_VARIABLES = [
   { key: '업체명', description: '업체명' },
   { key: '사업자번호', description: '사업자번호' },
   { key: '이메일', description: '이메일 주소' },
-  { key: '정산월', description: '정산 년월 (YYYY-MM)' },
+  { key: '대표자명', description: '회사 대표자 이름' },
+  { key: '정산월', description: '정산 년월 (예: 2026년 01월)' },
+  { key: '정산월+1', description: '정산 다음월 (예: 2월)' },
   { key: '총_금액', description: '총 금액 (= 전체 금액 합계)' },
   { key: '총_수수료', description: '제약수수료 합계 (= 세금계산서 발행 금액)' },
   { key: '제약수수료_합계', description: '제약수수료 합계 (상세)' },
@@ -99,9 +101,7 @@ export default function MailMergePage() {
 
 {{정산월}} 정산 내역을 안내드립니다.
 
-▪ 총 금액: {{총_금액}}
-▪ 총 수수료: {{총_수수료}}
-▪ 데이터 건수: {{데이터_건수}}
+★ 총 수수료(세금계산서 발행 금액): {{총_수수료}}
 
 자세한 내용은 정산서 포털에서 확인해 주세요.
 

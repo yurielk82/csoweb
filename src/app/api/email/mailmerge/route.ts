@@ -42,6 +42,11 @@ interface MailMergeData {
   sections?: SectionConfig[];
 }
 
+// Escape special regex characters in a string
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // Replace template variables
 function replaceVariables(
   template: string,
@@ -49,7 +54,7 @@ function replaceVariables(
 ): string {
   let result = template;
   for (const [key, value] of Object.entries(data)) {
-    const regex = new RegExp(`{{${key}}}`, 'g');
+    const regex = new RegExp(`\\{\\{${escapeRegex(key)}\\}\\}`, 'g');
     result = result.replace(regex, String(value));
   }
   return result;
@@ -58,6 +63,21 @@ function replaceVariables(
 // Format currency
 function formatCurrency(value: number): string {
   return value.toLocaleString('ko-KR') + '원';
+}
+
+// Format year-month: "2026-01" → "2026년 01월"
+function formatYearMonth(ym: string): string {
+  if (!ym) return '';
+  const [year, month] = ym.split('-');
+  return `${year}년 ${month}월`;
+}
+
+// Format next month: "2026-01" → "2월", "2026-12" → "1월"
+function formatNextMonth(ym: string): string {
+  if (!ym) return '';
+  const month = Number(ym.split('-')[1]);
+  const next = month === 12 ? 1 : month + 1;
+  return `${next}월`;
 }
 
 // Build content HTML from sections in order
@@ -180,6 +200,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 회사 정보 (대표자명 등) 사전 조회
+    const companyInfo = await getCompanyRepository().get();
+
     // 정산서 테이블 첨부 시 사전 데이터 로드
     let visibleColumns: { key: string; name: string; isNumeric: boolean }[] = [];
     let notice = '';
@@ -197,7 +220,6 @@ export async function POST(request: NextRequest) {
           isNumeric: NUMERIC_COLUMN_KEYS.includes(c.column_key),
         }));
 
-      const companyInfo = await getCompanyRepository().get();
       notice = companyInfo.notice_content || '';
 
       const selectCols = ['CSO관리업체', ...visibleColumns.map(c => c.key)].join(', ');
@@ -252,7 +274,9 @@ export async function POST(request: NextRequest) {
             '업체명': user.company_name,
             '사업자번호': user.business_number,
             '이메일': user.email,
-            '정산월': year_month || '',
+            '정산월': formatYearMonth(year_month || ''),
+            '정산월+1': formatNextMonth(year_month || ''),
+            '대표자명': companyInfo.ceo_name || '',
             '총_금액': formatCurrency(summary.총_금액),
             '총_수수료': formatCurrency(summary.총_수수료),
             '제약수수료_합계': formatCurrency(summary.제약수수료_합계),
@@ -386,6 +410,9 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // 회사 정보 (대표자명 등)
+    const companyInfo = await getCompanyRepository().get();
+
     // Resolve target company: real company or sample
     let companyName = '[테스트] 샘플 업체';
     let businessNumber = '000-00-00000';
@@ -410,7 +437,9 @@ export async function PATCH(request: NextRequest) {
       '업체명': companyName,
       '사업자번호': businessNumber,
       '이메일': session.email,
-      '정산월': year_month || '',
+      '정산월': formatYearMonth(year_month || ''),
+      '정산월+1': formatNextMonth(year_month || ''),
+      '대표자명': companyInfo.ceo_name || '',
       '총_금액': formatCurrency(summary.총_금액),
       '총_수수료': formatCurrency(summary.총_수수료),
       '제약수수료_합계': formatCurrency(summary.제약수수료_합계),
@@ -443,7 +472,6 @@ export async function PATCH(request: NextRequest) {
           isNumeric: NUMERIC_COLUMN_KEYS.includes(c.column_key),
         }));
 
-      const companyInfo = await getCompanyRepository().get();
       const notice = companyInfo.notice_content || '';
 
       if (test_business_number) {
@@ -571,11 +599,14 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    const sampleYm = year_month || '2026-01';
     const previewVariables: Record<string, string | number> = {
       '업체명': companyName,
       '사업자번호': businessNumber,
       '이메일': email,
-      '정산월': year_month || '2026-01',
+      '정산월': formatYearMonth(sampleYm),
+      '정산월+1': formatNextMonth(sampleYm),
+      '대표자명': '홍길동',
       '총_금액': formatCurrency(summary.총_금액),
       '총_수수료': formatCurrency(summary.총_수수료),
       '제약수수료_합계': formatCurrency(summary.제약수수료_합계),
