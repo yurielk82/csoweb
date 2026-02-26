@@ -16,9 +16,6 @@ export async function GET() {
       );
     }
     
-    // Initialize default column settings if needed
-    await getColumnSettingRepository().initialize(DEFAULT_COLUMN_SETTINGS);
-    
     const columns = await getColumnSettingRepository().findAll();
     
     return NextResponse.json({

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface SummaryCardsProps {
@@ -14,7 +15,7 @@ function formatNumber(value: number | null) {
   return value.toLocaleString('ko-KR');
 }
 
-export function SummaryCards({ totals }: SummaryCardsProps) {
+export const SummaryCards = memo(function SummaryCards({ totals }: SummaryCardsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <Card>
@@ -38,4 +39,4 @@ export function SummaryCards({ totals }: SummaryCardsProps) {
       </Card>
     </div>
   );
-}
+});

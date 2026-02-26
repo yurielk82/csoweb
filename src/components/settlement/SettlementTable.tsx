@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { FileSpreadsheet } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Settlement, ColumnSetting } from '@/types';
@@ -63,7 +64,7 @@ function buildGroupedData(settlements: Settlement[]): GroupedData[] {
   return result;
 }
 
-export function SettlementTable({
+export const SettlementTable = memo(function SettlementTable({
   settlements, displayColumns, labelColumnIndex, selectedMonth, yearMonths, searchQuery,
 }: SettlementTableProps) {
   const groupedData = settlements ? buildGroupedData(settlements) : [];
@@ -168,4 +169,4 @@ export function SettlementTable({
       </CardContent>
     </Card>
   );
-}
+});

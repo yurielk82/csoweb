@@ -44,23 +44,40 @@ export function useSettlementData() {
   const [error, setError] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<ErrorType>(null);
 
-  // 초기화: 3개 API 병렬 호출 (직렬 → Promise.all)
+  // 초기 로드 완료 여부 (init API가 settlements도 포함)
+  const [initDataLoaded, setInitDataLoaded] = useState(false);
+
+  // ── 초기화: 1회 통합 API 호출 (기존 3+1 → 1) ──
   useEffect(() => {
     const init = async () => {
       try {
-        const [columnsRes, yearMonthsRes, noticeRes] = await Promise.all([
-          fetch('/api/columns').then(r => r.json()).catch(() => ({ success: false })),
-          fetch('/api/settlements/year-months').then(r => {
-            if (r.status === 401) return { success: false, _authError: true };
-            if (!r.ok) return { success: false, _networkError: true };
-            return r.json();
-          }).catch(() => ({ success: false, _networkError: true })),
-          fetch('/api/settings/company', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ success: false })),
-        ]);
+        const res = await fetch('/api/dashboard/init?page=1&page_size=50');
+
+        if (res.status === 401) {
+          setError('로그인이 필요합니다. 다시 로그인해주세요.');
+          setErrorType('auth');
+          return;
+        }
+
+        if (!res.ok) {
+          setError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+          setErrorType('network');
+          return;
+        }
+
+        const result = await res.json();
+
+        if (!result.success) {
+          setError(result.error || '초기화 중 오류가 발생했습니다.');
+          setErrorType('no_data');
+          return;
+        }
+
+        const d = result.data;
 
         // 컬럼 설정
-        if (columnsRes.success) {
-          const visibleColumns = columnsRes.data.filter((c: ColumnSetting) => c.is_visible);
+        if (d.columns) {
+          const visibleColumns = d.columns as ColumnSetting[];
           setColumns(visibleColumns);
           const requiredKeys = visibleColumns
             .filter((c: ColumnSetting) => c.is_required)
@@ -69,28 +86,30 @@ export function useSettlementData() {
         }
 
         // 정산월 목록
-        if (yearMonthsRes._authError) {
-          setError('로그인이 필요합니다. 다시 로그인해주세요.');
-          setErrorType('auth');
-        } else if (yearMonthsRes._networkError) {
-          setError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
-          setErrorType('network');
-        } else if (yearMonthsRes.success) {
-          const months = yearMonthsRes.data || [];
-          setYearMonths(months);
-          if (months.length > 0) {
-            setSelectedMonth(months[0]);
-          } else {
-            setErrorType('no_matching');
-          }
+        const months = d.yearMonths || [];
+        setYearMonths(months);
+
+        if (d.noMatching) {
+          setErrorType('no_matching');
+        } else if (months.length > 0) {
+          setSelectedMonth(months[0]);
         } else {
-          setError(yearMonthsRes.error || '정산월 목록을 불러올 수 없습니다.');
-          setErrorType('no_data');
+          setErrorType('no_matching');
         }
 
         // Notice
-        if (noticeRes.success && noticeRes.data) {
-          setNoticeSettings(noticeRes.data);
+        if (d.notice) {
+          setNoticeSettings(d.notice);
+        }
+
+        // 첫 페이지 데이터 (init이 settlements까지 포함)
+        if (d.settlements && d.pagination && d.totals) {
+          setData({
+            settlements: d.settlements,
+            pagination: d.pagination,
+            totals: d.totals,
+          });
+          setInitDataLoaded(true);
         }
       } catch (err) {
         console.error('Init error:', err);
@@ -104,7 +123,7 @@ export function useSettlementData() {
     init();
   }, []);
 
-  // Fetch settlements — 검색/페이지네이션은 서버에서 처리
+  // ── 이후 페이지/월/검색 변경 시만 settlements API 호출 ──
   const fetchSettlements = useCallback(async () => {
     if (!selectedMonth) return;
 
@@ -158,9 +177,17 @@ export function useSettlementData() {
     }
   }, [selectedMonth, page, searchQuery, errorType]);
 
+  // selectedMonth/page/searchQuery 변경 시 데이터 재조회 (단, init 직후 첫 로드는 스킵)
   useEffect(() => {
-    fetchSettlements();
-  }, [fetchSettlements]);
+    if (initDataLoaded) {
+      // init에서 이미 첫 데이터를 받았으므로 스킵하고, 이후부터는 개별 fetch
+      setInitDataLoaded(false);
+      return;
+    }
+    if (!initialLoading) {
+      fetchSettlements();
+    }
+  }, [fetchSettlements, initialLoading, initDataLoaded]);
 
   // Handlers
   const handleSearch = () => {

@@ -5,6 +5,31 @@
 
 ---
 
+## [0.18.3] - 2026-02-27
+
+### Performance — 사이트 전체 성능 리뷰 반영
+
+#### 통합 init API (가장 큰 개선)
+- **신규 `GET /api/dashboard/init`**: columns + yearMonths + notice + settlements를 1회 API 호출로 반환
+- 대시보드 초기 로드: **4개 API (getSession × 4, cold start × 4) → 1개 API (getSession × 1, cold start × 1)**
+- 마스터 조회 초기 로드: **4개 API → 2개 API** (init + users)
+
+#### 기타 최적화
+- `/api/columns` route에서 `initialize()` 제거 — 매 요청마다 불필요한 DB 조회 1회 제거
+- `SettlementTable`, `SummaryCards`에 `React.memo` 적용 — 부모 리렌더 시 불필요한 grouping 재계산 방지
+- `useSettlementData` 훅 리팩토링 — init에서 첫 페이지 데이터까지 받아 이중 fetch 방지
+
+#### 변경 전후 비교
+
+| 항목 | v0.18.2 | v0.18.3 |
+|------|---------|---------|
+| 대시보드 초기 API 호출 | 4회 (columns + year-months + company + settlements) | **1회** (dashboard/init) |
+| getSession() 호출 | 5회 (layout + API × 4) | **2회** (layout + init) |
+| Vercel cold start 노출 | 4회 (각 API 별도 Lambda) | **1회** |
+| SettlementTable 리렌더 | 매번 grouping 재계산 | React.memo로 변경 시에만 |
+
+---
+
 ## [0.18.2] - 2026-02-27
 
 ### Performance

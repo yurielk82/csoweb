@@ -126,35 +126,36 @@ export default function AdminMasterPage() {
       )
     : csoList;
 
-  // 초기화: 메타 데이터만 병렬 로드 (정산 데이터는 로드하지 않음)
+  // 초기화: 통합 init API 1회 + users API 1회 (기존 4회 → 2회)
   useEffect(() => {
     const init = async () => {
       try {
-        const [columnsRes, yearMonthsRes, noticeRes, usersRes] = await Promise.all([
-          fetch('/api/columns').then(r => r.json()).catch(() => ({ success: false })),
-          fetch('/api/settlements/year-months').then(r => r.json()).catch(() => ({ success: false })),
-          fetch('/api/settings/company', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ success: false })),
+        const [initRes, usersRes] = await Promise.all([
+          fetch('/api/dashboard/init?include_settlements=false').then(r => r.json()).catch(() => ({ success: false })),
           fetch('/api/users?status=approved').then(r => r.json()).catch(() => ({ success: false })),
         ]);
 
-        if (columnsRes.success) {
-          const visibleColumns = columnsRes.data.filter((c: ColumnSetting) => c.is_visible);
-          setColumns(visibleColumns);
-          const requiredKeys = visibleColumns
-            .filter((c: ColumnSetting) => c.is_required)
-            .map((c: ColumnSetting) => c.column_key);
-          setSelectedColumns(requiredKeys.length > 0 ? requiredKeys : visibleColumns.map((c: ColumnSetting) => c.column_key));
-        }
+        if (initRes.success) {
+          const d = initRes.data;
 
-        if (yearMonthsRes.success) {
-          setYearMonths(yearMonthsRes.data || []);
-          if (yearMonthsRes.data?.length > 0) {
-            setSelectedMonth(yearMonthsRes.data[0]);
+          if (d.columns) {
+            const visibleColumns = d.columns as ColumnSetting[];
+            setColumns(visibleColumns);
+            const requiredKeys = visibleColumns
+              .filter((c: ColumnSetting) => c.is_required)
+              .map((c: ColumnSetting) => c.column_key);
+            setSelectedColumns(requiredKeys.length > 0 ? requiredKeys : visibleColumns.map((c: ColumnSetting) => c.column_key));
           }
-        }
 
-        if (noticeRes.success && noticeRes.data) {
-          setNoticeSettings(noticeRes.data);
+          const months = d.yearMonths || [];
+          setYearMonths(months);
+          if (months.length > 0) {
+            setSelectedMonth(months[0]);
+          }
+
+          if (d.notice) {
+            setNoticeSettings(d.notice);
+          }
         }
 
         if (usersRes.success) {
