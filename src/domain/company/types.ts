@@ -42,6 +42,8 @@ export interface CompanyInfo {
   smtp_password: string;
   smtp_from_name: string;
   smtp_from_email: string;
+  resend_from_email: string;
+  test_recipient_email: string;
   email_send_delay_ms: number;
   // 이메일 알림 유형별 ON/OFF
   email_notifications: EmailNotifications;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { getSession } from '@/lib/auth';
-import { getCompanyRepository, getUserRepository } from '@/infrastructure/supabase';
+import { getCompanyRepository } from '@/infrastructure/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,33 +84,31 @@ export async function POST(request: NextRequest) {
       }
 
       // 테스트 메일 발송 (선택적)
-      if (send_test_email && session.business_number) {
-        const user = await getUserRepository().findByBusinessNumber(session.business_number);
-        if (user?.email) {
-          const fromName = smtp_from_name || 'CSO 정산서 포털';
-          const fromEmail = smtp_from_email || smtp_user;
+      if (send_test_email) {
+        const testRecipient = companyInfo.test_recipient_email || session.email;
+        const fromName = smtp_from_name || 'CSO 정산서 포털';
+        const fromEmail = smtp_from_email || smtp_user;
 
-          await transporter.sendMail({
-            from: `${fromName} <${fromEmail}>`,
-            to: user.email,
-            subject: '[테스트] SMTP 연결 테스트',
-            html: `
-              <div style="font-family: sans-serif; padding: 20px;">
-                <h2>SMTP 연결 테스트 성공</h2>
-                <p>이 메일은 SMTP 설정 테스트를 위해 발송되었습니다.</p>
-                <p style="color: #6b7280; font-size: 12px;">호스트: ${smtp_host}:${smtp_port}</p>
-              </div>
-            `,
-          });
+        await transporter.sendMail({
+          from: `${fromName} <${fromEmail}>`,
+          to: testRecipient,
+          subject: '[테스트] SMTP 연결 테스트',
+          html: `
+            <div style="font-family: sans-serif; padding: 20px;">
+              <h2>SMTP 연결 테스트 성공</h2>
+              <p>이 메일은 SMTP 설정 테스트를 위해 발송되었습니다.</p>
+              <p style="color: #6b7280; font-size: 12px;">호스트: ${smtp_host}:${smtp_port}</p>
+            </div>
+          `,
+        });
 
-          return NextResponse.json({
-            success: true,
-            data: {
-              connected: true,
-              message: `SMTP 연결 성공. 테스트 메일이 ${user.email}로 발송되었습니다.`,
-            },
-          });
-        }
+        return NextResponse.json({
+          success: true,
+          data: {
+            connected: true,
+            message: `SMTP 연결 성공. 테스트 메일이 ${testRecipient}로 발송되었습니다.`,
+          },
+        });
       }
 
       return NextResponse.json({
