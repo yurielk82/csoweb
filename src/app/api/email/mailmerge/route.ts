@@ -335,6 +335,123 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Test send to admin's own email
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getSession();
+
+    if (!session || !session.is_admin) {
+      return NextResponse.json(
+        { success: false, error: '관리자 권한이 필요합니다.' },
+        { status: 403 }
+      );
+    }
+
+    const { subject, body, year_month, include_settlement_table, sections } = await request.json();
+    const orderedSections: SectionConfig[] = sections || DEFAULT_SECTIONS;
+
+    if (!subject || !body) {
+      return NextResponse.json(
+        { success: false, error: '제목과 내용을 입력해주세요.' },
+        { status: 400 }
+      );
+    }
+
+    // Use sample variables for test
+    const sampleVariables: Record<string, string | number> = {
+      '업체명': '[테스트] ABC 상사',
+      '사업자번호': '123-45-67890',
+      '이메일': session.email,
+      '정산월': year_month || '2026-01',
+      '총_금액': formatCurrency(15234000),
+      '총_수수료': formatCurrency(1781729),
+      '제약수수료_합계': formatCurrency(1781729),
+      '담당수수료_합계': formatCurrency(523400),
+      '데이터_건수': 127,
+      '총_수량': '1,250',
+    };
+
+    const testSubject = '[테스트] ' + replaceVariables(subject, sampleVariables);
+    const testBody = replaceVariables(body, sampleVariables);
+
+    // Build section HTML
+    const sectionHtmlMap: Record<EmailSectionId, string> = {
+      notice: '',
+      dashboard: '',
+      table: '',
+      body: buildBodyHtml(testBody),
+    };
+
+    let hasWideContent = false;
+
+    if (include_settlement_table && year_month) {
+      const allColumns = await getColumnSettingRepository().findAll();
+      const visibleColumns = allColumns
+        .filter(c => c.is_visible)
+        .sort((a, b) => a.display_order - b.display_order)
+        .map(c => ({
+          key: c.column_key,
+          name: c.column_name,
+          isNumeric: NUMERIC_COLUMN_KEYS.includes(c.column_key),
+        }));
+
+      const companyInfo = await getCompanyRepository().get();
+      const notice = companyInfo.notice_content || '';
+
+      const selectCols = ['CSO관리업체', ...visibleColumns.map(c => c.key)].join(', ');
+      const allData = await getSettlementRepository().findAll(year_month, selectCols);
+      const firstCSO = allData.find(s => s.CSO관리업체)?.CSO관리업체;
+
+      if (firstCSO) {
+        hasWideContent = true;
+        const sampleRows = allData.filter(s => s.CSO관리업체 === firstCSO).slice(0, 20);
+        const summary = {
+          총_금액: sampleRows.reduce((sum, r) => sum + (Number(r.금액) || 0), 0),
+          총_수수료: sampleRows.reduce((sum, r) => sum + (Number(r.제약수수료_합계) || 0), 0),
+          데이터_건수: sampleRows.length,
+          총_수량: sampleRows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
+        };
+
+        sectionHtmlMap.notice = buildNoticeHtml(notice);
+        sectionHtmlMap.dashboard = buildDashboardHtml(summary);
+        sectionHtmlMap.table = buildDataTableHtml({
+          columns: visibleColumns,
+          rows: sampleRows,
+          company_name: '[테스트] ABC 상사',
+          year_month,
+        });
+      }
+    }
+
+    const contentHtml = buildContentHtml(orderedSections, sectionHtmlMap);
+
+    // Send to admin's email
+    const result = await sendEmail(session.email, 'mail_merge', {
+      subject: testSubject,
+      contentHtml,
+      hasWideContent,
+    });
+
+    if (result.success) {
+      return NextResponse.json({
+        success: true,
+        data: { email: session.email },
+      });
+    } else {
+      return NextResponse.json(
+        { success: false, error: result.error || '테스트 발송에 실패했습니다.' },
+        { status: 500 }
+      );
+    }
+  } catch (error) {
+    console.error('Test send error:', error);
+    return NextResponse.json(
+      { success: false, error: '테스트 발송 중 오류가 발생했습니다.' },
+      { status: 500 }
+    );
+  }
+}
+
 // Preview mail merge
 export async function PUT(request: NextRequest) {
   try {

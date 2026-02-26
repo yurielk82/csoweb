@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MailPlus, Send, Eye, Loader2, Users, X, CheckCircle2, XCircle, Clock, ChevronUp, ChevronDown } from 'lucide-react';
+import { MailPlus, Send, Eye, Loader2, Users, X, CheckCircle2, XCircle, Clock, ChevronUp, ChevronDown, SendHorizonal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -109,6 +109,7 @@ export default function MailMergePage() {
 
   const [preview, setPreview] = useState<{ subject: string; contentHtml?: string; hasSettlementData?: boolean } | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [testSending, setTestSending] = useState(false);
 
   const [recipientCount, setRecipientCount] = useState<number | null>(null);
   const [loadingCount, setLoadingCount] = useState(false);
@@ -210,6 +211,33 @@ export default function MailMergePage() {
       }
     } catch {
       toast({ variant: 'destructive', title: '오류', description: '미리보기 생성 중 오류가 발생했습니다.' });
+    }
+  };
+
+  const handleTestSend = async () => {
+    setTestSending(true);
+    try {
+      const response = await fetch('/api/email/mailmerge', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject,
+          body,
+          year_month: recipientType === 'year_month' ? selectedYearMonth : undefined,
+          include_settlement_table: includeSettlementTable,
+          sections: includeSettlementTable ? getSectionsPayload() : undefined,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast({ title: '테스트 발송 완료', description: `${data.data.email}로 테스트 메일이 발송되었습니다.` });
+      } else {
+        toast({ variant: 'destructive', title: '테스트 발송 실패', description: data.error });
+      }
+    } catch {
+      toast({ variant: 'destructive', title: '오류', description: '테스트 발송 중 오류가 발생했습니다.' });
+    } finally {
+      setTestSending(false);
     }
   };
 
@@ -558,8 +586,12 @@ export default function MailMergePage() {
               </div>
             </ScrollArea>
           )}
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setPreviewOpen(false)}>닫기</Button>
+            <Button onClick={handleTestSend} disabled={testSending}>
+              {testSending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <SendHorizonal className="h-4 w-4 mr-2" />}
+              테스트 발송 (내 이메일)
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
