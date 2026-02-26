@@ -142,19 +142,29 @@ export default function SettingsPage() {
   const handleConnectionTest = async () => {
     setTesting(true);
     try {
+      // 먼저 설정을 DB에 저장
+      const saveRes = await fetch('/api/settings/company', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const saveResult = await saveRes.json();
+      if (!saveResult.success) {
+        toast({
+          variant: 'destructive',
+          title: '저장 실패',
+          description: saveResult.error || '설정 저장에 실패하여 연결 테스트를 진행할 수 없습니다.',
+        });
+        return;
+      }
+
+      // 저장된 DB 값으로 연결 테스트
       const res = await fetch('/api/settings/email-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           provider: formData.email_provider,
           send_test_email: false,
-          smtp_host: formData.smtp_host,
-          smtp_port: formData.smtp_port,
-          smtp_secure: formData.smtp_secure,
-          smtp_user: formData.smtp_user,
-          smtp_password: formData.smtp_password,
-          smtp_from_name: formData.smtp_from_name,
-          smtp_from_email: formData.smtp_from_email,
         }),
       });
 

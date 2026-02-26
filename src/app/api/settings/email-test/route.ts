@@ -31,32 +31,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (provider === 'smtp') {
-      const PASSWORD_MASK = '••••••••';
-
-      // Use form values from request body if provided, otherwise fall back to DB
-      let smtp_host = body.smtp_host;
-      let smtp_port = body.smtp_port;
-      let smtp_secure = body.smtp_secure;
-      let smtp_user = body.smtp_user;
-      let smtp_password = body.smtp_password;
-      let smtp_from_name = body.smtp_from_name;
-      let smtp_from_email = body.smtp_from_email;
-
-      // 마스킹된 비밀번호이거나 설정이 불완전한 경우 DB에서 가져오기
-      const needsDbFallback = !smtp_host || !smtp_user || smtp_password === PASSWORD_MASK;
-      if (needsDbFallback) {
-        const companyInfo = await getCompanyRepository().get();
-        smtp_host = smtp_host || companyInfo.smtp_host;
-        smtp_port = smtp_port ?? companyInfo.smtp_port;
-        smtp_secure = smtp_secure ?? companyInfo.smtp_secure;
-        smtp_user = smtp_user || companyInfo.smtp_user;
-        // 마스킹된 비밀번호면 DB 값 사용
-        if (!smtp_password || smtp_password === PASSWORD_MASK) {
-          smtp_password = companyInfo.smtp_password;
-        }
-        smtp_from_name = smtp_from_name || companyInfo.smtp_from_name;
-        smtp_from_email = smtp_from_email || companyInfo.smtp_from_email;
-      }
+      // DB에서 SMTP 설정 읽기
+      const companyInfo = await getCompanyRepository().get();
+      const smtp_host = companyInfo.smtp_host;
+      const smtp_port = companyInfo.smtp_port;
+      const smtp_secure = companyInfo.smtp_secure;
+      const smtp_user = companyInfo.smtp_user;
+      const smtp_password = companyInfo.smtp_password;
+      const smtp_from_name = companyInfo.smtp_from_name;
+      const smtp_from_email = companyInfo.smtp_from_email;
 
       if (!smtp_host || !smtp_user || !smtp_password) {
         return NextResponse.json({
