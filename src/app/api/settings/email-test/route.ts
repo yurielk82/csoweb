@@ -16,7 +16,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { provider, send_test_email } = await request.json();
+    const body = await request.json();
+    const { provider, send_test_email } = body;
 
     if (provider === 'resend') {
       const hasKey = !!process.env.RESEND_API_KEY;
@@ -30,8 +31,25 @@ export async function POST(request: NextRequest) {
     }
 
     if (provider === 'smtp') {
-      const companyInfo = await getCompanyRepository().get();
-      const { smtp_host, smtp_port, smtp_secure, smtp_user, smtp_password } = companyInfo;
+      // Use form values from request body if provided, otherwise fall back to DB
+      let smtp_host = body.smtp_host;
+      let smtp_port = body.smtp_port;
+      let smtp_secure = body.smtp_secure;
+      let smtp_user = body.smtp_user;
+      let smtp_password = body.smtp_password;
+      let smtp_from_name = body.smtp_from_name;
+      let smtp_from_email = body.smtp_from_email;
+
+      if (!smtp_host || !smtp_user) {
+        const companyInfo = await getCompanyRepository().get();
+        smtp_host = smtp_host || companyInfo.smtp_host;
+        smtp_port = smtp_port ?? companyInfo.smtp_port;
+        smtp_secure = smtp_secure ?? companyInfo.smtp_secure;
+        smtp_user = smtp_user || companyInfo.smtp_user;
+        smtp_password = smtp_password || companyInfo.smtp_password;
+        smtp_from_name = smtp_from_name || companyInfo.smtp_from_name;
+        smtp_from_email = smtp_from_email || companyInfo.smtp_from_email;
+      }
 
       if (!smtp_host || !smtp_user || !smtp_password) {
         return NextResponse.json({
@@ -66,8 +84,8 @@ export async function POST(request: NextRequest) {
       if (send_test_email && session.business_number) {
         const user = await getUserRepository().findByBusinessNumber(session.business_number);
         if (user?.email) {
-          const fromName = companyInfo.smtp_from_name || 'CSO 정산서 포털';
-          const fromEmail = companyInfo.smtp_from_email || smtp_user;
+          const fromName = smtp_from_name || 'CSO 정산서 포털';
+          const fromEmail = smtp_from_email || smtp_user;
 
           await transporter.sendMail({
             from: `${fromName} <${fromEmail}>`,

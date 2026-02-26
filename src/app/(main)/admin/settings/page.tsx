@@ -148,6 +148,13 @@ export default function SettingsPage() {
         body: JSON.stringify({
           provider: formData.email_provider,
           send_test_email: false,
+          smtp_host: formData.smtp_host,
+          smtp_port: formData.smtp_port,
+          smtp_secure: formData.smtp_secure,
+          smtp_user: formData.smtp_user,
+          smtp_password: formData.smtp_password,
+          smtp_from_name: formData.smtp_from_name,
+          smtp_from_email: formData.smtp_from_email,
         }),
       });
 

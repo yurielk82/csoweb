@@ -99,15 +99,17 @@ export async function GET(request: NextRequest) {
       }
     } else if (type === 'year_month' && ym) {
       const bns = await getSettlementRepository().getBusinessNumbersForMonth(ym);
-      count = bns.length;
+      const users = await getUserRepository().findAll();
+      // Only include business numbers that have a matching approved user
+      const validCompanies = bns
+        .map(bn => {
+          const user = users.find(u => u.business_number === bn && u.is_approved && !u.is_admin);
+          return user ? { business_number: bn, company_name: user.company_name } : null;
+        })
+        .filter((c): c is { business_number: string; company_name: string } => c !== null);
+      count = validCompanies.length;
       if (includeList) {
-        const users = await getUserRepository().findAll();
-        companies = bns
-          .map(bn => {
-            const user = users.find(u => u.business_number === bn);
-            return user ? { business_number: bn, company_name: user.company_name } : { business_number: bn, company_name: bn };
-          })
-          .sort((a, b) => a.company_name.localeCompare(b.company_name));
+        companies = validCompanies.sort((a, b) => a.company_name.localeCompare(b.company_name));
       }
     }
 
