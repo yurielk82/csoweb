@@ -321,7 +321,7 @@ export async function PUT(request: NextRequest) {
     const notice = companyInfo.notice_content || '';
 
     // 특정 업체 데이터 or 첫 번째 업체 데이터
-    let rows;
+    let rows: Record<string, unknown>[] = [];
     let companyName = 'ABC 상사';
 
     if (business_number) {
