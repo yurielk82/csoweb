@@ -6,7 +6,8 @@ import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 import { getEmailLogRepository, getCompanyRepository } from '@/infrastructure/supabase';
 import type { EmailTemplateType } from '@/types';
-import type { EmailProvider } from '@/domain/company/types';
+import type { EmailProvider, EmailNotifications } from '@/domain/company/types';
+import { DEFAULT_EMAIL_NOTIFICATIONS } from '@/domain/company/types';
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -30,6 +31,7 @@ interface EmailSettings {
   smtp_from_name: string;
   smtp_from_email: string;
   email_send_delay_ms: number;
+  email_notifications: EmailNotifications;
 }
 
 let _cachedSettings: EmailSettings | null = null;
@@ -53,6 +55,7 @@ async function getEmailSettings(): Promise<EmailSettings> {
     smtp_from_name: info.smtp_from_name || '',
     smtp_from_email: info.smtp_from_email || '',
     email_send_delay_ms: info.email_send_delay_ms ?? 6000,
+    email_notifications: info.email_notifications ?? { ...DEFAULT_EMAIL_NOTIFICATIONS },
   };
   _cacheTimestamp = now;
   return _cachedSettings;
@@ -696,6 +699,20 @@ export async function sendEmail(
   templateType: EmailTemplateType,
   data: Record<string, unknown>
 ): Promise<{ success: boolean; error?: string }> {
+  // 알림 토글 체크 (mail_merge는 수동 발송이므로 항상 허용)
+  if (templateType !== 'mail_merge') {
+    try {
+      const settings = await getEmailSettings();
+      const key = templateType as keyof EmailNotifications;
+      if (key in settings.email_notifications && !settings.email_notifications[key]) {
+        console.log(`[Email Skip] ${templateType} 알림이 비활성화되어 발송하지 않습니다.`);
+        return { success: true };
+      }
+    } catch {
+      // 설정 조회 실패 시 기본값(전부 활성)으로 진행
+    }
+  }
+
   // 회사 정보 조회
   let companyInfo: CompanyFooterInfo;
   let emailSettings: EmailSettings;
@@ -733,6 +750,7 @@ export async function sendEmail(
       smtp_from_name: '',
       smtp_from_email: '',
       email_send_delay_ms: 6000,
+      email_notifications: { ...DEFAULT_EMAIL_NOTIFICATIONS },
     };
   }
 

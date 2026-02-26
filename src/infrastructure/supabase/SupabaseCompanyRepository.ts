@@ -4,7 +4,8 @@
 
 import { supabase } from './client';
 import type { CompanyRepository } from '@/domain/company/CompanyRepository';
-import type { CompanyInfo } from '@/domain/company/types';
+import type { CompanyInfo, EmailNotifications } from '@/domain/company/types';
+import { DEFAULT_EMAIL_NOTIFICATIONS } from '@/domain/company/types';
 
 const DEFAULT_NOTICE_CONTENT = `1. 세금계산서 작성일자: {{정산월}} 29일 이내
 2. 세금계산서 취합 마감일: {{정산월}} 29일 (기간내 미발행 할 경우 무통보 이월)
@@ -34,7 +35,22 @@ const DEFAULT_COMPANY_INFO: CompanyInfo = {
   smtp_from_name: '',
   smtp_from_email: '',
   email_send_delay_ms: 6000,
+  email_notifications: { ...DEFAULT_EMAIL_NOTIFICATIONS },
 };
+
+function parseEmailNotifications(raw: unknown): EmailNotifications {
+  if (!raw || typeof raw !== 'object') {
+    return { ...DEFAULT_EMAIL_NOTIFICATIONS };
+  }
+  const obj = raw as Record<string, unknown>;
+  return {
+    registration_request: typeof obj.registration_request === 'boolean' ? obj.registration_request : true,
+    approval_complete: typeof obj.approval_complete === 'boolean' ? obj.approval_complete : true,
+    approval_rejected: typeof obj.approval_rejected === 'boolean' ? obj.approval_rejected : true,
+    settlement_uploaded: typeof obj.settlement_uploaded === 'boolean' ? obj.settlement_uploaded : true,
+    password_reset: typeof obj.password_reset === 'boolean' ? obj.password_reset : true,
+  };
+}
 
 export class SupabaseCompanyRepository implements CompanyRepository {
   async get(): Promise<CompanyInfo> {
@@ -74,6 +90,7 @@ export class SupabaseCompanyRepository implements CompanyRepository {
       smtp_from_name: data.smtp_from_name || '',
       smtp_from_email: data.smtp_from_email || '',
       email_send_delay_ms: data.email_send_delay_ms ?? 6000,
+      email_notifications: parseEmailNotifications(data.email_notifications),
     };
   }
 

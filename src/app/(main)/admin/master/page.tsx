@@ -628,7 +628,7 @@ export default function AdminMasterPage() {
 
       {/* Notice 편집 Dialog */}
       <Dialog open={noticeDialogOpen} onOpenChange={setNoticeDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>정산서 Notice 편집</DialogTitle>
             <DialogDescription>
@@ -639,8 +639,8 @@ export default function AdminMasterPage() {
             <Textarea
               value={noticeEditContent}
               onChange={(e) => setNoticeEditContent(e.target.value)}
-              rows={8}
-              className="font-mono text-sm"
+              rows={14}
+              className="font-mono text-sm min-h-[280px] resize-y"
             />
             <div className="text-xs text-muted-foreground space-y-1">
               <p className="font-medium">사용 가능한 변수:</p>

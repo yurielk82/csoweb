@@ -53,6 +53,7 @@
 - [ ] 커스텀 도메인 DNS 레코드 (사용 시)
 - [ ] 현재 JWT_SECRET 값
 - [ ] SMTP 설정 (DB `company_settings` 테이블에 저장됨 — 관리자 대시보드에서 확인)
+- [ ] 이메일 알림 ON/OFF 설정 (`company_settings.email_notifications` JSONB)
 - [ ] Vercel 프로젝트 URL (사용 시)
 
 ---
@@ -145,6 +146,7 @@ Supabase 대시보드에서 새 프로젝트를 생성합니다.
 2. 20260218_fix_cso_matching_rls.sql        ← cso_matching RLS 정책 추가
 3. 20260218_fix_rls_auth_initialization.sql ← RLS 성능 최적화 (4개 테이블)
 4. 20260225_add_account_lockout.sql         ← users 테이블 잠금 컬럼 추가
+5. 20260226_add_email_notifications.sql     ← company_settings 이메일 알림 ON/OFF JSONB 컬럼
 ```
 
 Supabase SQL Editor에서 순서대로 실행하거나, Supabase CLI를 사용합니다:

@@ -15,7 +15,7 @@
 <br />
 <div align="center">
   <h1>CSO 정산 포털</h1>
-  <p><code>v0.16.0</code></p>
+  <p><code>v0.17.0</code></p>
   <p>
     CSO(위탁영업) 업체가 제약사 정산 수수료를 조회하는 B2B 포털
   </p>
@@ -207,6 +207,7 @@ npm run test:e2e:headed   # Playwright headed 모드
 - [x] 메일머지 SSE 실시간 진행률 + 수신자 수 표시
 - [x] 대시보드 시스템 정보 강화 (SMTP/NTS 상태, 버전 동기화)
 - [x] 정산서 Notice 편집을 마스터조회 페이지로 이동 (사용 맥락에서 인라인 편집)
+- [x] 이메일 알림 유형별 ON/OFF 토글 (설정에서 5가지 유형별 발송 제어)
 - [ ] CSO 필터링
 - [x] DDD 레이어 전환 완료 (`lib/db.ts` 호환 레이어 제거)
 - [x] 테스트 인프라 구축 (Vitest + Playwright, 108개 케이스)
