@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import {
   Select,
@@ -66,18 +67,21 @@ interface ProgressEvent {
   status?: 'sent' | 'failed' | 'skipped';
   error?: string;
   delay?: number;
+  row_count?: number;
 }
 
 interface SendLog {
   company_name: string;
   status: 'sent' | 'failed' | 'skipped';
   error?: string;
+  row_count?: number;
 }
 
 export default function MailMergePage() {
   const { toast } = useToast();
   const [recipientType, setRecipientType] = useState<'all' | 'year_month'>('all');
   const [selectedYearMonth, setSelectedYearMonth] = useState<string>('');
+  const [includeSettlementTable, setIncludeSettlementTable] = useState(false);
   const [subject, setSubject] = useState('{{정산월}} 정산 안내 - {{업체명}}');
   const [body, setBody] = useState(`{{업체명}} 담당자님께,
 
@@ -91,7 +95,7 @@ export default function MailMergePage() {
 
 감사합니다.`);
 
-  const [preview, setPreview] = useState<{ subject: string; body: string } | null>(null);
+  const [preview, setPreview] = useState<{ subject: string; body: string; tableHtml?: string } | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
   // 수신자 수
@@ -118,6 +122,13 @@ export default function MailMergePage() {
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   const yearMonthOptions = generateYearMonthOptions();
+
+  // 수신 대상이 all로 바뀌면 테이블 첨부 해제
+  useEffect(() => {
+    if (recipientType !== 'year_month') {
+      setIncludeSettlementTable(false);
+    }
+  }, [recipientType]);
 
   // 수신자 수 조회
   const fetchRecipientCount = useCallback(async () => {
@@ -174,6 +185,7 @@ export default function MailMergePage() {
           subject,
           body,
           year_month: recipientType === 'year_month' ? selectedYearMonth : undefined,
+          include_settlement_table: includeSettlementTable,
         }),
       });
 
@@ -220,6 +232,7 @@ export default function MailMergePage() {
           subject,
           body,
           year_month: recipientType === 'year_month' ? selectedYearMonth : undefined,
+          include_settlement_table: includeSettlementTable,
         }),
         signal: abortController.signal,
       });
@@ -271,6 +284,7 @@ export default function MailMergePage() {
                     company_name: event.company_name!,
                     status: event.status!,
                     error: event.error,
+                    row_count: event.row_count,
                   }]);
                 }
               } else if (event.type === 'complete') {
@@ -369,7 +383,7 @@ export default function MailMergePage() {
           </RadioGroup>
 
           {recipientType === 'year_month' && (
-            <div className="ml-6">
+            <div className="ml-6 space-y-3">
               <Select value={selectedYearMonth} onValueChange={setSelectedYearMonth}>
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="정산월 선택" />
@@ -380,6 +394,23 @@ export default function MailMergePage() {
                   ))}
                 </SelectContent>
               </Select>
+
+              {selectedYearMonth && (
+                <div className="flex items-center space-x-2 rounded-lg border px-3 py-2 bg-muted/30">
+                  <Checkbox
+                    id="includeSettlementTable"
+                    checked={includeSettlementTable}
+                    onCheckedChange={(checked) => setIncludeSettlementTable(checked === true)}
+                    disabled={sending}
+                  />
+                  <Label htmlFor="includeSettlementTable" className="text-sm font-medium cursor-pointer">
+                    정산서 상세 데이터 테이블 포함
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
+                    (각 업체별 정산 상세 데이터가 이메일 본문 아래에 테이블로 첨부됩니다)
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
@@ -494,7 +525,9 @@ export default function MailMergePage() {
                         {log.company_name}
                       </span>
                       {log.status === 'sent' && (
-                        <span className="text-muted-foreground">— 발송 완료</span>
+                        <span className="text-muted-foreground">
+                          — {log.row_count ? `${log.row_count}건 테이블 포함 ` : ''}발송 완료
+                        </span>
                       )}
                       {log.status === 'failed' && (
                         <span className="text-red-500">— {log.error || '발송 실패'}</span>
@@ -549,7 +582,7 @@ export default function MailMergePage() {
 
       {/* Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className={preview?.tableHtml ? 'max-w-[90vw] max-h-[90vh]' : 'max-w-2xl'}>
           <DialogHeader>
             <DialogTitle>메일 미리보기</DialogTitle>
             <DialogDescription>
@@ -557,16 +590,24 @@ export default function MailMergePage() {
             </DialogDescription>
           </DialogHeader>
           {preview && (
-            <div className="space-y-4">
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">제목</p>
-                <p className="font-medium">{preview.subject}</p>
+            <ScrollArea className="max-h-[70vh]">
+              <div className="space-y-4">
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">제목</p>
+                  <p className="font-medium">{preview.subject}</p>
+                </div>
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">내용</p>
+                  <pre className="whitespace-pre-wrap text-sm">{preview.body}</pre>
+                </div>
+                {preview.tableHtml && (
+                  <div className="p-4 bg-muted rounded-lg overflow-x-auto">
+                    <p className="text-sm text-muted-foreground mb-2">정산서 테이블</p>
+                    <div dangerouslySetInnerHTML={{ __html: preview.tableHtml }} />
+                  </div>
+                )}
               </div>
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">내용</p>
-                <pre className="whitespace-pre-wrap text-sm">{preview.body}</pre>
-              </div>
-            </div>
+            </ScrollArea>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setPreviewOpen(false)}>

@@ -82,7 +82,6 @@ export function Header() {
     { href: '/admin/integrity', label: '거래처 매핑', icon: Link2 },
     { href: '/admin/emails', label: '이메일 이력', icon: Mail },
     { href: '/admin/mailmerge', label: '메일머지', icon: MailPlus },
-    { href: '/admin/settlement-email', label: '정산서 발송', icon: FileSpreadsheet },
   ];
 
   const userMenuItems = [

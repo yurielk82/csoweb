@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getUserRepository, getSettlementRepository } from '@/infrastructure/supabase';
-import { sendEmail, getEmailSendDelay } from '@/lib/email';
+import {
+  getUserRepository,
+  getSettlementRepository,
+  getCSOMatchingRepository,
+  getColumnSettingRepository,
+  getCompanyRepository,
+} from '@/infrastructure/supabase';
+import { sendEmail, getEmailSendDelay, buildSettlementTableHtml } from '@/lib/email';
+import { NUMERIC_COLUMN_KEYS } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
 interface MailMergeData {
-  recipients: string[]; // 'all' | 'year_month:YYYY-MM' | business_numbers[]
+  recipients: string[];
   subject: string;
   body: string;
   year_month?: string;
+  include_settlement_table?: boolean;
 }
 
 // Replace template variables
@@ -78,7 +86,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { recipients, subject, body, year_month }: MailMergeData = await request.json();
+    const { recipients, subject, body, year_month, include_settlement_table }: MailMergeData = await request.json();
 
     if (!subject || !body) {
       return NextResponse.json(
@@ -109,6 +117,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 정산서 테이블 첨부 시 사전 데이터 로드
+    let visibleColumns: { key: string; name: string; isNumeric: boolean }[] = [];
+    let notice = '';
+    let allSettlements: Record<string, unknown>[] = [];
+    let allMatches: { cso_company_name: string; business_number: string }[] = [];
+
+    if (include_settlement_table && year_month) {
+      const allColumns = await getColumnSettingRepository().findAll();
+      visibleColumns = allColumns
+        .filter(c => c.is_visible)
+        .sort((a, b) => a.display_order - b.display_order)
+        .map(c => ({
+          key: c.column_key,
+          name: c.column_name,
+          isNumeric: NUMERIC_COLUMN_KEYS.includes(c.column_key),
+        }));
+
+      const companyInfo = await getCompanyRepository().get();
+      notice = companyInfo.notice_content || '';
+
+      const selectCols = ['CSO관리업체', ...visibleColumns.map(c => c.key)].join(', ');
+      allSettlements = await getSettlementRepository().findAll(year_month, selectCols);
+
+      allMatches = await getCSOMatchingRepository().findAll();
+    }
+
     const delay = await getEmailSendDelay();
     const encoder = new TextEncoder();
 
@@ -122,7 +156,6 @@ export async function POST(request: NextRequest) {
           }
         };
 
-        // 시작 이벤트
         send({ type: 'start', total: targetBusinessNumbers.length, delay });
 
         let sent = 0;
@@ -165,14 +198,47 @@ export async function POST(request: NextRequest) {
             '총_수량': summary.총_수량.toLocaleString('ko-KR'),
           };
 
-          // Replace variables in subject and body
           const personalizedSubject = replaceVariables(subject, variables);
           const personalizedBody = replaceVariables(body, variables);
+
+          // 정산서 테이블 HTML 생성
+          let settlementTableHtml: string | undefined;
+          let rowCount = 0;
+
+          if (include_settlement_table && year_month && visibleColumns.length > 0) {
+            const matchedCSONames = allMatches
+              .filter(m => m.business_number === bn)
+              .map(m => m.cso_company_name);
+
+            const rows = matchedCSONames.length > 0
+              ? allSettlements.filter(s => matchedCSONames.includes((s.CSO관리업체 as string) || ''))
+              : [];
+
+            if (rows.length > 0) {
+              rowCount = rows.length;
+              const tableSummary = {
+                총_금액: rows.reduce((sum, r) => sum + (Number(r.금액) || 0), 0),
+                총_수수료: rows.reduce((sum, r) => sum + (Number(r.제약수수료_합계) || 0), 0),
+                데이터_건수: rows.length,
+                총_수량: rows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
+              };
+
+              settlementTableHtml = buildSettlementTableHtml({
+                columns: visibleColumns,
+                rows,
+                summary: tableSummary,
+                notice,
+                company_name: user.company_name,
+                year_month,
+              });
+            }
+          }
 
           // Send email
           const result = await sendEmail(user.email, 'mail_merge', {
             subject: personalizedSubject,
             body: personalizedBody,
+            settlementTableHtml,
           });
 
           if (result.success) {
@@ -181,7 +247,6 @@ export async function POST(request: NextRequest) {
             failed++;
           }
 
-          // 진행률 이벤트
           send({
             type: 'progress',
             current: i + 1,
@@ -191,15 +256,14 @@ export async function POST(request: NextRequest) {
             company_name: user.company_name,
             status: result.success ? 'sent' : 'failed',
             error: result.error,
+            row_count: rowCount || undefined,
           });
 
-          // 마지막 건이 아닌 경우 delay 적용
           if (i < targetBusinessNumbers.length - 1) {
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
 
-        // 완료 이벤트
         send({
           type: 'complete',
           sent,
@@ -239,7 +303,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { subject, body, year_month } = await request.json();
+    const { subject, body, year_month, include_settlement_table } = await request.json();
 
     // Sample data for preview
     const sampleVariables: Record<string, string | number> = {
@@ -258,11 +322,53 @@ export async function PUT(request: NextRequest) {
     const previewSubject = replaceVariables(subject || '', sampleVariables);
     const previewBody = replaceVariables(body || '', sampleVariables);
 
+    // 정산서 테이블 미리보기
+    let tableHtml: string | undefined;
+
+    if (include_settlement_table && year_month) {
+      const allColumns = await getColumnSettingRepository().findAll();
+      const visibleColumns = allColumns
+        .filter(c => c.is_visible)
+        .sort((a, b) => a.display_order - b.display_order)
+        .map(c => ({
+          key: c.column_key,
+          name: c.column_name,
+          isNumeric: NUMERIC_COLUMN_KEYS.includes(c.column_key),
+        }));
+
+      const companyInfo = await getCompanyRepository().get();
+      const notice = companyInfo.notice_content || '';
+
+      const selectCols = ['CSO관리업체', ...visibleColumns.map(c => c.key)].join(', ');
+      const allData = await getSettlementRepository().findAll(year_month, selectCols);
+      const firstCSO = allData.find(s => s.CSO관리업체)?.CSO관리업체;
+
+      if (firstCSO) {
+        const sampleRows = allData.filter(s => s.CSO관리업체 === firstCSO).slice(0, 20);
+        const summary = {
+          총_금액: sampleRows.reduce((sum, r) => sum + (Number(r.금액) || 0), 0),
+          총_수수료: sampleRows.reduce((sum, r) => sum + (Number(r.제약수수료_합계) || 0), 0),
+          데이터_건수: sampleRows.length,
+          총_수량: sampleRows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
+        };
+
+        tableHtml = buildSettlementTableHtml({
+          columns: visibleColumns,
+          rows: sampleRows,
+          summary,
+          notice,
+          company_name: 'ABC 상사',
+          year_month,
+        });
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         subject: previewSubject,
         body: previewBody,
+        tableHtml,
         variables: Object.keys(sampleVariables).map(k => `{{${k}}}`),
       },
     });

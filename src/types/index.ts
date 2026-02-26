@@ -108,8 +108,7 @@ export type EmailTemplateType =
   | 'approval_rejected'
   | 'settlement_uploaded'
   | 'password_reset'
-  | 'mail_merge'
-  | 'settlement_email';
+  | 'mail_merge';
 
 export type EmailStatus = 'pending' | 'sent' | 'failed';
 
