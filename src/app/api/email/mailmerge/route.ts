@@ -98,15 +98,18 @@ export async function GET(request: NextRequest) {
         companies = filtered.map(u => ({ business_number: u.business_number, company_name: u.company_name }));
       }
     } else if (type === 'year_month' && ym) {
-      const bns = await getSettlementRepository().getBusinessNumbersForMonth(ym);
+      // Use CSO matching to find companies with settlement data for the month
+      const csoNames = await getSettlementRepository().getCSOCompanyNamesForMonth(ym);
+      const allMatches = await getCSOMatchingRepository().findAll();
+      const matchedBns = new Set(
+        allMatches
+          .filter(m => csoNames.includes(m.cso_company_name))
+          .map(m => m.business_number)
+      );
       const users = await getUserRepository().findAll();
-      // Only include business numbers that have a matching approved user
-      const validCompanies = bns
-        .map(bn => {
-          const user = users.find(u => u.business_number === bn && u.is_approved && !u.is_admin);
-          return user ? { business_number: bn, company_name: user.company_name } : null;
-        })
-        .filter((c): c is { business_number: string; company_name: string } => c !== null);
+      const validCompanies = users
+        .filter(u => u.is_approved && !u.is_admin && matchedBns.has(u.business_number))
+        .map(u => ({ business_number: u.business_number, company_name: u.company_name }));
       count = validCompanies.length;
       if (includeList) {
         companies = validCompanies.sort((a, b) => a.company_name.localeCompare(b.company_name));
@@ -156,7 +159,15 @@ export async function POST(request: NextRequest) {
         .map(u => u.business_number);
     } else if (recipients.length === 1 && recipients[0].startsWith('year_month:')) {
       const ym = recipients[0].replace('year_month:', '');
-      targetBusinessNumbers = await getSettlementRepository().getBusinessNumbersForMonth(ym);
+      // Use CSO matching to find companies with settlement data for the month
+      const csoNames = await getSettlementRepository().getCSOCompanyNamesForMonth(ym);
+      const allMatches = await getCSOMatchingRepository().findAll();
+      const matchedBns = new Set(
+        allMatches
+          .filter(m => csoNames.includes(m.cso_company_name))
+          .map(m => m.business_number)
+      );
+      targetBusinessNumbers = [...matchedBns];
     } else {
       targetBusinessNumbers = recipients;
     }
