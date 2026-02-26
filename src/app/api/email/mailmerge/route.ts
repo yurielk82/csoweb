@@ -534,25 +534,45 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { subject, body, year_month, include_settlement_table, sections } = await request.json();
+    const { subject, body, year_month, include_settlement_table, sections, test_business_number } = await request.json();
     const orderedSections: SectionConfig[] = sections || DEFAULT_SECTIONS;
 
-    // Sample data for preview
-    const sampleVariables: Record<string, string | number> = {
-      '업체명': 'ABC 상사',
-      '사업자번호': '123-45-67890',
-      '이메일': 'sample@example.com',
+    // 실제 업체 데이터 또는 샘플 데이터
+    let companyName = 'ABC 상사';
+    let businessNumber = '123-45-67890';
+    let email = 'sample@example.com';
+    let summary = { 총_금액: 15234000, 총_수수료: 1781729, 제약수수료_합계: 1781729, 담당수수료_합계: 523400, 데이터_건수: 127, 총_수량: 1250 };
+    let useRealData = false;
+
+    if (test_business_number) {
+      const targetUser = await getUserRepository().findByBusinessNumber(test_business_number);
+      if (targetUser) {
+        companyName = targetUser.company_name;
+        businessNumber = targetUser.business_number;
+        email = targetUser.email;
+        useRealData = true;
+        if (year_month) {
+          const realSummary = await getSettlementRepository().getSummary(businessNumber, year_month);
+          summary = realSummary;
+        }
+      }
+    }
+
+    const previewVariables: Record<string, string | number> = {
+      '업체명': companyName,
+      '사업자번호': businessNumber,
+      '이메일': email,
       '정산월': year_month || '2026-01',
-      '총_금액': formatCurrency(15234000),
-      '총_수수료': formatCurrency(1781729),
-      '제약수수료_합계': formatCurrency(1781729),
-      '담당수수료_합계': formatCurrency(523400),
-      '데이터_건수': 127,
-      '총_수량': '1,250',
+      '총_금액': formatCurrency(summary.총_금액),
+      '총_수수료': formatCurrency(summary.총_수수료),
+      '제약수수료_합계': formatCurrency(summary.제약수수료_합계),
+      '담당수수료_합계': formatCurrency(summary.담당수수료_합계),
+      '데이터_건수': summary.데이터_건수,
+      '총_수량': summary.총_수량.toLocaleString('ko-KR'),
     };
 
-    const previewSubject = replaceVariables(subject || '', sampleVariables);
-    const previewBody = replaceVariables(body || '', sampleVariables);
+    const previewSubject = replaceVariables(subject || '', previewVariables);
+    const previewBody = replaceVariables(body || '', previewVariables);
 
     // 섹션별 HTML 미리보기
     const sectionHtmlMap: Record<EmailSectionId, string> = {
@@ -580,26 +600,57 @@ export async function PUT(request: NextRequest) {
 
       const selectCols = ['CSO관리업체', ...visibleColumns.map(c => c.key)].join(', ');
       const allData = await getSettlementRepository().findAll(year_month, selectCols);
-      const firstCSO = allData.find(s => s.CSO관리업체)?.CSO관리업체;
 
-      if (firstCSO) {
-        hasSettlementData = true;
-        const sampleRows = allData.filter(s => s.CSO관리업체 === firstCSO).slice(0, 20);
-        const summary = {
-          총_금액: sampleRows.reduce((sum, r) => sum + (Number(r.금액) || 0), 0),
-          총_수수료: sampleRows.reduce((sum, r) => sum + (Number(r.제약수수료_합계) || 0), 0),
-          데이터_건수: sampleRows.length,
-          총_수량: sampleRows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
-        };
+      if (useRealData) {
+        // 실제 업체: CSO 매칭 기반으로 데이터 조회
+        const allMatches = await getCSOMatchingRepository().findAll();
+        const matchedCSONames = allMatches
+          .filter(m => m.business_number === businessNumber)
+          .map(m => m.cso_company_name);
 
-        sectionHtmlMap.notice = buildNoticeHtml(notice);
-        sectionHtmlMap.dashboard = buildDashboardHtml(summary);
-        sectionHtmlMap.table = buildDataTableHtml({
-          columns: visibleColumns,
-          rows: sampleRows,
-          company_name: 'ABC 상사',
-          year_month,
-        });
+        if (matchedCSONames.length > 0) {
+          const rows = allData.filter(s => matchedCSONames.includes((s.CSO관리업체 as string) || ''));
+          if (rows.length > 0) {
+            hasSettlementData = true;
+            const tableSummary = {
+              총_금액: rows.reduce((sum, r) => sum + (Number(r.금액) || 0), 0),
+              총_수수료: rows.reduce((sum, r) => sum + (Number(r.제약수수료_합계) || 0), 0),
+              데이터_건수: rows.length,
+              총_수량: rows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
+            };
+
+            sectionHtmlMap.notice = buildNoticeHtml(notice);
+            sectionHtmlMap.dashboard = buildDashboardHtml(tableSummary);
+            sectionHtmlMap.table = buildDataTableHtml({
+              columns: visibleColumns,
+              rows,
+              company_name: companyName,
+              year_month,
+            });
+          }
+        }
+      } else {
+        // 샘플: 첫 번째 CSO 데이터로 미리보기
+        const firstCSO = allData.find(s => s.CSO관리업체)?.CSO관리업체;
+        if (firstCSO) {
+          hasSettlementData = true;
+          const sampleRows = allData.filter(s => s.CSO관리업체 === firstCSO).slice(0, 20);
+          const tableSummary = {
+            총_금액: sampleRows.reduce((sum, r) => sum + (Number(r.금액) || 0), 0),
+            총_수수료: sampleRows.reduce((sum, r) => sum + (Number(r.제약수수료_합계) || 0), 0),
+            데이터_건수: sampleRows.length,
+            총_수량: sampleRows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
+          };
+
+          sectionHtmlMap.notice = buildNoticeHtml(notice);
+          sectionHtmlMap.dashboard = buildDashboardHtml(tableSummary);
+          sectionHtmlMap.table = buildDataTableHtml({
+            columns: visibleColumns,
+            rows: sampleRows,
+            company_name: companyName,
+            year_month,
+          });
+        }
       }
     }
 
@@ -611,7 +662,7 @@ export async function PUT(request: NextRequest) {
         subject: previewSubject,
         contentHtml,
         hasSettlementData,
-        variables: Object.keys(sampleVariables).map(k => `{{${k}}}`),
+        variables: Object.keys(previewVariables).map(k => `{{${k}}}`),
       },
     });
   } catch (error) {
