@@ -95,6 +95,22 @@ export class SupabaseCompanyRepository implements CompanyRepository {
   }
 
   async update(data: Partial<CompanyInfo>): Promise<void> {
+    // DB에 존재하는 컬럼만 추출 (unknown 필드 전달 방지)
+    const dbData: Record<string, unknown> = {};
+    const KNOWN_COLUMNS = [
+      'company_name', 'ceo_name', 'business_number', 'address',
+      'phone', 'fax', 'email', 'website', 'copyright', 'additional_info',
+      'notice_content', 'email_provider', 'smtp_host', 'smtp_port',
+      'smtp_secure', 'smtp_user', 'smtp_password', 'smtp_from_name',
+      'smtp_from_email', 'email_send_delay_ms', 'email_notifications',
+    ];
+
+    for (const key of KNOWN_COLUMNS) {
+      if (key in data) {
+        dbData[key] = data[key as keyof CompanyInfo];
+      }
+    }
+
     const { data: existing, error: selectError } = await supabase
       .from('company_settings')
       .select('id')
@@ -105,25 +121,41 @@ export class SupabaseCompanyRepository implements CompanyRepository {
       throw new Error(selectError.message);
     }
 
-    if (existing && existing.length > 0) {
-      const { error: updateError } = await supabase
-        .from('company_settings')
-        .update({ ...data, updated_at: new Date().toISOString() })
-        .eq('id', existing[0].id);
-
-      if (updateError) {
-        console.error('Company settings update error:', updateError);
-        throw new Error(updateError.message);
+    const upsert = async (payload: Record<string, unknown>) => {
+      if (existing && existing.length > 0) {
+        const { error: updateError } = await supabase
+          .from('company_settings')
+          .update({ ...payload, updated_at: new Date().toISOString() })
+          .eq('id', existing[0].id);
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from('company_settings')
+          .insert({ ...payload });
+        if (insertError) throw insertError;
       }
-    } else {
-      const { error: insertError } = await supabase
-        .from('company_settings')
-        .insert({ ...data });
+    };
 
-      if (insertError) {
-        console.error('Company settings insert error:', insertError);
-        throw new Error(insertError.message);
+    try {
+      await upsert(dbData);
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'message' in err ? (err as { message: string }).message : '';
+      // email_notifications 컬럼이 DB에 없는 경우 해당 필드 제외 후 재시도
+      if (msg.includes('email_notifications')) {
+        console.warn('email_notifications column not found, retrying without it');
+        delete dbData.email_notifications;
+        try {
+          await upsert(dbData);
+          return;
+        } catch (retryErr: unknown) {
+          const retryMsg = retryErr && typeof retryErr === 'object' && 'message' in retryErr
+            ? (retryErr as { message: string }).message : 'Unknown error';
+          console.error('Company settings retry error:', retryMsg);
+          throw new Error(retryMsg);
+        }
       }
+      console.error('Company settings save error:', msg);
+      throw new Error(msg || 'Unknown error');
     }
   }
 }

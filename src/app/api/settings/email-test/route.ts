@@ -31,25 +31,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (provider === 'smtp') {
-      // Use form values from request body if provided, otherwise fall back to DB
-      let smtp_host = body.smtp_host;
-      let smtp_port = body.smtp_port;
-      let smtp_secure = body.smtp_secure;
-      let smtp_user = body.smtp_user;
-      let smtp_password = body.smtp_password;
-      let smtp_from_name = body.smtp_from_name;
-      let smtp_from_email = body.smtp_from_email;
-
-      if (!smtp_host || !smtp_user) {
-        const companyInfo = await getCompanyRepository().get();
-        smtp_host = smtp_host || companyInfo.smtp_host;
-        smtp_port = smtp_port ?? companyInfo.smtp_port;
-        smtp_secure = smtp_secure ?? companyInfo.smtp_secure;
-        smtp_user = smtp_user || companyInfo.smtp_user;
-        smtp_password = smtp_password || companyInfo.smtp_password;
-        smtp_from_name = smtp_from_name || companyInfo.smtp_from_name;
-        smtp_from_email = smtp_from_email || companyInfo.smtp_from_email;
-      }
+      // DB에서 SMTP 설정 읽기
+      const companyInfo = await getCompanyRepository().get();
+      const smtp_host = companyInfo.smtp_host;
+      const smtp_port = companyInfo.smtp_port;
+      const smtp_secure = companyInfo.smtp_secure;
+      const smtp_user = companyInfo.smtp_user;
+      const smtp_password = companyInfo.smtp_password;
+      const smtp_from_name = companyInfo.smtp_from_name;
+      const smtp_from_email = companyInfo.smtp_from_email;
 
       if (!smtp_host || !smtp_user || !smtp_password) {
         return NextResponse.json({
@@ -74,9 +64,18 @@ export async function POST(request: NextRequest) {
         await transporter.verify();
       } catch (verifyError) {
         const msg = verifyError instanceof Error ? verifyError.message : 'SMTP 연결 실패';
+
+        // IP 허용 관련 에러인 경우 안내 메시지 추가
+        let userMessage = `SMTP 연결 실패: ${msg}`;
+        if (msg.includes('IP is not allowed') || msg.includes('IP') && msg.includes('not allowed')) {
+          userMessage = `SMTP 연결 실패: 서버 IP가 메일 서버에서 허용되지 않았습니다. 메일 서버(하이웍스 등) 관리자 페이지에서 발송 서버 IP를 허용 목록에 추가해 주세요. (${msg})`;
+        } else if (msg.includes('authentication failed') || msg.includes('Invalid login')) {
+          userMessage = `SMTP 인증 실패: 계정 또는 비밀번호를 확인해 주세요. 설정을 변경한 경우 먼저 저장 후 다시 테스트하세요. (${msg})`;
+        }
+
         return NextResponse.json({
           success: false,
-          error: `SMTP 연결 실패: ${msg}`,
+          error: userMessage,
         });
       }
 
