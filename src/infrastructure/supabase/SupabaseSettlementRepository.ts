@@ -220,7 +220,7 @@ export class SupabaseSettlementRepository implements SettlementRepository {
 
     if (error || !data) return [];
     return [...new Set(
-      (data as Record<string, unknown>[]).map(d => d.CSO관리업체 as string).filter(Boolean)
+      (data as unknown as Record<string, unknown>[]).map(d => d.CSO관리업체 as string).filter(Boolean)
     )];
   }
 
