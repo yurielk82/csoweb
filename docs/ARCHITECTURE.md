@@ -95,6 +95,7 @@ domain/ (인터페이스 정의) ← infrastructure/ (구현체)
 | 새 외부 서비스 연동 | `infrastructure/` (새 서비스) → `domain/` (인터페이스) |
 | 엑셀 파싱 로직 변경 | `infrastructure/excel/` |
 | 이메일 템플릿 변경 | `lib/email.ts` (듀얼 프로바이더: Resend + SMTP) |
+| 메일머지 변수/치환 로직 변경 | `app/api/email/mailmerge/route.ts` (POST/PATCH/PUT 핸들러) |
 
 ---
 
