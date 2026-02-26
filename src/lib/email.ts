@@ -643,12 +643,9 @@ function getPasswordResetEmail(data: {
 
 function getMailMergeEmail(data: {
   subject: string;
-  body: string;
-  settlementTableHtml?: string;
+  contentHtml: string;
+  hasWideContent?: boolean;
 }, companyInfo: CompanyFooterInfo) {
-  const bodyHtml = data.body.split('\n').map(line => line.trim() ? `<p style="margin: 0 0 12px;">${line}</p>` : '<br>').join('');
-  const hasTable = !!data.settlementTableHtml;
-
   return {
     subject: data.subject,
     html: `
@@ -662,7 +659,7 @@ function getMailMergeEmail(data: {
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f4f7fa;">
     <tr>
       <td align="center" style="padding: 40px 20px;">
-        <table role="presentation" ${hasTable ? 'width="100%" style="max-width:100%;' : 'width="600" style="'}background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;" cellspacing="0" cellpadding="0">
+        <table role="presentation" ${data.hasWideContent ? 'width="100%" style="max-width:100%;' : 'width="600" style="'}background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;" cellspacing="0" cellpadding="0">
 
           <!-- Header -->
           <tr>
@@ -675,21 +672,10 @@ function getMailMergeEmail(data: {
 
           <!-- Content -->
           <tr>
-            <td style="padding: 40px;">
-              <div style="color: #374151; font-size: 14px; line-height: 1.8;">
-                ${bodyHtml}
-              </div>
+            <td style="padding: 40px 20px;">
+              ${data.contentHtml}
             </td>
           </tr>
-
-          ${data.settlementTableHtml ? `
-          <!-- Settlement Table -->
-          <tr>
-            <td style="padding: 0 20px 40px;">
-              ${data.settlementTableHtml}
-            </td>
-          </tr>
-          ` : ''}
 
           ${generateEmailFooter(companyInfo)}
 
@@ -704,19 +690,58 @@ function getMailMergeEmail(data: {
 }
 
 // ============================================
-// 정산서 테이블 HTML 빌더 (메일머지에서 사용)
+// 이메일 섹션 빌더 (메일머지에서 사용)
 // ============================================
 
-export interface SettlementTableData {
-  columns: { key: string; name: string; isNumeric: boolean }[];
-  rows: Record<string, unknown>[];
-  summary: { 총_금액: number; 총_수수료: number; 데이터_건수: number; 총_수량: number };
-  notice: string;
-  company_name: string;
-  year_month: string;
+export type EmailSectionId = 'notice' | 'dashboard' | 'table' | 'body';
+
+export function buildBodyHtml(body: string): string {
+  const lines = body.split('\n').map(line =>
+    line.trim() ? `<p style="margin: 0 0 12px;">${line}</p>` : '<br>'
+  ).join('');
+  return `<div style="color: #374151; font-size: 14px; line-height: 1.8; padding: 0 20px;">${lines}</div>`;
 }
 
-export function buildSettlementTableHtml(tableData: SettlementTableData): string {
+export function buildNoticeHtml(notice: string): string {
+  if (!notice) return '';
+  return `<div style="margin:16px 20px;padding:12px 16px;border-left:4px solid #f59e0b;background:#fefce8;">
+    <p style="font-weight:bold;font-size:13px;color:#92400e;margin:0 0 8px;">[ Notice ]</p>
+    <div style="font-size:12px;color:#78350f;line-height:1.8;white-space:pre-line;">${notice}</div>
+  </div>`;
+}
+
+export function buildDashboardHtml(summary: {
+  총_금액: number;
+  총_수수료: number;
+  데이터_건수: number;
+  총_수량: number;
+}): string {
+  const fmt = (v: number) => v.toLocaleString('ko-KR');
+  return `<div style="margin:16px 20px;padding:16px 20px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+    <p style="font-size:13px;font-weight:600;color:#334155;margin:0 0 10px;">합계 요약</p>
+    <table cellspacing="0" cellpadding="0" style="width:100%;font-size:13px;color:#475569;">
+      <tr>
+        <td style="padding:4px 0;">데이터 건수</td>
+        <td style="padding:4px 0;text-align:right;font-weight:600;">${fmt(summary.데이터_건수)}건</td>
+        <td style="padding:4px 0;padding-left:24px;">총 수량</td>
+        <td style="padding:4px 0;text-align:right;font-weight:600;">${fmt(summary.총_수량)}</td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;">총 금액</td>
+        <td style="padding:4px 0;text-align:right;font-weight:600;">${fmt(summary.총_금액)}원</td>
+        <td style="padding:4px 0;padding-left:24px;">총 수수료</td>
+        <td style="padding:4px 0;text-align:right;font-weight:600;">${fmt(summary.총_수수료)}원</td>
+      </tr>
+    </table>
+  </div>`;
+}
+
+export function buildDataTableHtml(params: {
+  columns: { key: string; name: string; isNumeric: boolean }[];
+  rows: Record<string, unknown>[];
+  company_name: string;
+  year_month: string;
+}): string {
   const formatNumber = (val: unknown): string => {
     if (val === null || val === undefined || val === '') return '';
     const num = Number(val);
@@ -724,13 +749,13 @@ export function buildSettlementTableHtml(tableData: SettlementTableData): string
     return num.toLocaleString('ko-KR');
   };
 
-  const headerCells = tableData.columns
+  const headerCells = params.columns
     .map(col => `<th style="border:1px solid #999;padding:4px 8px;background:#e2e8f0;font-size:12px;white-space:nowrap;text-align:center;">${col.name}</th>`)
     .join('');
 
-  const bodyRows = tableData.rows.map((row, i) => {
+  const bodyRows = params.rows.map((row, i) => {
     const bgColor = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-    const cells = tableData.columns.map(col => {
+    const cells = params.columns.map(col => {
       const val = row[col.key];
       const align = col.isNumeric ? 'right' : 'left';
       const display = col.isNumeric ? formatNumber(val) : (val ?? '');
@@ -739,35 +764,17 @@ export function buildSettlementTableHtml(tableData: SettlementTableData): string
     return `<tr style="background:${bgColor};">${cells}</tr>`;
   }).join('');
 
-  const noticeHtml = tableData.notice
-    ? `<div style="margin:16px 0;padding:12px 16px;border-left:4px solid #f59e0b;background:#fefce8;">
-        <p style="font-weight:bold;font-size:13px;color:#92400e;margin:0 0 8px;">[ Notice ]</p>
-        <div style="font-size:12px;color:#78350f;line-height:1.8;white-space:pre-line;">${tableData.notice}</div>
-      </div>`
-    : '';
-
-  const summaryItems = [
-    `데이터 건수: ${tableData.summary.데이터_건수.toLocaleString('ko-KR')}건`,
-    `총 수량: ${tableData.summary.총_수량.toLocaleString('ko-KR')}`,
-    `총 금액: ${tableData.summary.총_금액.toLocaleString('ko-KR')}원`,
-    `총 수수료: ${tableData.summary.총_수수료.toLocaleString('ko-KR')}원`,
-  ].join('  |  ');
-
-  return `
-    <div style="border-top: 1px solid #e5e7eb; padding-top: 24px; margin-top: 8px;">
-      <p style="font-size:16px;font-weight:bold;color:#1e293b;margin:0 0 4px;">
-        ${tableData.company_name} - ${tableData.year_month} 정산서
-      </p>
-      ${noticeHtml}
-      <p style="font-size:12px;color:#475569;margin:12px 0 8px;font-weight:600;">${summaryItems}</p>
-      <div style="overflow-x: auto;">
-        <table cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:monospace,sans-serif;">
-          <thead><tr>${headerCells}</tr></thead>
-          <tbody>${bodyRows}</tbody>
-        </table>
-      </div>
+  return `<div style="margin:16px 0;padding:0 20px;">
+    <p style="font-size:14px;font-weight:bold;color:#1e293b;margin:0 0 8px;">
+      ${params.company_name} - ${params.year_month} 정산서
+    </p>
+    <div style="overflow-x:auto;">
+      <table cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:monospace,sans-serif;">
+        <thead><tr>${headerCells}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
     </div>
-  `;
+  </div>`;
 }
 
 // ============================================

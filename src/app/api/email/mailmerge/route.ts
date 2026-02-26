@@ -7,10 +7,30 @@ import {
   getColumnSettingRepository,
   getCompanyRepository,
 } from '@/infrastructure/supabase';
-import { sendEmail, getEmailSendDelay, buildSettlementTableHtml } from '@/lib/email';
+import {
+  sendEmail,
+  getEmailSendDelay,
+  buildBodyHtml,
+  buildNoticeHtml,
+  buildDashboardHtml,
+  buildDataTableHtml,
+  type EmailSectionId,
+} from '@/lib/email';
 import { NUMERIC_COLUMN_KEYS } from '@/types';
 
 export const dynamic = 'force-dynamic';
+
+interface SectionConfig {
+  id: EmailSectionId;
+  enabled: boolean;
+}
+
+const DEFAULT_SECTIONS: SectionConfig[] = [
+  { id: 'notice', enabled: true },
+  { id: 'dashboard', enabled: true },
+  { id: 'table', enabled: true },
+  { id: 'body', enabled: true },
+];
 
 interface MailMergeData {
   recipients: string[];
@@ -18,6 +38,7 @@ interface MailMergeData {
   body: string;
   year_month?: string;
   include_settlement_table?: boolean;
+  sections?: SectionConfig[];
 }
 
 // Replace template variables
@@ -36,6 +57,17 @@ function replaceVariables(
 // Format currency
 function formatCurrency(value: number): string {
   return value.toLocaleString('ko-KR') + '원';
+}
+
+// Build content HTML from sections in order
+function buildContentHtml(
+  orderedSections: SectionConfig[],
+  sectionHtmlMap: Record<EmailSectionId, string>,
+): string {
+  return orderedSections
+    .filter(s => s.enabled && sectionHtmlMap[s.id])
+    .map(s => sectionHtmlMap[s.id])
+    .join('');
 }
 
 // C-1: 수신자 수 조회
@@ -86,7 +118,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { recipients, subject, body, year_month, include_settlement_table }: MailMergeData = await request.json();
+    const { recipients, subject, body, year_month, include_settlement_table, sections }: MailMergeData = await request.json();
 
     if (!subject || !body) {
       return NextResponse.json(
@@ -94,6 +126,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const orderedSections = sections || DEFAULT_SECTIONS;
 
     // Determine recipient list
     let targetBusinessNumbers: string[] = [];
@@ -201,9 +235,16 @@ export async function POST(request: NextRequest) {
           const personalizedSubject = replaceVariables(subject, variables);
           const personalizedBody = replaceVariables(body, variables);
 
-          // 정산서 테이블 HTML 생성
-          let settlementTableHtml: string | undefined;
+          // 섹션별 HTML 빌드
           let rowCount = 0;
+          let hasWideContent = false;
+
+          const sectionHtmlMap: Record<EmailSectionId, string> = {
+            notice: '',
+            dashboard: '',
+            table: '',
+            body: buildBodyHtml(personalizedBody),
+          };
 
           if (include_settlement_table && year_month && visibleColumns.length > 0) {
             const matchedCSONames = allMatches
@@ -216,6 +257,7 @@ export async function POST(request: NextRequest) {
 
             if (rows.length > 0) {
               rowCount = rows.length;
+              hasWideContent = true;
               const tableSummary = {
                 총_금액: rows.reduce((sum, r) => sum + (Number(r.금액) || 0), 0),
                 총_수수료: rows.reduce((sum, r) => sum + (Number(r.제약수수료_합계) || 0), 0),
@@ -223,22 +265,24 @@ export async function POST(request: NextRequest) {
                 총_수량: rows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
               };
 
-              settlementTableHtml = buildSettlementTableHtml({
+              sectionHtmlMap.notice = buildNoticeHtml(notice);
+              sectionHtmlMap.dashboard = buildDashboardHtml(tableSummary);
+              sectionHtmlMap.table = buildDataTableHtml({
                 columns: visibleColumns,
                 rows,
-                summary: tableSummary,
-                notice,
                 company_name: user.company_name,
                 year_month,
               });
             }
           }
 
+          const contentHtml = buildContentHtml(orderedSections, sectionHtmlMap);
+
           // Send email
           const result = await sendEmail(user.email, 'mail_merge', {
             subject: personalizedSubject,
-            body: personalizedBody,
-            settlementTableHtml,
+            contentHtml,
+            hasWideContent,
           });
 
           if (result.success) {
@@ -303,7 +347,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { subject, body, year_month, include_settlement_table } = await request.json();
+    const { subject, body, year_month, include_settlement_table, sections } = await request.json();
+    const orderedSections: SectionConfig[] = sections || DEFAULT_SECTIONS;
 
     // Sample data for preview
     const sampleVariables: Record<string, string | number> = {
@@ -322,8 +367,15 @@ export async function PUT(request: NextRequest) {
     const previewSubject = replaceVariables(subject || '', sampleVariables);
     const previewBody = replaceVariables(body || '', sampleVariables);
 
-    // 정산서 테이블 미리보기
-    let tableHtml: string | undefined;
+    // 섹션별 HTML 미리보기
+    const sectionHtmlMap: Record<EmailSectionId, string> = {
+      notice: '',
+      dashboard: '',
+      table: '',
+      body: buildBodyHtml(previewBody),
+    };
+
+    let hasSettlementData = false;
 
     if (include_settlement_table && year_month) {
       const allColumns = await getColumnSettingRepository().findAll();
@@ -344,6 +396,7 @@ export async function PUT(request: NextRequest) {
       const firstCSO = allData.find(s => s.CSO관리업체)?.CSO관리업체;
 
       if (firstCSO) {
+        hasSettlementData = true;
         const sampleRows = allData.filter(s => s.CSO관리업체 === firstCSO).slice(0, 20);
         const summary = {
           총_금액: sampleRows.reduce((sum, r) => sum + (Number(r.금액) || 0), 0),
@@ -352,23 +405,25 @@ export async function PUT(request: NextRequest) {
           총_수량: sampleRows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
         };
 
-        tableHtml = buildSettlementTableHtml({
+        sectionHtmlMap.notice = buildNoticeHtml(notice);
+        sectionHtmlMap.dashboard = buildDashboardHtml(summary);
+        sectionHtmlMap.table = buildDataTableHtml({
           columns: visibleColumns,
           rows: sampleRows,
-          summary,
-          notice,
           company_name: 'ABC 상사',
           year_month,
         });
       }
     }
 
+    const contentHtml = buildContentHtml(orderedSections, sectionHtmlMap);
+
     return NextResponse.json({
       success: true,
       data: {
         subject: previewSubject,
-        body: previewBody,
-        tableHtml,
+        contentHtml,
+        hasSettlementData,
         variables: Object.keys(sampleVariables).map(k => `{{${k}}}`),
       },
     });
