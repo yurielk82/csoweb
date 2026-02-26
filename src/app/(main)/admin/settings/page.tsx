@@ -34,6 +34,8 @@ interface CompanyInfo {
   smtp_password: string;
   smtp_from_name: string;
   smtp_from_email: string;
+  resend_from_email: string;
+  test_recipient_email: string;
   email_send_delay_ms: number;
   email_notifications: {
     registration_request: boolean;
@@ -72,6 +74,8 @@ const defaultCompanyInfo: CompanyInfo = {
   smtp_password: '',
   smtp_from_name: '',
   smtp_from_email: '',
+  resend_from_email: '',
+  test_recipient_email: '',
   email_send_delay_ms: 6000,
   email_notifications: {
     registration_request: true,
@@ -398,6 +402,45 @@ export default function SettingsPage() {
             </RadioGroup>
           </div>
 
+          {/* Resend Settings (resend일 때만 표시) */}
+          {formData.email_provider === 'resend' && (
+            <div className="space-y-4 border-t pt-4">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Resend 설정</Label>
+                <Badge variant="secondary" className="text-xs">활성</Badge>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="resend_from_email">발신 이메일</Label>
+                <Input
+                  id="resend_from_email"
+                  type="email"
+                  value={formData.resend_from_email}
+                  onChange={(e) => handleChange('resend_from_email', e.target.value)}
+                  placeholder="onboarding@resend.dev"
+                />
+                <p className="text-xs text-muted-foreground">
+                  비워두면 환경변수(EMAIL_FROM) 또는 기본값(onboarding@resend.dev)을 사용합니다.
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleConnectionTest}
+                disabled={testing}
+              >
+                {testing ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Plug className="h-4 w-4 mr-2" />
+                )}
+                연결 테스트
+              </Button>
+            </div>
+          )}
+
           {/* SMTP Settings (smtp일 때만 표시) */}
           {formData.email_provider === 'smtp' && (
             <div className="space-y-4 border-t pt-4">
@@ -525,6 +568,21 @@ export default function SettingsPage() {
             </div>
             <p className="text-xs text-muted-foreground">
               스팸 필터 방지를 위해 최소 6초를 권장합니다.
+            </p>
+          </div>
+
+          {/* Test Recipient Email */}
+          <div className="space-y-2 border-t pt-4">
+            <Label htmlFor="test_recipient_email">테스트 수신 이메일</Label>
+            <Input
+              id="test_recipient_email"
+              type="email"
+              value={formData.test_recipient_email}
+              onChange={(e) => handleChange('test_recipient_email', e.target.value)}
+              placeholder="test@example.com"
+            />
+            <p className="text-xs text-muted-foreground">
+              연결 테스트 및 메일머지 테스트 발송 시 사용할 수신자 이메일입니다. 비워두면 로그인된 관리자의 이메일로 발송됩니다.
             </p>
           </div>
         </CardContent>

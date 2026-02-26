@@ -30,6 +30,8 @@ interface EmailSettings {
   smtp_password: string;
   smtp_from_name: string;
   smtp_from_email: string;
+  resend_from_email: string;
+  test_recipient_email: string;
   email_send_delay_ms: number;
   email_notifications: EmailNotifications;
 }
@@ -54,6 +56,8 @@ async function getEmailSettings(): Promise<EmailSettings> {
     smtp_password: info.smtp_password || '',
     smtp_from_name: info.smtp_from_name || '',
     smtp_from_email: info.smtp_from_email || '',
+    resend_from_email: info.resend_from_email || '',
+    test_recipient_email: info.test_recipient_email || '',
     email_send_delay_ms: info.email_send_delay_ms ?? 6000,
     email_notifications: info.email_notifications ?? { ...DEFAULT_EMAIL_NOTIFICATIONS },
   };
@@ -69,6 +73,11 @@ export function invalidateEmailSettingsCache(): void {
 export async function getEmailSendDelay(): Promise<number> {
   const settings = await getEmailSettings();
   return settings.email_send_delay_ms;
+}
+
+export async function getTestRecipientEmail(fallbackEmail: string): Promise<string> {
+  const settings = await getEmailSettings();
+  return settings.test_recipient_email || fallbackEmail;
 }
 
 // ============================================
@@ -111,10 +120,11 @@ async function sendViaSMTP(
 // 발신자 이메일 생성
 // ============================================
 
-function getFromEmail(companyName: string): string {
+function getFromEmail(companyName: string, resendFromEmail?: string): string {
   const senderName = companyName || 'CSO 정산서 포털';
-  const emailMatch = DEFAULT_FROM_EMAIL.match(/<(.+)>/);
-  const emailAddress = emailMatch ? emailMatch[1] : DEFAULT_FROM_EMAIL;
+  const baseEmail = resendFromEmail || DEFAULT_FROM_EMAIL;
+  const emailMatch = baseEmail.match(/<(.+)>/);
+  const emailAddress = emailMatch ? emailMatch[1] : baseEmail;
   return `${senderName} <${emailAddress}>`;
 }
 
@@ -840,6 +850,8 @@ export async function sendEmail(
       smtp_password: '',
       smtp_from_name: '',
       smtp_from_email: '',
+      resend_from_email: '',
+      test_recipient_email: '',
       email_send_delay_ms: 6000,
       email_notifications: { ...DEFAULT_EMAIL_NOTIFICATIONS },
     };
@@ -918,7 +930,7 @@ export async function sendEmail(
   }
 
   // Resend 프로바이더
-  const fromEmail = getFromEmail(companyInfo.company_name);
+  const fromEmail = getFromEmail(companyInfo.company_name, emailSettings.resend_from_email);
 
   if (!resend) {
     const msg = 'RESEND_API_KEY가 설정되지 않았습니다.';

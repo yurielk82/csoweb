@@ -34,6 +34,8 @@ const DEFAULT_COMPANY_INFO: CompanyInfo = {
   smtp_password: '',
   smtp_from_name: '',
   smtp_from_email: '',
+  resend_from_email: '',
+  test_recipient_email: '',
   email_send_delay_ms: 6000,
   email_notifications: { ...DEFAULT_EMAIL_NOTIFICATIONS },
 };
@@ -89,6 +91,8 @@ export class SupabaseCompanyRepository implements CompanyRepository {
       smtp_password: data.smtp_password || '',
       smtp_from_name: data.smtp_from_name || '',
       smtp_from_email: data.smtp_from_email || '',
+      resend_from_email: data.resend_from_email || '',
+      test_recipient_email: data.test_recipient_email || '',
       email_send_delay_ms: data.email_send_delay_ms ?? 6000,
       email_notifications: parseEmailNotifications(data.email_notifications),
     };
@@ -102,7 +106,8 @@ export class SupabaseCompanyRepository implements CompanyRepository {
       'phone', 'fax', 'email', 'website', 'copyright', 'additional_info',
       'notice_content', 'email_provider', 'smtp_host', 'smtp_port',
       'smtp_secure', 'smtp_user', 'smtp_password', 'smtp_from_name',
-      'smtp_from_email', 'email_send_delay_ms', 'email_notifications',
+      'smtp_from_email', 'resend_from_email', 'test_recipient_email',
+      'email_send_delay_ms', 'email_notifications',
     ];
 
     for (const key of KNOWN_COLUMNS) {

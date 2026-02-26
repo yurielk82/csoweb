@@ -10,6 +10,7 @@ import {
 import {
   sendEmail,
   getEmailSendDelay,
+  getTestRecipientEmail,
   buildBodyHtml,
   buildNoticeHtml,
   buildDashboardHtml,
@@ -506,8 +507,9 @@ export async function PATCH(request: NextRequest) {
 
     const contentHtml = buildContentHtml(orderedSections, sectionHtmlMap);
 
-    // Send to admin's email
-    const result = await sendEmail(session.email, 'mail_merge', {
+    // Send to test recipient (or admin's email as fallback)
+    const testRecipient = await getTestRecipientEmail(session.email);
+    const result = await sendEmail(testRecipient, 'mail_merge', {
       subject: testSubject,
       contentHtml,
       hasWideContent,
@@ -516,7 +518,7 @@ export async function PATCH(request: NextRequest) {
     if (result.success) {
       return NextResponse.json({
         success: true,
-        data: { email: session.email, company_name: companyName },
+        data: { email: testRecipient, company_name: companyName },
       });
     } else {
       return NextResponse.json(
