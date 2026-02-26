@@ -850,6 +850,8 @@ export async function sendEmail(
       smtp_password: '',
       smtp_from_name: '',
       smtp_from_email: '',
+      resend_from_email: '',
+      test_recipient_email: '',
       email_send_delay_ms: 6000,
       email_notifications: { ...DEFAULT_EMAIL_NOTIFICATIONS },
     };
