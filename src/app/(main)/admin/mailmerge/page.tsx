@@ -191,6 +191,26 @@ export default function MailMergePage() {
   const getSectionsPayload = () =>
     sections.map(s => ({ id: s.id, enabled: s.enabled }));
 
+  const fetchPreview = useCallback(async (testBn?: string) => {
+    const previewRes = await fetch('/api/email/mailmerge', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subject,
+        body,
+        year_month: recipientType === 'year_month' ? selectedYearMonth : undefined,
+        include_settlement_table: includeSettlementTable,
+        sections: includeSettlementTable ? getSectionsPayload() : undefined,
+        test_business_number: testBn && testBn !== '__sample__' ? testBn : undefined,
+      }),
+    });
+    const previewData = await previewRes.json();
+    if (previewData.success) {
+      setPreview(previewData.data);
+    }
+    return previewData;
+  }, [subject, body, recipientType, selectedYearMonth, includeSettlementTable, sections]);
+
   const handlePreview = async () => {
     try {
       // Fetch preview + company list in parallel
@@ -203,26 +223,14 @@ export default function MailMergePage() {
       }
       params.set('include_list', 'true');
 
-      const [previewRes, listRes] = await Promise.all([
-        fetch('/api/email/mailmerge', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            subject,
-            body,
-            year_month: recipientType === 'year_month' ? selectedYearMonth : undefined,
-            include_settlement_table: includeSettlementTable,
-            sections: includeSettlementTable ? getSectionsPayload() : undefined,
-          }),
-        }),
+      const [previewData, listRes] = await Promise.all([
+        fetchPreview(),
         fetch(`/api/email/mailmerge?${params.toString()}`),
       ]);
 
-      const previewData = await previewRes.json();
       const listData = await listRes.json();
 
       if (previewData.success) {
-        setPreview(previewData.data);
         setPreviewOpen(true);
       } else {
         toast({ variant: 'destructive', title: '미리보기 실패', description: previewData.error });
@@ -234,6 +242,15 @@ export default function MailMergePage() {
       }
     } catch {
       toast({ variant: 'destructive', title: '오류', description: '미리보기 생성 중 오류가 발생했습니다.' });
+    }
+  };
+
+  const handleTestCompanyChange = async (bn: string) => {
+    setSelectedTestBn(bn);
+    try {
+      await fetchPreview(bn);
+    } catch {
+      // 미리보기 갱신 실패 시 무시
     }
   };
 
@@ -616,7 +633,7 @@ export default function MailMergePage() {
           <div className="border-t pt-4 space-y-3">
             <div className="flex items-center gap-3">
               <Label className="text-sm font-medium whitespace-nowrap">테스트 업체</Label>
-              <Select value={selectedTestBn} onValueChange={setSelectedTestBn}>
+              <Select value={selectedTestBn} onValueChange={handleTestCompanyChange}>
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="업체 선택 (미선택 시 샘플 데이터)" />
                 </SelectTrigger>
