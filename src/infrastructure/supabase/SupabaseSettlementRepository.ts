@@ -212,6 +212,18 @@ export class SupabaseSettlementRepository implements SettlementRepository {
     return [...new Set(data.map(d => d.business_number))];
   }
 
+  async getCSOCompanyNamesForMonth(settlementMonth: string): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('settlements')
+      .select('CSO관리업체')
+      .eq('정산월', settlementMonth);
+
+    if (error || !data) return [];
+    return [...new Set(
+      (data as Record<string, unknown>[]).map(d => d.CSO관리업체 as string).filter(Boolean)
+    )];
+  }
+
   async getSummary(businessNumber: string, settlementMonth: string): Promise<SettlementSummary> {
     const { data, error } = await supabase
       .from('settlements')
