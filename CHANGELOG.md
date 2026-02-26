@@ -5,6 +5,23 @@
 
 ---
 
+## [0.18.1] - 2026-02-27
+
+### Performance
+
+- **정산서 API — DB 레벨 페이지네이션**: 전건 로드 후 JS slice → Supabase `.range()` + `count: 'exact'` + `ilike` 검색으로 전환. 5만건 기준 응답 시간 수초 → ~100ms
+- **합계(totals) 별도 경량 쿼리**: 정산 데이터 페이지네이션과 합계 계산을 `Promise.all`로 병렬 실행. 합계는 4개 숫자 컬럼만 조회
+- **클라이언트 초기화 병렬화**: `useSettlementData` 훅의 columns/year-months/notice 3개 API를 `Promise.all`로 병렬 호출
+- **마스터조회 지연 로딩**: 페이지 진입 시 정산 데이터 자동 로드 제거 → 거래처 선택 또는 "전체 거래처 조회" 클릭 후 50건만 DB에서 로드
+
+### Changed
+
+- **Repository 인터페이스 확장**: `findAllPaginated`, `findByCSOMatchingPaginated`, `getTotals`, `getTotalsByCSOMatching` 4개 메서드 추가
+- **마스터조회 검색 UX**: 입력 즉시 JS 필터 → Enter/검색 버튼으로 서버 `ilike` 검색 전환
+- **마스터조회 초기 화면**: 빈 테이블 대신 "거래처를 선택하여 조회를 시작하세요" 안내 카드 표시
+
+---
+
 ## [0.18.0] - 2026-02-26
 
 전체 코드 리뷰 & 리팩토링. 보안 강화, 타입 안전성, SRP 분리, UX 개선, SEO 기본 설정.
