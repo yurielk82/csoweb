@@ -11,6 +11,10 @@ const mockSettlementRepo = {
   findAll: vi.fn(),
   findByCSOMatching: vi.fn(),
   getAvailableMonths: vi.fn(),
+  findAllPaginated: vi.fn(),
+  findByCSOMatchingPaginated: vi.fn(),
+  getTotals: vi.fn(),
+  getTotalsByCSOMatching: vi.fn(),
 };
 const mockCSOMatchingRepo = {
   getMatchedCompanyNames: vi.fn(),
@@ -30,6 +34,13 @@ const { GET } = await import('./route');
 
 const mockGetSession = getSession as ReturnType<typeof vi.fn>;
 
+const mockTotals = {
+  수량: 350,
+  금액: 350000,
+  제약수수료_합계: 35000,
+  담당수수료_합계: 3500,
+};
+
 function createGetRequest(params: Record<string, string> = {}): NextRequest {
   const url = new URL('http://localhost:3000/api/settlements');
   for (const [key, value] of Object.entries(params)) {
@@ -41,6 +52,8 @@ function createGetRequest(params: Record<string, string> = {}): NextRequest {
 beforeEach(() => {
   vi.clearAllMocks();
   mockColumnSettingRepo.findAll.mockResolvedValue(mockColumnSettings);
+  mockSettlementRepo.getTotals.mockResolvedValue(mockTotals);
+  mockSettlementRepo.getTotalsByCSOMatching.mockResolvedValue(mockTotals);
 });
 
 describe('GET /api/settlements', () => {
@@ -56,7 +69,10 @@ describe('GET /api/settlements', () => {
 
   it('관리자는 전체 정산서를 조회한다', async () => {
     mockGetSession.mockResolvedValue(mockAdminSession);
-    mockSettlementRepo.findAll.mockResolvedValue(mockSettlements);
+    mockSettlementRepo.findAllPaginated.mockResolvedValue({
+      data: mockSettlements,
+      total: 3,
+    });
 
     const res = await GET(createGetRequest({ settlement_month: '2025-02' }));
     const json = await res.json();
@@ -71,32 +87,44 @@ describe('GET /api/settlements', () => {
   it('일반 회원은 CSO 매칭 기반으로 조회한다', async () => {
     mockGetSession.mockResolvedValue(mockRegularSession);
     mockCSOMatchingRepo.getMatchedCompanyNames.mockResolvedValue(['CSO업체A']);
-    mockSettlementRepo.findByCSOMatching.mockResolvedValue([mockSettlements[0]]);
+    mockSettlementRepo.findByCSOMatchingPaginated.mockResolvedValue({
+      data: [mockSettlements[0]],
+      total: 1,
+    });
 
     const res = await GET(createGetRequest());
     const json = await res.json();
 
     expect(res.status).toBe(200);
     expect(mockCSOMatchingRepo.getMatchedCompanyNames).toHaveBeenCalled();
-    expect(mockSettlementRepo.findByCSOMatching).toHaveBeenCalled();
+    expect(mockSettlementRepo.findByCSOMatchingPaginated).toHaveBeenCalled();
     expect(json.data.settlements).toHaveLength(1);
   });
 
-  it('search 파라미터로 필터링한다', async () => {
+  it('search 파라미터가 DB 쿼리에 전달된다', async () => {
     mockGetSession.mockResolvedValue(mockAdminSession);
-    mockSettlementRepo.findAll.mockResolvedValue(mockSettlements);
+    mockSettlementRepo.findAllPaginated.mockResolvedValue({
+      data: [mockSettlements[0]],
+      total: 1,
+    });
 
     const res = await GET(createGetRequest({ search: '서울' }));
     const json = await res.json();
 
-    // '서울약국'만 매칭
     expect(json.data.settlements).toHaveLength(1);
     expect(json.data.pagination.total).toBe(1);
+    // search가 findAllPaginated에 전달되었는지 확인
+    expect(mockSettlementRepo.findAllPaginated).toHaveBeenCalledWith(
+      expect.objectContaining({ search: '서울' })
+    );
   });
 
   it('페이지네이션이 적용된다', async () => {
     mockGetSession.mockResolvedValue(mockAdminSession);
-    mockSettlementRepo.findAll.mockResolvedValue(mockSettlements);
+    mockSettlementRepo.findAllPaginated.mockResolvedValue({
+      data: mockSettlements.slice(0, 2),
+      total: 3,
+    });
 
     const res = await GET(createGetRequest({ page: '1', page_size: '2' }));
     const json = await res.json();
@@ -106,16 +134,17 @@ describe('GET /api/settlements', () => {
     expect(json.data.pagination.totalPages).toBe(2);
   });
 
-  it('합계(totals)가 전체 데이터 기준으로 계산된다', async () => {
+  it('합계(totals)가 DB 합계 기준으로 반환된다', async () => {
     mockGetSession.mockResolvedValue(mockAdminSession);
-    mockSettlementRepo.findAll.mockResolvedValue(mockSettlements);
+    mockSettlementRepo.findAllPaginated.mockResolvedValue({
+      data: mockSettlements,
+      total: 3,
+    });
 
     const res = await GET(createGetRequest());
     const json = await res.json();
 
-    // 100000 + 50000 + 200000 = 350000
     expect(json.data.totals.금액).toBe(350000);
-    // 10000 + 5000 + 20000 = 35000
     expect(json.data.totals.제약수수료_합계).toBe(35000);
   });
 });

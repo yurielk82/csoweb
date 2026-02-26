@@ -11,12 +11,6 @@ const ALWAYS_NEEDED_COLUMNS = [
   '수량', '금액', '제약수수료_합계', '담당수수료_합계',
 ];
 
-async function fetchSettlementsByCSOMatching(businessNumber: string, settlementMonth?: string, selectColumns?: string) {
-  const matchedNames = await getCSOMatchingRepository().getMatchedCompanyNames(businessNumber);
-  if (matchedNames.length === 0) return [];
-  return getSettlementRepository().findByCSOMatching(matchedNames, settlementMonth, selectColumns);
-}
-
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
@@ -36,62 +30,65 @@ export async function GET(request: NextRequest) {
     // 관리자용: 특정 CSO의 business_number로 필터링
     const filterBusinessNumber = searchParams.get('business_number') || undefined;
 
-    // 표시 가능한 컬럼만 조회하여 SELECT 최적화 (39개 → ~15개)
+    // 표시 가능한 컬럼만 조회하여 SELECT 최적화
     const columnSettings = await getColumnSettingRepository().findAll();
     const visibleColumnKeys = columnSettings
       .filter(c => c.is_visible)
       .map(c => c.column_key);
     const selectColumns = [...new Set([...ALWAYS_NEEDED_COLUMNS, ...visibleColumnKeys])].join(',');
 
-    let settlements;
+    const settlementRepo = getSettlementRepository();
+    const queryParams = { settlementMonth, selectColumns, page, pageSize, search };
+
+    let matchedNames: string[] | null = null;
 
     if (session.is_admin) {
       if (filterBusinessNumber) {
-        settlements = await fetchSettlementsByCSOMatching(filterBusinessNumber, settlementMonth, selectColumns);
-      } else {
-        settlements = await getSettlementRepository().findAll(settlementMonth, selectColumns);
+        matchedNames = await getCSOMatchingRepository().getMatchedCompanyNames(filterBusinessNumber);
+        if (matchedNames.length === 0) {
+          return NextResponse.json({
+            success: true,
+            data: {
+              settlements: [],
+              pagination: { page, pageSize, total: 0, totalPages: 0 },
+              totals: { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0 },
+            },
+          });
+        }
       }
     } else {
-      settlements = await fetchSettlementsByCSOMatching(
-        session.business_number,
-        settlementMonth,
-        selectColumns
-      );
+      matchedNames = await getCSOMatchingRepository().getMatchedCompanyNames(session.business_number);
+      if (matchedNames.length === 0) {
+        return NextResponse.json({
+          success: true,
+          data: {
+            settlements: [],
+            pagination: { page, pageSize, total: 0, totalPages: 0 },
+            totals: { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0 },
+          },
+        });
+      }
     }
 
-    // Search filter
-    if (search) {
-      const searchLower = search.toLowerCase();
-      settlements = settlements.filter(s =>
-        s.제품명?.toLowerCase().includes(searchLower) ||
-        s.거래처명?.toLowerCase().includes(searchLower) ||
-        s.영업사원?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    // Pagination
-    const total = settlements.length;
-    const totalPages = Math.ceil(total / pageSize);
-    const start = (page - 1) * pageSize;
-    const paginatedData = settlements.slice(start, start + pageSize);
-
-    // Calculate totals
-    const totals = {
-      수량: settlements.reduce((sum, s) => sum + (Number(s.수량) || 0), 0),
-      금액: settlements.reduce((sum, s) => sum + (Number(s.금액) || 0), 0),
-      제약수수료_합계: settlements.reduce((sum, s) => sum + (Number(s.제약수수료_합계) || 0), 0),
-      담당수수료_합계: settlements.reduce((sum, s) => sum + (Number(s.담당수수료_합계) || 0), 0),
-    };
+    // DB 레벨 페이지네이션 + 검색 (전건 로드 제거)
+    const [paginated, totals] = await Promise.all([
+      matchedNames
+        ? settlementRepo.findByCSOMatchingPaginated(matchedNames, queryParams)
+        : settlementRepo.findAllPaginated(queryParams),
+      matchedNames
+        ? settlementRepo.getTotalsByCSOMatching(matchedNames, settlementMonth)
+        : settlementRepo.getTotals(settlementMonth),
+    ]);
 
     return NextResponse.json({
       success: true,
       data: {
-        settlements: paginatedData,
+        settlements: paginated.data,
         pagination: {
           page,
           pageSize,
-          total,
-          totalPages,
+          total: paginated.total,
+          totalPages: Math.ceil(paginated.total / pageSize),
         },
         totals,
       },

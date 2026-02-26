@@ -3,7 +3,12 @@
 // ============================================
 
 import { supabase } from './client';
-import type { SettlementRepository } from '@/domain/settlement/SettlementRepository';
+import type {
+  SettlementRepository,
+  PaginatedSettlements,
+  SettlementTotals,
+  SettlementQueryParams,
+} from '@/domain/settlement/SettlementRepository';
 import type {
   Settlement,
   SettlementSummary,
@@ -172,16 +177,15 @@ export class SupabaseSettlementRepository implements SettlementRepository {
   }
 
   async getAvailableMonths(): Promise<string[]> {
+    // 정산월 컬럼만 조회 (전건이지만 1컬럼 → 전송량 최소)
     const rows = await fetchAllPaginated<{ 정산월: string }>(async (page, pageSize) => {
       const result = await supabase
         .from('settlements')
         .select('정산월')
         .not('정산월', 'is', null)
         .range(page * pageSize, (page + 1) * pageSize - 1);
-
       return result as { data: { 정산월: string }[] | null; error: { message: string } | null };
     });
-
     const months = [...new Set(rows.map(d => d.정산월))].filter(Boolean);
     return months.sort().reverse();
   }
@@ -194,10 +198,8 @@ export class SupabaseSettlementRepository implements SettlementRepository {
         .in('CSO관리업체', matchedNames)
         .not('정산월', 'is', null)
         .range(page * pageSize, (page + 1) * pageSize - 1);
-
       return result as { data: { 정산월: string }[] | null; error: { message: string } | null };
     });
-
     const months = [...new Set(rows.map(d => d.정산월))].filter(Boolean);
     return months.sort().reverse();
   }
@@ -433,6 +435,91 @@ export class SupabaseSettlementRepository implements SettlementRepository {
     });
 
     return this.aggregateMonthlyData(allRows, summaryColumnKeys);
+  }
+
+  // ============================================
+  // DB 레벨 페이지네이션 메서드 (신규)
+  // ============================================
+
+  async findAllPaginated(params: SettlementQueryParams): Promise<PaginatedSettlements> {
+    return this.paginatedQuery(null, params);
+  }
+
+  async findByCSOMatchingPaginated(matchedNames: string[], params: SettlementQueryParams): Promise<PaginatedSettlements> {
+    return this.paginatedQuery(matchedNames, params);
+  }
+
+  private async paginatedQuery(
+    matchedNames: string[] | null,
+    params: SettlementQueryParams
+  ): Promise<PaginatedSettlements> {
+    const { settlementMonth, selectColumns, page, pageSize, search } = params;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    // 데이터 쿼리
+    let query = supabase
+      .from('settlements')
+      .select(selectColumns || '*', { count: 'exact' });
+
+    if (matchedNames) {
+      query = query.in('CSO관리업체', matchedNames);
+    }
+    if (settlementMonth) {
+      query = query.eq('정산월', settlementMonth);
+    }
+    if (search) {
+      query = query.or(`제품명.ilike.%${search}%,거래처명.ilike.%${search}%,영업사원.ilike.%${search}%`);
+    }
+
+    const { data, count, error } = await query
+      .order('id', { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      console.error('Paginated query error:', error);
+      return { data: [], total: 0 };
+    }
+
+    return {
+      data: (data || []) as unknown as Settlement[],
+      total: count || 0,
+    };
+  }
+
+  async getTotals(settlementMonth?: string): Promise<SettlementTotals> {
+    return this.totalsQuery(null, settlementMonth);
+  }
+
+  async getTotalsByCSOMatching(matchedNames: string[], settlementMonth?: string): Promise<SettlementTotals> {
+    return this.totalsQuery(matchedNames, settlementMonth);
+  }
+
+  private async totalsQuery(matchedNames: string[] | null, settlementMonth?: string): Promise<SettlementTotals> {
+    type TotalRow = { 수량: number | null; 금액: number | null; 제약수수료_합계: number | null; 담당수수료_합계: number | null };
+
+    const allRows = await fetchAllPaginated<TotalRow>(async (page, pageSize) => {
+      let query = supabase
+        .from('settlements')
+        .select('수량, 금액, 제약수수료_합계, 담당수수료_합계');
+
+      if (matchedNames) {
+        query = query.in('CSO관리업체', matchedNames);
+      }
+      if (settlementMonth) {
+        query = query.eq('정산월', settlementMonth);
+      }
+
+      const result = await query.range(page * pageSize, (page + 1) * pageSize - 1);
+      return result as { data: TotalRow[] | null; error: { message: string } | null };
+    });
+
+    return {
+      수량: allRows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
+      금액: allRows.reduce((sum, r) => sum + (Number(r.금액) || 0), 0),
+      제약수수료_합계: allRows.reduce((sum, r) => sum + (Number(r.제약수수료_합계) || 0), 0),
+      담당수수료_합계: allRows.reduce((sum, r) => sum + (Number(r.담당수수료_합계) || 0), 0),
+    };
   }
 
   private aggregateMonthlyData(

@@ -52,6 +52,10 @@ export function createMockSettlementRepository(): {
     deleteByMonth: vi.fn(),
     getMonthlySummaryByBusinessNumber: vi.fn(),
     getMonthlySummaryByCSOMatching: vi.fn(),
+    findAllPaginated: vi.fn(),
+    findByCSOMatchingPaginated: vi.fn(),
+    getTotals: vi.fn(),
+    getTotalsByCSOMatching: vi.fn(),
   };
 }
 

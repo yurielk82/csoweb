@@ -44,49 +44,39 @@ export function useSettlementData() {
   const [error, setError] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<ErrorType>(null);
 
-  // Fetch column settings
+  // 초기화: 3개 API 병렬 호출 (직렬 → Promise.all)
   useEffect(() => {
-    fetch('/api/columns')
-      .then(res => res.json())
-      .then(result => {
-        if (result.success) {
-          const visibleColumns = result.data.filter((c: ColumnSetting) => c.is_visible);
+    const init = async () => {
+      try {
+        const [columnsRes, yearMonthsRes, noticeRes] = await Promise.all([
+          fetch('/api/columns').then(r => r.json()).catch(() => ({ success: false })),
+          fetch('/api/settlements/year-months').then(r => {
+            if (r.status === 401) return { success: false, _authError: true };
+            if (!r.ok) return { success: false, _networkError: true };
+            return r.json();
+          }).catch(() => ({ success: false, _networkError: true })),
+          fetch('/api/settings/company', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ success: false })),
+        ]);
+
+        // 컬럼 설정
+        if (columnsRes.success) {
+          const visibleColumns = columnsRes.data.filter((c: ColumnSetting) => c.is_visible);
           setColumns(visibleColumns);
           const requiredKeys = visibleColumns
             .filter((c: ColumnSetting) => c.is_required)
             .map((c: ColumnSetting) => c.column_key);
           setSelectedColumns(requiredKeys.length > 0 ? requiredKeys : visibleColumns.map((c: ColumnSetting) => c.column_key));
         }
-      })
-      .catch(err => {
-        console.error('Fetch columns error:', err);
-      });
-  }, []);
 
-  // Fetch available settlement months
-  useEffect(() => {
-    const fetchYearMonths = async () => {
-      try {
-        const res = await fetch('/api/settlements/year-months');
-
-        if (res.status === 401) {
+        // 정산월 목록
+        if (yearMonthsRes._authError) {
           setError('로그인이 필요합니다. 다시 로그인해주세요.');
           setErrorType('auth');
-          setInitialLoading(false);
-          return;
-        }
-
-        if (!res.ok) {
+        } else if (yearMonthsRes._networkError) {
           setError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
           setErrorType('network');
-          setInitialLoading(false);
-          return;
-        }
-
-        const result = await res.json();
-
-        if (result.success) {
-          const months = result.data || [];
+        } else if (yearMonthsRes.success) {
+          const months = yearMonthsRes.data || [];
           setYearMonths(months);
           if (months.length > 0) {
             setSelectedMonth(months[0]);
@@ -94,11 +84,16 @@ export function useSettlementData() {
             setErrorType('no_matching');
           }
         } else {
-          setError(result.error || '정산월 목록을 불러올 수 없습니다.');
+          setError(yearMonthsRes.error || '정산월 목록을 불러올 수 없습니다.');
           setErrorType('no_data');
         }
+
+        // Notice
+        if (noticeRes.success && noticeRes.data) {
+          setNoticeSettings(noticeRes.data);
+        }
       } catch (err) {
-        console.error('Fetch year-months error:', err);
+        console.error('Init error:', err);
         setError('네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.');
         setErrorType('network');
       } finally {
@@ -106,22 +101,10 @@ export function useSettlementData() {
       }
     };
 
-    fetchYearMonths();
+    init();
   }, []);
 
-  // Fetch notice settings
-  useEffect(() => {
-    fetch('/api/settings/company', { cache: 'no-store' })
-      .then(res => res.json())
-      .then(result => {
-        if (result.success && result.data) {
-          setNoticeSettings(result.data);
-        }
-      })
-      .catch(console.error);
-  }, []);
-
-  // Fetch settlements
+  // Fetch settlements — 검색/페이지네이션은 서버에서 처리
   const fetchSettlements = useCallback(async () => {
     if (!selectedMonth) return;
 
