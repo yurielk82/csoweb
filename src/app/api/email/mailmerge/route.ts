@@ -203,11 +203,15 @@ export async function POST(request: NextRequest) {
     // 회사 정보 (대표자명 등) 사전 조회
     const companyInfo = await getCompanyRepository().get();
 
-    // 정산서 테이블 첨부 시 사전 데이터 로드
+    // CSO 매칭 데이터 사전 로드 (summary 계산 + 테이블 첨부 모두 필요)
+    const allMatches = year_month
+      ? await getCSOMatchingRepository().findAll()
+      : [];
+
+    // 정산서 테이블 첨부 시 추가 데이터 로드
     let visibleColumns: { key: string; name: string; isNumeric: boolean }[] = [];
     let notice = '';
     let allSettlements: Record<string, unknown>[] = [];
-    let allMatches: { cso_company_name: string; business_number: string }[] = [];
 
     if (include_settlement_table && year_month) {
       const allColumns = await getColumnSettingRepository().findAll();
@@ -224,8 +228,6 @@ export async function POST(request: NextRequest) {
 
       const selectCols = ['CSO관리업체', ...visibleColumns.map(c => c.key)].join(', ');
       allSettlements = await getSettlementRepository().findAll(year_month, selectCols);
-
-      allMatches = await getCSOMatchingRepository().findAll();
     }
 
     const delay = await getEmailSendDelay();
@@ -263,10 +265,15 @@ export async function POST(request: NextRequest) {
             continue;
           }
 
-          // Get settlement summary if year_month is specified
+          // Get settlement summary via CSO matching
           let summary = { 총_금액: 0, 총_수수료: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 데이터_건수: 0, 총_수량: 0 };
           if (year_month) {
-            summary = await getSettlementRepository().getSummary(bn, year_month);
+            const matchedCSONames = allMatches.length > 0
+              ? allMatches.filter(m => m.business_number === bn).map(m => m.cso_company_name)
+              : [];
+            if (matchedCSONames.length > 0) {
+              summary = await getSettlementRepository().getSummaryByCSOMatching(matchedCSONames, year_month);
+            }
           }
 
           // Prepare template variables
@@ -318,7 +325,7 @@ export async function POST(request: NextRequest) {
                 총_수량: rows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
               };
 
-              sectionHtmlMap.notice = buildNoticeHtml(notice);
+              sectionHtmlMap.notice = buildNoticeHtml(replaceVariables(notice, variables));
               sectionHtmlMap.dashboard = buildDashboardHtml(tableSummary);
               sectionHtmlMap.table = buildDataTableHtml({
                 columns: visibleColumns,
@@ -429,7 +436,13 @@ export async function PATCH(request: NextRequest) {
       companyName = targetUser.company_name;
       businessNumber = targetUser.business_number;
       if (year_month) {
-        summary = await getSettlementRepository().getSummary(businessNumber, year_month);
+        const csoMatches = await getCSOMatchingRepository().findAll();
+        const matchedCSONames = csoMatches
+          .filter(m => m.business_number === businessNumber)
+          .map(m => m.cso_company_name);
+        if (matchedCSONames.length > 0) {
+          summary = await getSettlementRepository().getSummaryByCSOMatching(matchedCSONames, year_month);
+        }
       }
     }
 
@@ -495,7 +508,7 @@ export async function PATCH(request: NextRequest) {
               총_수량: rows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
             };
 
-            sectionHtmlMap.notice = buildNoticeHtml(notice);
+            sectionHtmlMap.notice = buildNoticeHtml(replaceVariables(notice, variables));
             sectionHtmlMap.dashboard = buildDashboardHtml(tableSummary);
             sectionHtmlMap.table = buildDataTableHtml({
               columns: visibleColumns,
@@ -521,7 +534,7 @@ export async function PATCH(request: NextRequest) {
             총_수량: sampleRows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
           };
 
-          sectionHtmlMap.notice = buildNoticeHtml(notice);
+          sectionHtmlMap.notice = buildNoticeHtml(replaceVariables(notice, variables));
           sectionHtmlMap.dashboard = buildDashboardHtml(tableSummary);
           sectionHtmlMap.table = buildDataTableHtml({
             columns: visibleColumns,
@@ -593,8 +606,13 @@ export async function PUT(request: NextRequest) {
         email = targetUser.email;
         useRealData = true;
         if (year_month) {
-          const realSummary = await getSettlementRepository().getSummary(businessNumber, year_month);
-          summary = realSummary;
+          const csoMatches = await getCSOMatchingRepository().findAll();
+          const matchedCSONames = csoMatches
+            .filter(m => m.business_number === businessNumber)
+            .map(m => m.cso_company_name);
+          if (matchedCSONames.length > 0) {
+            summary = await getSettlementRepository().getSummaryByCSOMatching(matchedCSONames, year_month);
+          }
         }
       }
     }
@@ -663,7 +681,7 @@ export async function PUT(request: NextRequest) {
               총_수량: rows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
             };
 
-            sectionHtmlMap.notice = buildNoticeHtml(notice);
+            sectionHtmlMap.notice = buildNoticeHtml(replaceVariables(notice, previewVariables));
             sectionHtmlMap.dashboard = buildDashboardHtml(tableSummary);
             sectionHtmlMap.table = buildDataTableHtml({
               columns: visibleColumns,
@@ -686,7 +704,7 @@ export async function PUT(request: NextRequest) {
             총_수량: sampleRows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
           };
 
-          sectionHtmlMap.notice = buildNoticeHtml(notice);
+          sectionHtmlMap.notice = buildNoticeHtml(replaceVariables(notice, previewVariables));
           sectionHtmlMap.dashboard = buildDashboardHtml(tableSummary);
           sectionHtmlMap.table = buildDataTableHtml({
             columns: visibleColumns,

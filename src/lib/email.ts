@@ -732,21 +732,8 @@ export function buildDashboardHtml(summary: {
 }): string {
   const fmt = (v: number) => v.toLocaleString('ko-KR');
   return `<div style="margin:16px 20px;padding:16px 20px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
-    <p style="font-size:13px;font-weight:600;color:#334155;margin:0 0 10px;">합계 요약</p>
-    <table cellspacing="0" cellpadding="0" style="width:100%;font-size:13px;color:#475569;">
-      <tr>
-        <td style="padding:4px 0;">데이터 건수</td>
-        <td style="padding:4px 0;text-align:right;font-weight:600;">${fmt(summary.데이터_건수)}건</td>
-        <td style="padding:4px 0;padding-left:24px;">총 수량</td>
-        <td style="padding:4px 0;text-align:right;font-weight:600;">${fmt(summary.총_수량)}</td>
-      </tr>
-      <tr>
-        <td style="padding:4px 0;">총 금액</td>
-        <td style="padding:4px 0;text-align:right;font-weight:600;">${fmt(summary.총_금액)}원</td>
-        <td style="padding:4px 0;padding-left:24px;">총 수수료</td>
-        <td style="padding:4px 0;text-align:right;font-weight:600;">${fmt(summary.총_수수료)}원</td>
-      </tr>
-    </table>
+    <div style="font-size:13px;font-weight:600;color:#334155;">★ 총 수수료 (세금계산서 발행 금액)</div>
+    <div style="font-size:18px;font-weight:700;color:#1e40af;margin-top:6px;">${fmt(summary.총_수수료)}원</div>
   </div>`;
 }
 
