@@ -15,7 +15,7 @@
 <br />
 <div align="center">
   <h1>CSO 정산 포털</h1>
-  <p><code>v0.17.2</code></p>
+  <p><code>v0.18.0</code></p>
   <p>
     CSO(위탁영업) 업체가 제약사 정산 수수료를 조회하는 B2B 포털
   </p>
@@ -215,6 +215,7 @@ npm run test:e2e:headed   # Playwright headed 모드
 - [ ] CSO 필터링
 - [x] DDD 레이어 전환 완료 (`lib/db.ts` 호환 레이어 제거)
 - [x] 테스트 인프라 구축 (Vitest + Playwright, 108개 케이스)
+- [x] 코드 품질 전면 리뷰 (v0.18.0) — XSS 방어, 빈 catch 해소, SRP 분리, 스켈레톤/Error Boundary, SEO, next/image
 - [ ] SIT솔루션 API 연동 (엑셀 수동 업로드 → API 자동 통신 전환)
 - [ ] 다국어 지원
 

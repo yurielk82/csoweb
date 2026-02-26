@@ -5,6 +5,53 @@
 
 ---
 
+## [0.18.0] - 2026-02-26
+
+전체 코드 리뷰 & 리팩토링. 보안 강화, 타입 안전성, SRP 분리, UX 개선, SEO 기본 설정.
+
+### Security (Phase 1)
+
+- **XSS 방어**: `escapeHtml()` 유틸 추가, 이메일 Notice 본문 이스케이프 적용 (`lib/email.ts`)
+- **빈 catch 블록 해소**: 44곳 → 의도적 무시 4곳(주석 보강) + 31곳 `console.error` 추가 (23개 파일)
+
+### Changed (Phase 2 — Type Safety)
+
+- `getSettlementValue()` 유틸 추가 — Settlement 동적 키 접근의 타입 안전한 대안 (`domain/settlement/types.ts`, `types/index.ts`)
+- UI 페이지에서 `row[key]` → `getSettlementValue(row, key)` 교체 (dashboard, master)
+
+### Changed (Phase 3 — Performance/SRP)
+
+- **대시보드 분리** (752줄 → ~150줄): `useSettlementData` 훅 + 6개 하위 컴포넌트
+- **업로드 분리** (639줄 → ~150줄): `useFileUpload` 훅 + 4개 하위 컴포넌트
+- **메일머지 분리** (665줄 → ~143줄): `useMailMerge` 훅 + 4개 하위 컴포넌트
+
+### Added (Phase 4 — UX/UI)
+
+- **Skeleton UI**: `SettlementSkeleton` (대시보드), `AdminSkeleton` (관리자) + shadcn/ui `Skeleton` 베이스
+- **Error Boundary**: 루트(`error.tsx`), 메인(`(main)/error.tsx`), 인증(`(auth)/error.tsx`)
+- **loading.tsx**: App Router Suspense 경계 — 메인, 대시보드, 관리자
+
+### Added (Phase 5 — SEO)
+
+- `robots.ts`: B2B 인증 포털 전체 크롤링 차단
+- `sitemap.ts`: 로그인 페이지만 노출
+- `layout.tsx`: `title.template`, `openGraph`, `robots: {index: false}` 메타데이터
+
+### Changed (Phase 6 — Performance)
+
+- 로그인 페이지 `<img>` 3곳 → `next/image` `<Image>` 전환
+- `next.config.mjs`: `images.remotePatterns` 추가 (kogl.or.kr, creativecommons.org)
+
+### Docs (Phase 7)
+
+- `CLAUDE.md`: Tech Stack 상세화, 주요 명령어, DDD 구조, 컴포넌트 구조, 알려진 예외 문서화
+- `docs/ARCHITECTURE.md`: hooks/, components/ 구조, Error Boundary/loading.tsx 설명 추가
+- `README.md`: v0.18.0 동기화 + 로드맵 업데이트
+- `CHANGELOG.md`: v0.18.0 전체 기록
+- `package.json`: `"version": "0.18.0"`
+
+---
+
 ## [0.17.2] - 2026-02-26
 
 ### Fixed

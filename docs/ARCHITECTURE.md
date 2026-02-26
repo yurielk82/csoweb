@@ -66,9 +66,25 @@ src/
 │   ├── email/           (제거됨 — lib/email.ts에서 듀얼 프로바이더 직접 처리)
 │   └── excel/           ExcelParser (엑셀 → 도메인 객체 변환)
 │
+├── hooks/               ← 커스텀 훅 (Phase 3 SRP 분리)
+│   ├── useSettlementData.ts   대시보드 상태 + 데이터 페칭 + 핸들러
+│   ├── useFileUpload.ts       업로드 상태 + 업로드/프리뷰 로직
+│   └── useMailMerge.ts        메일머지 상태 + SSE 연결 + 발송
+│
+├── components/          ← UI 컴포넌트
+│   ├── ui/              shadcn/ui 베이스 (Button, Card, Skeleton 등)
+│   ├── shared/          공통 (Loading, Header, MainLayout)
+│   ├── settlement/      정산 관련 (Filters, Table, SummaryCards, Pagination, NoticeCard, Skeleton)
+│   └── admin/           관리자 관련 (upload/, mailmerge/, AdminSkeleton)
+│
 └── app/                 ← Next.js App Router (프레젠테이션)
-    ├── (auth)/          로그인, 회원가입 등 인증 페이지
-    ├── (main)/          메인 레이아웃 (대시보드, 정산 등)
+    ├── error.tsx        루트 Error Boundary
+    ├── robots.ts        크롤링 차단
+    ├── sitemap.ts       사이트맵 (로그인만)
+    ├── (auth)/          로그인, 회원가입 등 인증 페이지 + error.tsx
+    ├── (main)/          메인 레이아웃 + error.tsx + loading.tsx
+    │   ├── dashboard/   정산 조회 + loading.tsx (SettlementSkeleton)
+    │   └── admin/       관리자 페이지 + loading.tsx (AdminSkeleton)
     └── api/             API 라우트 핸들러
 ```
 
@@ -165,3 +181,29 @@ const user = await userRepo.findByBusinessNumber('1234567890')
 import { authenticateUser } from '@/application/auth'
 const result = await authenticateUser(businessNumber, password)
 ```
+
+---
+
+## Error Boundary & Loading
+
+Next.js App Router의 `error.tsx`와 `loading.tsx` 파일 규약을 사용합니다.
+
+### Error Boundary (error.tsx)
+
+| 파일 | 범위 |
+|------|------|
+| `src/app/error.tsx` | 루트 — 전체 앱 에러 |
+| `src/app/(main)/error.tsx` | 메인 레이아웃 — 대시보드/관리자 에러 |
+| `src/app/(auth)/error.tsx` | 인증 페이지 에러 (로그인 링크 포함) |
+
+모든 Error Boundary는 `'use client'` 컴포넌트이며, `error`와 `reset` props를 받아 에러 메시지 표시 + 재시도 버튼을 제공합니다.
+
+### Loading (loading.tsx)
+
+| 파일 | 스켈레톤 |
+|------|----------|
+| `src/app/(main)/loading.tsx` | 일반 Loading 스피너 |
+| `src/app/(main)/dashboard/loading.tsx` | `SettlementSkeleton` (카드 3개 + 테이블 10행) |
+| `src/app/(main)/admin/loading.tsx` | `AdminSkeleton` (헤더 + 카드 + 테이블) |
+
+App Router는 `loading.tsx`를 자동으로 React Suspense 경계로 감싸, 페이지 로딩 시 스켈레톤을 즉시 표시합니다.
