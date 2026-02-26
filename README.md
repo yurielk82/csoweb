@@ -25,6 +25,8 @@
     <a href="docs/API-DATABASE.md">API 레퍼런스</a>
     &middot;
     <a href="docs/OPERATIONS.md">운영 가이드</a>
+    &middot;
+    <a href="docs/MIGRATION.md">이관 매뉴얼</a>
   </p>
 </div>
 
