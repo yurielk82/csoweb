@@ -20,6 +20,10 @@
     CSO(위탁영업) 업체가 제약사 정산 수수료를 조회하는 B2B 포털
   </p>
   <p>
+    <a href="docs/USER_MANUAL.md">사용자 매뉴얼</a>
+    &middot;
+    <a href="docs/ADMIN_MANUAL.md">운영자 매뉴얼</a>
+    &middot;
     <a href="docs/ARCHITECTURE.md">아키텍처</a>
     &middot;
     <a href="docs/API-DATABASE.md">API 레퍼런스</a>

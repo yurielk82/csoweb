@@ -19,6 +19,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # 문서 순서 정의 (전산팀 이관 전달용: 개요 → 이관 → 환경 → 운영 → 설계 → 참조)
 DOCS = [
     ("README.md", "CSO 정산 포털"),
+    ("docs/USER_MANUAL.md", "사용자 매뉴얼"),
+    ("docs/ADMIN_MANUAL.md", "운영자 매뉴얼"),
     ("docs/MIGRATION.md", "이관 매뉴얼"),
     ("docs/ONBOARDING.md", "온보딩 가이드"),
     ("docs/OPERATIONS.md", "배포 & 운영"),

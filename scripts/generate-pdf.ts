@@ -36,6 +36,8 @@ const CONTACT = '영업관리팀 권대환 — qwer@ukp.co.kr';
 // 문서 순서 (전산팀 이관 전달용)
 const DOCS: Array<{ path: string; title: string }> = [
   { path: 'README.md', title: 'CSO 정산 포털' },
+  { path: 'docs/USER_MANUAL.md', title: '사용자 매뉴얼' },
+  { path: 'docs/ADMIN_MANUAL.md', title: '운영자 매뉴얼' },
   { path: 'docs/MIGRATION.md', title: '이관 매뉴얼' },
   { path: 'docs/ONBOARDING.md', title: '온보딩 가이드' },
   { path: 'docs/OPERATIONS.md', title: '배포 & 운영' },

@@ -14,6 +14,8 @@
   - 메일머지(수동 발송)는 항상 발송, 토글 대상 제외
   - `company_settings` 테이블에 `email_notifications` JSONB 컬럼 추가
   - `sendEmail()` 진입 시 비활성 유형은 발송 skip
+- **사용자 매뉴얼** (`docs/USER_MANUAL.md`) — CSO 업체 담당자용 사이트 이용 안내서
+- **운영자 매뉴얼** (`docs/ADMIN_MANUAL.md`) — 관리자(영업관리팀)용 사이트 운영 안내서
 
 ### Changed
 
