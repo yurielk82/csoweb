@@ -921,18 +921,28 @@ export async function sendEmail(
   const fromEmail = getFromEmail(companyInfo.company_name);
 
   if (!resend) {
-    console.log(`[Email Demo] From: ${fromEmail}, To: ${to}, Subject: ${emailContent.subject}`);
-    await getEmailLogRepository().update(log.id, { status: 'sent' });
-    return { success: true };
+    const msg = 'RESEND_API_KEY가 설정되지 않았습니다.';
+    console.error(`[Email Error] ${msg} From: ${fromEmail}, To: ${to}`);
+    await getEmailLogRepository().update(log.id, { status: 'failed', error_message: msg });
+    return { success: false, error: msg };
   }
 
   try {
-    await resend.emails.send({
+    const { error: resendError } = await resend.emails.send({
       from: fromEmail,
       to,
       subject: emailContent.subject,
       html: emailContent.html,
     });
+
+    if (resendError) {
+      console.error(`[Email Resend Error] From: ${fromEmail}, To: ${to}, Error: ${resendError.message}`);
+      await getEmailLogRepository().update(log.id, {
+        status: 'failed',
+        error_message: resendError.message,
+      });
+      return { success: false, error: resendError.message };
+    }
 
     await getEmailLogRepository().update(log.id, { status: 'sent' });
     return { success: true };
