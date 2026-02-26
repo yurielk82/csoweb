@@ -32,7 +32,8 @@ export async function GET() {
       smtpConfigured = !!(companyInfo.smtp_host && companyInfo.smtp_user);
       smtpHost = companyInfo.smtp_host || null;
       emailProvider = companyInfo.email_provider || 'resend';
-    } catch {
+    } catch (error) {
+      console.warn('SMTP 상태 확인 실패:', error);
       // 회사 정보 조회 실패 시 기본값 유지
     }
 

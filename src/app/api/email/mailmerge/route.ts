@@ -238,8 +238,7 @@ export async function POST(request: NextRequest) {
         const send = (data: Record<string, unknown>) => {
           try {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-          } catch {
-            // stream already closed
+          } catch { // SSE 스트림 닫힘 시 JSON 파싱 실패는 정상
           }
         };
 

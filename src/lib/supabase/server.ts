@@ -17,8 +17,7 @@ export async function createClient() {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             );
-          } catch {
-            // Ignore - called from Server Component
+          } catch { // Supabase SSR 공식 패턴: 쿠키 설정 실패 시 무시
           }
         },
       },
@@ -42,8 +41,7 @@ export async function createServiceClient() {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             );
-          } catch {
-            // Ignore
+          } catch { // Supabase SSR 공식 패턴: 쿠키 삭제 실패 시 무시
           }
         },
       },

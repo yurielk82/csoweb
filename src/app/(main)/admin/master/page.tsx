@@ -342,7 +342,8 @@ export default function AdminMasterPage() {
       } else {
         toast({ variant: 'destructive', title: '저장 실패', description: result.error });
       }
-    } catch {
+    } catch (error) {
+      console.error('Notice 저장 오류:', error);
       toast({ variant: 'destructive', title: '오류', description: '저장 중 오류가 발생했습니다.' });
     } finally {
       setNoticeSaving(false);

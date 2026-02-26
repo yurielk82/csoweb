@@ -73,7 +73,8 @@ function ResetPasswordContent() {
         }
 
         setTokenInfo(result.data);
-      } catch {
+      } catch (error) {
+        console.error('비밀번호 재설정 토큰 검증 중 오류:', error);
         setTokenError('토큰 검증 중 오류가 발생했습니다.');
       } finally {
         setLoading(false);
@@ -124,7 +125,8 @@ function ResetPasswordContent() {
       setTimeout(() => {
         router.push('/login');
       }, 3000);
-    } catch {
+    } catch (error) {
+      console.error('비밀번호 재설정 처리 중 오류:', error);
       setError('비밀번호 변경 중 오류가 발생했습니다.');
     } finally {
       setSubmitting(false);

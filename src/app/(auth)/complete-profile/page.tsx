@@ -115,7 +115,8 @@ export default function CompleteProfilePage() {
             email2: p.email2 || '',
           });
         }
-      } catch {
+      } catch (error) {
+        console.error('프로필 초기화 중 오류:', error);
         router.push('/login');
       } finally {
         setLoading(false);
@@ -225,7 +226,8 @@ export default function CompleteProfilePage() {
       }
 
       router.push(result.data?.redirect || '/dashboard');
-    } catch {
+    } catch (error) {
+      console.error('프로필 저장 처리 중 오류:', error);
       setError('처리 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);

@@ -127,7 +127,8 @@ export default function ProfilePage() {
           description: result.error,
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('프로필 처리 중 오류:', error);
       toast({
         variant: 'destructive',
         title: '오류',
@@ -168,7 +169,8 @@ export default function ProfilePage() {
           description: result.error,
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('프로필 처리 중 오류:', error);
       toast({
         variant: 'destructive',
         title: '오류',
@@ -208,7 +210,8 @@ export default function ProfilePage() {
           description: result.error,
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('프로필 처리 중 오류:', error);
       toast({
         variant: 'destructive',
         title: '오류',
@@ -248,7 +251,8 @@ export default function ProfilePage() {
           description: result.error,
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('프로필 처리 중 오류:', error);
       toast({
         variant: 'destructive',
         title: '오류',
@@ -301,7 +305,8 @@ export default function ProfilePage() {
       } else {
         setPasswordError(result.error);
       }
-    } catch {
+    } catch (error) {
+      console.error('프로필 처리 중 오류:', error);
       setPasswordError('비밀번호 변경 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);

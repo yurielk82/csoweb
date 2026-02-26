@@ -52,7 +52,8 @@ export default function ChangePasswordPage() {
         }
 
         setSession(sessionResult.data);
-      } catch {
+      } catch (error) {
+        console.error('비밀번호 변경 세션 확인 중 오류:', error);
         router.push('/login');
       } finally {
         setLoading(false);
@@ -104,7 +105,8 @@ export default function ChangePasswordPage() {
       }
 
       router.push(result.data?.redirect || '/dashboard');
-    } catch {
+    } catch (error) {
+      console.error('비밀번호 변경 처리 중 오류:', error);
       setError('처리 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);

@@ -39,7 +39,7 @@ export async function verifyToken(token: string): Promise<UserSession | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
     return payload.user as UserSession;
-  } catch {
+  } catch { // JWT 검증 실패는 정상 분기 (미인증 상태)
     return null;
   }
 }

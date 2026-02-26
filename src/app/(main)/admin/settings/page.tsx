@@ -132,7 +132,8 @@ export default function SettingsPage() {
           description: result.error,
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('설정 저장 오류:', error);
       toast({
         variant: 'destructive',
         title: '오류',
@@ -186,7 +187,8 @@ export default function SettingsPage() {
           description: result.error || result.data?.message || '연결에 실패했습니다.',
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('연결 테스트 오류:', error);
       toast({
         variant: 'destructive',
         title: '오류',

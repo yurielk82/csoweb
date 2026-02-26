@@ -138,7 +138,8 @@ export default function UploadPage() {
           description: data.error,
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('파일 미리보기 오류:', error);
       toast({
         variant: 'destructive',
         title: '오류',
@@ -205,7 +206,8 @@ export default function UploadPage() {
         // 업로드 성공 시 이메일 발송 여부 묻기 - 주석 처리
         // setShowEmailDialog(true);
       }
-    } catch {
+    } catch (error) {
+      console.error('파일 업로드 오류:', error);
       setResult({
         success: false,
         error: '업로드 중 오류가 발생했습니다.',
@@ -246,7 +248,8 @@ export default function UploadPage() {
           description: emailResult.error,
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('이메일 발송 오류:', error);
       toast({
         variant: 'destructive',
         title: '오류',

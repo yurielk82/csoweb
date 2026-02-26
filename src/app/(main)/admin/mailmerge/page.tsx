@@ -160,7 +160,8 @@ export default function MailMergePage() {
       const res = await fetch(`/api/email/mailmerge?${params.toString()}`);
       const data = await res.json();
       if (data.success) setRecipientCount(data.data.count);
-    } catch {
+    } catch (error) {
+      console.error('수신 대상 수 조회 오류:', error);
       setRecipientCount(null);
     } finally {
       setLoadingCount(false);
@@ -240,7 +241,8 @@ export default function MailMergePage() {
         setTestCompanies(listData.data.companies);
         setSelectedTestBn('');
       }
-    } catch {
+    } catch (error) {
+      console.error('미리보기 생성 오류:', error);
       toast({ variant: 'destructive', title: '오류', description: '미리보기 생성 중 오류가 발생했습니다.' });
     }
   };
@@ -249,8 +251,8 @@ export default function MailMergePage() {
     setSelectedTestBn(bn);
     try {
       await fetchPreview(bn);
-    } catch {
-      // 미리보기 갱신 실패 시 무시
+    } catch (error) {
+      console.error('미리보기 갱신 오류:', error);
     }
   };
 
@@ -278,7 +280,8 @@ export default function MailMergePage() {
       } else {
         toast({ variant: 'destructive', title: '테스트 발송 실패', description: data.error });
       }
-    } catch {
+    } catch (error) {
+      console.error('테스트 발송 오류:', error);
       toast({ variant: 'destructive', title: '오류', description: '테스트 발송 중 오류가 발생했습니다.' });
     } finally {
       setTestSending(false);
@@ -347,7 +350,7 @@ export default function MailMergePage() {
               } else if (event.type === 'complete') {
                 setResult({ sent: event.sent || 0, failed: event.failed || 0, total: event.total });
               }
-            } catch { /* ignore */ }
+            } catch { /* SSE JSON 파싱: 불완전한 줄은 정상적으로 무시 */ }
           }
         }
       } else {

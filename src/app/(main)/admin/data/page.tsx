@@ -98,7 +98,8 @@ export default function DataManagementPage() {
           description: result.error,
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('데이터 삭제 오류:', error);
       toast({
         variant: 'destructive',
         title: '오류',

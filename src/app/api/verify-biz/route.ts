@@ -61,7 +61,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<VerifyBiz
   let body: VerifyBizRequest;
   try {
     body = await request.json();
-  } catch {
+  } catch (error) {
+    console.error('사업자 진위확인 API 오류:', error);
     return NextResponse.json(
       { success: false, error: '잘못된 요청 형식입니다.', code: 'INVALID_REQUEST' },
       { status: 400 }

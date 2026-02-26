@@ -709,9 +709,18 @@ function getMailMergeEmail(data: {
 
 export type EmailSectionId = 'notice' | 'dashboard' | 'table' | 'body';
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function buildBodyHtml(body: string): string {
   const lines = body.split('\n').map(line =>
-    line.trim() ? `<p style="margin: 0 0 12px;">${line}</p>` : '<br>'
+    line.trim() ? `<p style="margin: 0 0 12px;">${escapeHtml(line)}</p>` : '<br>'
   ).join('');
   return `<div style="color: #374151; font-size: 14px; line-height: 1.8; padding: 0 20px;">${lines}</div>`;
 }
@@ -720,7 +729,7 @@ export function buildNoticeHtml(notice: string): string {
   if (!notice) return '';
   return `<div style="margin:16px 20px;padding:12px 16px;border-left:4px solid #f59e0b;background:#fefce8;">
     <p style="font-weight:bold;font-size:13px;color:#92400e;margin:0 0 8px;">[ Notice ]</p>
-    <div style="font-size:12px;color:#78350f;line-height:1.8;white-space:pre-line;">${notice}</div>
+    <div style="font-size:12px;color:#78350f;line-height:1.8;white-space:pre-line;">${escapeHtml(notice)}</div>
   </div>`;
 }
 
@@ -796,8 +805,8 @@ export async function sendEmail(
         console.log(`[Email Skip] ${templateType} 알림이 비활성화되어 발송하지 않습니다.`);
         return { success: true };
       }
-    } catch {
-      // 설정 조회 실패 시 기본값(전부 활성)으로 진행
+    } catch (error) {
+      console.warn('[Email] 알림 설정 조회 실패, 기본값(전부 활성)으로 진행:', error);
     }
   }
 
@@ -817,7 +826,8 @@ export async function sendEmail(
       website: info.website,
     };
     emailSettings = await getEmailSettings();
-  } catch {
+  } catch (error) {
+    console.warn('[Email] 회사 정보 조회 실패, 기본값으로 진행:', error);
     companyInfo = {
       company_name: 'CSO 정산서 포털',
       ceo_name: '',

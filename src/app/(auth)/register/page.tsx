@@ -292,7 +292,8 @@ export default function RegisterPage() {
       }
 
       setSuccess(true);
-    } catch {
+    } catch (error) {
+      console.error('회원가입 처리 중 오류:', error);
       setError('회원가입 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);

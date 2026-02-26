@@ -180,7 +180,8 @@ export default function MembersPage() {
           description: result.error,
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('회원 수정 오류:', error);
       toast({
         variant: 'destructive',
         title: '오류',
@@ -282,7 +283,8 @@ export default function MembersPage() {
           description: result.error,
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('회원 삭제 오류:', error);
       toast({
         variant: 'destructive',
         title: '오류',
@@ -320,7 +322,8 @@ export default function MembersPage() {
           description: result.error,
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('비밀번호 초기화 오류:', error);
       toast({
         variant: 'destructive',
         title: '오류',

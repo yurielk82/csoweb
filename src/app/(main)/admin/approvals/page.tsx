@@ -113,7 +113,8 @@ export default function ApprovalsPage() {
           description: result.error,
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('승인 처리 오류:', error);
       toast({
         variant: 'destructive',
         title: '오류',
@@ -168,7 +169,8 @@ export default function ApprovalsPage() {
           description: result.error || '처리 중 오류가 발생했습니다.',
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('일괄 승인 처리 오류:', error);
       toast({
         variant: 'destructive',
         title: '오류',
@@ -210,7 +212,8 @@ export default function ApprovalsPage() {
           description: result.error,
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('거부 처리 오류:', error);
       toast({
         variant: 'destructive',
         title: '오류',

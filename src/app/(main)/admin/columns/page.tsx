@@ -265,7 +265,8 @@ export default function ColumnsPage() {
           description: '컬럼 설정이 기본값으로 초기화되었습니다.',
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('컬럼 초기화 오류:', error);
       toast({
         variant: 'destructive',
         title: '오류',
@@ -294,7 +295,8 @@ export default function ColumnsPage() {
       } else {
         throw new Error(result.error);
       }
-    } catch {
+    } catch (error) {
+      console.error('컬럼 설정 저장 오류:', error);
       toast({
         variant: 'destructive',
         title: '저장 실패',

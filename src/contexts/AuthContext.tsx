@@ -56,7 +56,8 @@ function getStoredUser(): UserSession | null {
     }
     localStorage.removeItem(STORAGE_KEY);
     return null;
-  } catch {
+  } catch (error) {
+    console.error('세션 확인 중 오류:', error);
     localStorage.removeItem(STORAGE_KEY);
     return null;
   }

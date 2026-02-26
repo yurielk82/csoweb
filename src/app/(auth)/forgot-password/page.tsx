@@ -53,7 +53,8 @@ export default function ForgotPasswordPage() {
       }
 
       setSuccess(true);
-    } catch {
+    } catch (error) {
+      console.error('비밀번호 찾기 요청 중 오류:', error);
       setError('비밀번호 재설정 요청 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);

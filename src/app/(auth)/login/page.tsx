@@ -99,7 +99,8 @@ export default function LoginPage() {
         // ⚠️ 여기서 router.push 하지 않음! useEffect가 처리
       }
       // loading은 이동 완료 전까지 유지 (UX)
-    } catch {
+    } catch (error) {
+      console.error('로그인 처리 중 오류:', error);
       setError('로그인 중 오류가 발생했습니다.');
       setLoading(false);
     }

@@ -69,7 +69,8 @@ export async function POST(request: NextRequest) {
       try {
         customMapping = JSON.parse(customMappingStr);
         console.log('Using custom column mapping:', Object.keys(customMapping || {}).length, 'columns');
-      } catch {
+      } catch (error) {
+        console.error('업로드 JSON 파싱 오류:', error);
         console.warn('Invalid custom mapping JSON, ignoring');
       }
     }
