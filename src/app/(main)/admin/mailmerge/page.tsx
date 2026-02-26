@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MailPlus, Send, Eye, Loader2, Users, X, CheckCircle2, XCircle, Clock, ChevronUp, ChevronDown } from 'lucide-react';
+import { MailPlus, Send, Eye, Loader2, Users, X, CheckCircle2, XCircle, Clock, ChevronUp, ChevronDown, SendHorizonal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -109,6 +109,9 @@ export default function MailMergePage() {
 
   const [preview, setPreview] = useState<{ subject: string; contentHtml?: string; hasSettlementData?: boolean } | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [testSending, setTestSending] = useState(false);
+  const [testCompanies, setTestCompanies] = useState<{ business_number: string; company_name: string }[]>([]);
+  const [selectedTestBn, setSelectedTestBn] = useState<string>('');
 
   const [recipientCount, setRecipientCount] = useState<number | null>(null);
   const [loadingCount, setLoadingCount] = useState(false);
@@ -190,8 +193,55 @@ export default function MailMergePage() {
 
   const handlePreview = async () => {
     try {
+      // Fetch preview + company list in parallel
+      const params = new URLSearchParams();
+      if (recipientType === 'all') {
+        params.set('type', 'all');
+      } else if (recipientType === 'year_month' && selectedYearMonth) {
+        params.set('type', 'year_month');
+        params.set('year_month', selectedYearMonth);
+      }
+      params.set('include_list', 'true');
+
+      const [previewRes, listRes] = await Promise.all([
+        fetch('/api/email/mailmerge', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject,
+            body,
+            year_month: recipientType === 'year_month' ? selectedYearMonth : undefined,
+            include_settlement_table: includeSettlementTable,
+            sections: includeSettlementTable ? getSectionsPayload() : undefined,
+          }),
+        }),
+        fetch(`/api/email/mailmerge?${params.toString()}`),
+      ]);
+
+      const previewData = await previewRes.json();
+      const listData = await listRes.json();
+
+      if (previewData.success) {
+        setPreview(previewData.data);
+        setPreviewOpen(true);
+      } else {
+        toast({ variant: 'destructive', title: '미리보기 실패', description: previewData.error });
+      }
+
+      if (listData.success && listData.data.companies) {
+        setTestCompanies(listData.data.companies);
+        setSelectedTestBn('');
+      }
+    } catch {
+      toast({ variant: 'destructive', title: '오류', description: '미리보기 생성 중 오류가 발생했습니다.' });
+    }
+  };
+
+  const handleTestSend = async () => {
+    setTestSending(true);
+    try {
       const response = await fetch('/api/email/mailmerge', {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           subject,
@@ -199,17 +249,22 @@ export default function MailMergePage() {
           year_month: recipientType === 'year_month' ? selectedYearMonth : undefined,
           include_settlement_table: includeSettlementTable,
           sections: includeSettlementTable ? getSectionsPayload() : undefined,
+          test_business_number: selectedTestBn && selectedTestBn !== '__sample__' ? selectedTestBn : undefined,
         }),
       });
       const data = await response.json();
       if (data.success) {
-        setPreview(data.data);
-        setPreviewOpen(true);
+        toast({
+          title: '테스트 발송 완료',
+          description: `${data.data.email}로 "${data.data.company_name}" 데이터가 발송되었습니다.`,
+        });
       } else {
-        toast({ variant: 'destructive', title: '미리보기 실패', description: data.error });
+        toast({ variant: 'destructive', title: '테스트 발송 실패', description: data.error });
       }
     } catch {
-      toast({ variant: 'destructive', title: '오류', description: '미리보기 생성 중 오류가 발생했습니다.' });
+      toast({ variant: 'destructive', title: '오류', description: '테스트 발송 중 오류가 발생했습니다.' });
+    } finally {
+      setTestSending(false);
     }
   };
 
@@ -558,8 +613,33 @@ export default function MailMergePage() {
               </div>
             </ScrollArea>
           )}
-          <DialogFooter>
+          <div className="border-t pt-4 space-y-3">
+            <div className="flex items-center gap-3">
+              <Label className="text-sm font-medium whitespace-nowrap">테스트 업체</Label>
+              <Select value={selectedTestBn} onValueChange={setSelectedTestBn}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="업체 선택 (미선택 시 샘플 데이터)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__sample__">샘플 데이터 (가상)</SelectItem>
+                  {testCompanies.map(c => (
+                    <SelectItem key={c.business_number} value={c.business_number}>
+                      {c.company_name} ({c.business_number})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              업체를 선택하면 해당 업체의 실제 정산 데이터로 관리자 이메일에 테스트 발송합니다.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setPreviewOpen(false)}>닫기</Button>
+            <Button onClick={handleTestSend} disabled={testSending}>
+              {testSending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <SendHorizonal className="h-4 w-4 mr-2" />}
+              테스트 발송 (내 이메일)
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

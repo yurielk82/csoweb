@@ -85,18 +85,33 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const type = url.searchParams.get('type');
     const ym = url.searchParams.get('year_month');
+    const includeList = url.searchParams.get('include_list') === 'true';
 
     let count = 0;
+    let companies: { business_number: string; company_name: string }[] = [];
 
     if (type === 'all') {
       const users = await getUserRepository().findAll();
-      count = users.filter(u => u.is_approved && !u.is_admin).length;
+      const filtered = users.filter(u => u.is_approved && !u.is_admin);
+      count = filtered.length;
+      if (includeList) {
+        companies = filtered.map(u => ({ business_number: u.business_number, company_name: u.company_name }));
+      }
     } else if (type === 'year_month' && ym) {
       const bns = await getSettlementRepository().getBusinessNumbersForMonth(ym);
       count = bns.length;
+      if (includeList) {
+        const users = await getUserRepository().findAll();
+        companies = bns
+          .map(bn => {
+            const user = users.find(u => u.business_number === bn);
+            return user ? { business_number: bn, company_name: user.company_name } : { business_number: bn, company_name: bn };
+          })
+          .sort((a, b) => a.company_name.localeCompare(b.company_name));
+      }
     }
 
-    return NextResponse.json({ success: true, data: { count } });
+    return NextResponse.json({ success: true, data: { count, ...(includeList ? { companies } : {}) } });
   } catch (error) {
     console.error('Mailmerge GET error:', error);
     return NextResponse.json(
@@ -330,6 +345,176 @@ export async function POST(request: NextRequest) {
     console.error('Mail merge error:', error);
     return NextResponse.json(
       { success: false, error: '메일 발송 중 오류가 발생했습니다.' },
+      { status: 500 }
+    );
+  }
+}
+
+// Test send to admin's own email (with real company data)
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getSession();
+
+    if (!session || !session.is_admin) {
+      return NextResponse.json(
+        { success: false, error: '관리자 권한이 필요합니다.' },
+        { status: 403 }
+      );
+    }
+
+    const { subject, body, year_month, include_settlement_table, sections, test_business_number } = await request.json();
+    const orderedSections: SectionConfig[] = sections || DEFAULT_SECTIONS;
+
+    if (!subject || !body) {
+      return NextResponse.json(
+        { success: false, error: '제목과 내용을 입력해주세요.' },
+        { status: 400 }
+      );
+    }
+
+    // Resolve target company: real company or sample
+    let companyName = '[테스트] 샘플 업체';
+    let businessNumber = '000-00-00000';
+    let summary = { 총_금액: 0, 총_수수료: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 데이터_건수: 0, 총_수량: 0 };
+
+    if (test_business_number) {
+      const targetUser = await getUserRepository().findByBusinessNumber(test_business_number);
+      if (!targetUser) {
+        return NextResponse.json(
+          { success: false, error: '해당 업체를 찾을 수 없습니다.' },
+          { status: 404 }
+        );
+      }
+      companyName = targetUser.company_name;
+      businessNumber = targetUser.business_number;
+      if (year_month) {
+        summary = await getSettlementRepository().getSummary(businessNumber, year_month);
+      }
+    }
+
+    const variables: Record<string, string | number> = {
+      '업체명': companyName,
+      '사업자번호': businessNumber,
+      '이메일': session.email,
+      '정산월': year_month || '',
+      '총_금액': formatCurrency(summary.총_금액),
+      '총_수수료': formatCurrency(summary.총_수수료),
+      '제약수수료_합계': formatCurrency(summary.제약수수료_합계),
+      '담당수수료_합계': formatCurrency(summary.담당수수료_합계),
+      '데이터_건수': summary.데이터_건수,
+      '총_수량': summary.총_수량.toLocaleString('ko-KR'),
+    };
+
+    const testSubject = '[테스트] ' + replaceVariables(subject, variables);
+    const testBody = replaceVariables(body, variables);
+
+    // Build section HTML
+    const sectionHtmlMap: Record<EmailSectionId, string> = {
+      notice: '',
+      dashboard: '',
+      table: '',
+      body: buildBodyHtml(testBody),
+    };
+
+    let hasWideContent = false;
+
+    if (include_settlement_table && year_month) {
+      const allColumns = await getColumnSettingRepository().findAll();
+      const visibleColumns = allColumns
+        .filter(c => c.is_visible)
+        .sort((a, b) => a.display_order - b.display_order)
+        .map(c => ({
+          key: c.column_key,
+          name: c.column_name,
+          isNumeric: NUMERIC_COLUMN_KEYS.includes(c.column_key),
+        }));
+
+      const companyInfo = await getCompanyRepository().get();
+      const notice = companyInfo.notice_content || '';
+
+      if (test_business_number) {
+        // Real company data: same logic as actual send
+        const allMatches = await getCSOMatchingRepository().findAll();
+        const matchedCSONames = allMatches
+          .filter(m => m.business_number === businessNumber)
+          .map(m => m.cso_company_name);
+
+        if (matchedCSONames.length > 0) {
+          const selectCols = ['CSO관리업체', ...visibleColumns.map(c => c.key)].join(', ');
+          const allData = await getSettlementRepository().findAll(year_month, selectCols);
+          const rows = allData.filter(s => matchedCSONames.includes((s.CSO관리업체 as string) || ''));
+
+          if (rows.length > 0) {
+            hasWideContent = true;
+            const tableSummary = {
+              총_금액: rows.reduce((sum, r) => sum + (Number(r.금액) || 0), 0),
+              총_수수료: rows.reduce((sum, r) => sum + (Number(r.제약수수료_합계) || 0), 0),
+              데이터_건수: rows.length,
+              총_수량: rows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
+            };
+
+            sectionHtmlMap.notice = buildNoticeHtml(notice);
+            sectionHtmlMap.dashboard = buildDashboardHtml(tableSummary);
+            sectionHtmlMap.table = buildDataTableHtml({
+              columns: visibleColumns,
+              rows,
+              company_name: companyName,
+              year_month,
+            });
+          }
+        }
+      } else {
+        // Sample data: pick first CSO for demo
+        const selectCols = ['CSO관리업체', ...visibleColumns.map(c => c.key)].join(', ');
+        const allData = await getSettlementRepository().findAll(year_month, selectCols);
+        const firstCSO = allData.find(s => s.CSO관리업체)?.CSO관리업체;
+
+        if (firstCSO) {
+          hasWideContent = true;
+          const sampleRows = allData.filter(s => s.CSO관리업체 === firstCSO).slice(0, 20);
+          const tableSummary = {
+            총_금액: sampleRows.reduce((sum, r) => sum + (Number(r.금액) || 0), 0),
+            총_수수료: sampleRows.reduce((sum, r) => sum + (Number(r.제약수수료_합계) || 0), 0),
+            데이터_건수: sampleRows.length,
+            총_수량: sampleRows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
+          };
+
+          sectionHtmlMap.notice = buildNoticeHtml(notice);
+          sectionHtmlMap.dashboard = buildDashboardHtml(tableSummary);
+          sectionHtmlMap.table = buildDataTableHtml({
+            columns: visibleColumns,
+            rows: sampleRows,
+            company_name: companyName,
+            year_month,
+          });
+        }
+      }
+    }
+
+    const contentHtml = buildContentHtml(orderedSections, sectionHtmlMap);
+
+    // Send to admin's email
+    const result = await sendEmail(session.email, 'mail_merge', {
+      subject: testSubject,
+      contentHtml,
+      hasWideContent,
+    });
+
+    if (result.success) {
+      return NextResponse.json({
+        success: true,
+        data: { email: session.email, company_name: companyName },
+      });
+    } else {
+      return NextResponse.json(
+        { success: false, error: result.error || '테스트 발송에 실패했습니다.' },
+        { status: 500 }
+      );
+    }
+  } catch (error) {
+    console.error('Test send error:', error);
+    return NextResponse.json(
+      { success: false, error: '테스트 발송 중 오류가 발생했습니다.' },
       { status: 500 }
     );
   }
