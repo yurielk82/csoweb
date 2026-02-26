@@ -30,6 +30,7 @@ const TEMPLATE_LABELS: Record<EmailTemplateType, string> = {
   settlement_uploaded: '정산서 업로드',
   password_reset: '비밀번호 재설정',
   mail_merge: '메일머지',
+  settlement_email: '정산서 발송',
 };
 
 const STATUS_CONFIG: Record<EmailStatus, { label: string; variant: 'default' | 'secondary' | 'destructive'; icon: typeof CheckCircle }> = {
