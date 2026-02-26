@@ -1,15 +1,19 @@
 /**
- * GitHub 스타일 PDF 생성 스크립트
+ * 역할별 GitHub 스타일 PDF 생성 스크립트
  *
- * 사용법: npx tsx scripts/generate-pdf.ts
+ * 사용법:
+ *   npx tsx scripts/generate-pdf.ts          # 3개 PDF 모두 생성
+ *   npx tsx scripts/generate-pdf.ts user     # 사용자 매뉴얼만
+ *   npx tsx scripts/generate-pdf.ts admin    # 운영자 매뉴얼만
+ *   npx tsx scripts/generate-pdf.ts dev      # 개발자 매뉴얼만
  *
  * 의존성: marked, github-markdown-css, @playwright/test (모두 devDependencies)
  * Playwright 브라우저가 설치되어 있어야 합니다 (npx playwright install chromium)
  */
 
-import { chromium } from 'playwright';
+import { chromium, type Browser } from 'playwright';
 import { marked, type Tokens } from 'marked';
-import { readFileSync } from 'fs';
+import { readFileSync, statSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -18,36 +22,77 @@ import { fileURLToPath } from 'url';
 function slugify(text: string): string {
   return text
     .toLowerCase()
-    .replace(/<[^>]*>/g, '')           // HTML 태그 제거
-    .replace(/[^\w\s가-힣-]/g, '')     // 특수문자 제거 (한글 유지)
-    .replace(/\s+/g, '-')             // 공백 → 하이픈
-    .replace(/-+/g, '-')              // 중복 하이픈 제거
-    .replace(/^-|-$/g, '');           // 양 끝 하이픈 제거
+    .replace(/<[^>]*>/g, '')
+    .replace(/[^\w\s가-힣-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
 // --- 설정 ---
 
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-const VERSION = 'v0.16.0';
+const VERSION = 'v0.17.0';
 const DATE = '2026-02-26';
 const CONTACT = '영업관리팀 권대환 — qwer@ukp.co.kr';
 
-// 문서 순서 (전산팀 이관 전달용)
-const DOCS: Array<{ path: string; title: string }> = [
-  { path: 'README.md', title: 'CSO 정산 포털' },
-  { path: 'docs/USER_MANUAL.md', title: '사용자 매뉴얼' },
-  { path: 'docs/ADMIN_MANUAL.md', title: '운영자 매뉴얼' },
-  { path: 'docs/MIGRATION.md', title: '이관 매뉴얼' },
-  { path: 'docs/ONBOARDING.md', title: '온보딩 가이드' },
-  { path: 'docs/OPERATIONS.md', title: '배포 & 운영' },
-  { path: 'docs/ARCHITECTURE.md', title: '아키텍처' },
-  { path: 'docs/API-DATABASE.md', title: 'API & 데이터베이스 레퍼런스' },
-  { path: 'docs/API_REFERENCE.md', title: 'API Reference (외부/내부)' },
-  { path: 'CHANGELOG.md', title: 'Changelog' },
+// --- PDF 프로필 정의 ---
+
+interface PDFProfile {
+  id: string;
+  title: string;
+  subtitle: string;
+  outputFile: string;
+  footerLabel: string;
+  docs: Array<{ path: string; title: string }>;
+  showBadges: boolean;
+}
+
+const PROFILES: PDFProfile[] = [
+  {
+    id: 'user',
+    title: 'CSO 정산 포털 — 사용자 매뉴얼',
+    subtitle: 'CSO(위탁영업) 업체 담당자를 위한 사이트 이용 안내서',
+    outputFile: 'CSO_정산포털_사용자매뉴얼.pdf',
+    footerLabel: 'CSO 정산 포털 — 사용자 매뉴얼',
+    showBadges: false,
+    docs: [
+      { path: 'docs/USER_MANUAL.md', title: '사용자 매뉴얼' },
+    ],
+  },
+  {
+    id: 'admin',
+    title: 'CSO 정산 포털 — 운영자 매뉴얼',
+    subtitle: '관리자(영업관리팀)를 위한 사이트 운영 안내서',
+    outputFile: 'CSO_정산포털_운영자매뉴얼.pdf',
+    footerLabel: 'CSO 정산 포털 — 운영자 매뉴얼',
+    showBadges: false,
+    docs: [
+      { path: 'docs/ADMIN_MANUAL.md', title: '운영자 매뉴얼' },
+    ],
+  },
+  {
+    id: 'dev',
+    title: 'CSO 정산 포털 — 개발자 매뉴얼',
+    subtitle: '개발자 · 전산팀을 위한 기술 문서 통합본',
+    outputFile: 'CSO_정산포털_개발자매뉴얼.pdf',
+    footerLabel: 'CSO 정산 포털 — 개발자 매뉴얼',
+    showBadges: true,
+    docs: [
+      { path: 'README.md', title: 'CSO 정산 포털' },
+      { path: 'docs/MIGRATION.md', title: '이관 매뉴얼' },
+      { path: 'docs/ONBOARDING.md', title: '온보딩 가이드' },
+      { path: 'docs/OPERATIONS.md', title: '배포 & 운영' },
+      { path: 'docs/ARCHITECTURE.md', title: '아키텍처' },
+      { path: 'docs/API-DATABASE.md', title: 'API & 데이터베이스 레퍼런스' },
+      { path: 'docs/API_REFERENCE.md', title: 'API Reference (외부/내부)' },
+      { path: 'CHANGELOG.md', title: 'Changelog' },
+    ],
+  },
 ];
 
-// shields.io 배지 → HTML 라벨 (이미지 대신 텍스트 배지)
+// shields.io 배지 → HTML 라벨
 const BADGE_MAP: Record<string, { label: string; bg: string; fg: string }> = {
   'nextjs-shield': { label: 'Next.js', bg: '#24292f', fg: '#ffffff' },
   'typescript-shield': { label: 'TypeScript', bg: '#3178C6', fg: '#ffffff' },
@@ -59,13 +104,11 @@ const BADGE_MAP: Record<string, { label: string; bg: string; fg: string }> = {
 // --- 마크다운 전처리 ---
 
 function resolveReferenceLinks(text: string): string {
-  // 레퍼런스 정의 수집
   const refs: Record<string, string> = {};
   for (const m of text.matchAll(/^\[([^\]]+)\]:\s*(.+)$/gm)) {
     refs[m[1].toLowerCase()] = m[2].trim();
   }
 
-  // [![alt][img-ref]][link-ref] → 배지 HTML 또는 텍스트 링크
   text = text.replace(
     /\[!\[([^\]]*)\]\[([^\]]+)\]\]\[([^\]]+)\]/g,
     (_match, _alt: string, imgRef: string, linkRef: string) => {
@@ -80,81 +123,32 @@ function resolveReferenceLinks(text: string): string {
     }
   );
 
-  // 남은 [text][ref] → 인라인 링크
   text = text.replace(/\[([^\]]+)\]\[([^\]]+)\]/g, (_match, linkText: string, refKey: string) => {
     const url = refs[refKey.toLowerCase()];
     return url ? `[${linkText}](${url})` : _match;
   });
 
-  // 레퍼런스 정의 라인 제거
   text = text.replace(/^\[([^\]]+)\]:\s*.+$/gm, '');
-
   return text;
 }
 
 function preprocessMarkdown(text: string): string {
   text = resolveReferenceLinks(text);
-
-  // 체크박스
   text = text.replace(/- \[x\] /g, '- <input type="checkbox" checked disabled> ');
   text = text.replace(/- \[ \] /g, '- <input type="checkbox" disabled> ');
-
-  // HTML 주석 제거
   text = text.replace(/<!--.*?-->/gs, '');
-
-  // GitHub "맨 위로" 링크 제거
   text = text.replace(/<p align="right">.*?<\/p>/gs, '');
-
-  // <a id="..."></a> 앵커 제거
   text = text.replace(/<a\s+id="[^"]*"\s*>\s*<\/a>/g, '');
-
   return text;
 }
 
 // --- HTML 조립 ---
 
-function buildCoverPage(): string {
-  const badges = Object.values(BADGE_MAP)
-    .map(b => `<span class="badge" style="background:${b.bg};color:${b.fg}">${b.label}</span>`)
-    .join(' ');
-
-  return `
-  <div class="cover-page">
-    <h1>CSO 정산 포털</h1>
-    <div class="version">${VERSION}</div>
-    <div class="subtitle">
-      CSO(위탁영업) 업체가 제약사 정산 수수료를 조회하는 B2B 포털<br>
-      기술 문서 통합본
-    </div>
-    <div class="badges">${badges}</div>
-    <div class="meta">${DATE} 기준</div>
-    <div class="contact">${CONTACT}</div>
-  </div>`;
-}
-
-function buildToc(): string {
-  const items = DOCS.map(
-    (d, i) => `<li><a href="#${docPrefix(d.path)}"><span class="toc-num">${i + 1}.</span> ${d.title}</a></li>`
-  ).join('\n');
-
-  return `
-  <div class="toc-page">
-    <h1>목차</h1>
-    <ol>${items}</ol>
-  </div>`;
-}
-
-// 문서 파일명 → 앵커 프리픽스 (문서 간 링크용)
 function docPrefix(docPath: string): string {
-  // "docs/MIGRATION.md" → "migration", "README.md" → "readme"
   return docPath.replace(/^docs\//, '').replace(/\.md$/i, '').toLowerCase();
 }
 
-// 문서 간 상대 링크를 PDF 내부 앵커로 변환
-// 예: [ONBOARDING.md](ONBOARDING.md) → <a href="#onboarding">
-//     [API-DATABASE.md#스키마](API-DATABASE.md#스키마) → <a href="#api-database-스키마">
 function rewriteDocLinks(html: string): string {
-  // href="docs/FILE.md#section" 또는 href="FILE.md#section" 또는 href="FILE.md"
   return html.replace(
     /href="(?:docs\/)?([A-Za-z0-9_-]+)\.md(?:#([^"]*))?" /g,
     (_match, file: string, fragment: string | undefined) => {
@@ -167,24 +161,55 @@ function rewriteDocLinks(html: string): string {
   );
 }
 
-async function buildChapter(doc: typeof DOCS[0], index: number): Promise<string> {
+function buildCoverPage(profile: PDFProfile): string {
+  const badgesHtml = profile.showBadges
+    ? `<div class="badges">${Object.values(BADGE_MAP).map(b => `<span class="badge" style="background:${b.bg};color:${b.fg}">${b.label}</span>`).join(' ')}</div>`
+    : '';
+
+  return `
+  <div class="cover-page">
+    <h1>${profile.title}</h1>
+    <div class="version">${VERSION}</div>
+    <div class="subtitle">${profile.subtitle}</div>
+    ${badgesHtml}
+    <div class="meta">${DATE} 기준</div>
+    <div class="contact">${CONTACT}</div>
+  </div>`;
+}
+
+function buildToc(docs: PDFProfile['docs']): string {
+  if (docs.length <= 1) return '';
+
+  const items = docs.map(
+    (d, i) => `<li><a href="#${docPrefix(d.path)}"><span class="toc-num">${i + 1}.</span> ${d.title}</a></li>`
+  ).join('\n');
+
+  return `
+  <div class="toc-page">
+    <h1>목차</h1>
+    <ol>${items}</ol>
+  </div>`;
+}
+
+async function buildChapter(
+  doc: { path: string; title: string },
+  index: number,
+  isSingle: boolean,
+): Promise<string> {
   const fullPath = resolve(PROJECT_ROOT, doc.path);
   let md: string;
   try {
     md = readFileSync(fullPath, 'utf-8');
   } catch {
-    console.log(`  [SKIP] ${doc.path} not found`);
+    console.log(`    [SKIP] ${doc.path} not found`);
     return '';
   }
 
   md = preprocessMarkdown(md);
-
-  // 첫 번째 h1 제거 (chapter-header와 중복 방지)
   md = md.replace(/^#\s+.+$/m, '');
 
   const prefix = docPrefix(doc.path);
 
-  // marked에 heading renderer를 설정하여 id 속성 부여
   const renderer = new marked.Renderer();
   renderer.heading = function ({ text, depth }: Tokens.Heading) {
     const slug = slugify(text);
@@ -193,11 +218,20 @@ async function buildChapter(doc: typeof DOCS[0], index: number): Promise<string>
   };
 
   let html = await marked.parse(md, { gfm: true, breaks: false, renderer });
-
-  // 문서 간 .md 링크를 PDF 내부 앵커로 변환
   html = rewriteDocLinks(html);
 
-  console.log(`  [OK] ${doc.path}`);
+  console.log(`    [OK] ${doc.path}`);
+
+  // 단일 문서일 경우 chapter-header 없이 바로 본문
+  if (isSingle) {
+    return `
+    <div class="chapter" id="${prefix}">
+      <div class="markdown-body">
+        ${html}
+      </div>
+    </div>`;
+  }
+
   return `
   <div class="chapter" id="${prefix}">
     <div class="chapter-header">
@@ -215,20 +249,12 @@ function getGitHubCSS(): string {
   return readFileSync(cssPath, 'utf-8');
 }
 
-// --- 메인 ---
-
-async function main() {
-  console.log('\n  GitHub 스타일 PDF 생성 시작...\n');
-
-  const githubCSS = getGitHubCSS();
-
-  const chapters: string[] = [];
-  for (let i = 0; i < DOCS.length; i++) {
-    const html = await buildChapter(DOCS[i], i);
-    if (html) chapters.push(html);
-  }
-
-  const fullHTML = `<!DOCTYPE html>
+function buildFullHTML(
+  githubCSS: string,
+  profile: PDFProfile,
+  chapters: string[],
+): string {
+  return `<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="utf-8">
@@ -270,7 +296,7 @@ async function main() {
       page-break-after: always;
     }
     .cover-page h1 {
-      font-size: 34pt;
+      font-size: 28pt;
       font-weight: 700;
       color: #1f2328;
       border: none;
@@ -413,19 +439,31 @@ async function main() {
   </style>
 </head>
 <body>
-  ${buildCoverPage()}
-  ${buildToc()}
+  ${buildCoverPage(profile)}
+  ${buildToc(profile.docs)}
   ${chapters.join('\n')}
 </body>
 </html>`;
+}
 
-  // Playwright로 PDF 렌더링
-  const browser = await chromium.launch();
+// --- PDF 생성 ---
+
+async function generatePDF(browser: Browser, profile: PDFProfile, githubCSS: string): Promise<void> {
+  console.log(`\n  [${profile.id.toUpperCase()}] ${profile.title}`);
+
+  const isSingle = profile.docs.length === 1;
+  const chapters: string[] = [];
+  for (let i = 0; i < profile.docs.length; i++) {
+    const html = await buildChapter(profile.docs[i], i, isSingle);
+    if (html) chapters.push(html);
+  }
+
+  const fullHTML = buildFullHTML(githubCSS, profile, chapters);
+
   const page = await browser.newPage();
-
   await page.setContent(fullHTML, { waitUntil: 'networkidle' });
 
-  const outputPath = resolve(PROJECT_ROOT, 'CSO_정산포털_기술문서.pdf');
+  const outputPath = resolve(PROJECT_ROOT, profile.outputFile);
   await page.pdf({
     path: outputPath,
     format: 'A4',
@@ -435,17 +473,46 @@ async function main() {
     headerTemplate: '<span></span>',
     footerTemplate: `
       <div style="width:100%;text-align:center;font-size:8pt;color:#656d76;font-family:sans-serif;">
-        CSO 정산 포털 — 기술 문서 &nbsp;|&nbsp; <span class="pageNumber"></span> / <span class="totalPages"></span>
+        ${profile.footerLabel} &nbsp;|&nbsp; <span class="pageNumber"></span> / <span class="totalPages"></span>
       </div>
     `,
   });
 
-  await browser.close();
+  await page.close();
 
-  const { statSync } = await import('fs');
   const size = statSync(outputPath).size;
-  console.log(`\n  PDF 생성 완료: ${outputPath}`);
-  console.log(`  파일 크기: ${(size / 1024).toFixed(0)} KB\n`);
+  console.log(`  [${profile.id.toUpperCase()}] 완료: ${profile.outputFile} (${(size / 1024).toFixed(0)} KB)`);
+}
+
+// --- 메인 ---
+
+async function main() {
+  const arg = process.argv[2]?.toLowerCase();
+  const validIds = PROFILES.map(p => p.id);
+
+  let targets: PDFProfile[];
+  if (arg && validIds.includes(arg)) {
+    targets = PROFILES.filter(p => p.id === arg);
+  } else if (arg && !validIds.includes(arg)) {
+    console.error(`\n  알 수 없는 프로필: "${arg}"`);
+    console.error(`  사용 가능: ${validIds.join(', ')} (또는 인자 없이 전체 생성)\n`);
+    process.exit(1);
+  } else {
+    targets = PROFILES;
+  }
+
+  console.log('\n  GitHub 스타일 PDF 생성 시작...');
+  console.log(`  대상: ${targets.map(t => t.id).join(', ')}`);
+
+  const githubCSS = getGitHubCSS();
+  const browser = await chromium.launch();
+
+  for (const profile of targets) {
+    await generatePDF(browser, profile, githubCSS);
+  }
+
+  await browser.close();
+  console.log('\n  전체 PDF 생성 완료.\n');
 }
 
 main().catch((err) => {
