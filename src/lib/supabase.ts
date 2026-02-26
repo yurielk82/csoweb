@@ -30,6 +30,7 @@ export function isSupabaseConfigured(): boolean {
 // 기존 코드와의 호환성을 위한 getter
 export const supabase = {
   from: (table: string) => getSupabase().from(table),
+  rpc: (fn: string, params?: Record<string, unknown>) => getSupabase().rpc(fn, params),
 };
 
 // 타입 정의

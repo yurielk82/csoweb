@@ -177,31 +177,27 @@ export class SupabaseSettlementRepository implements SettlementRepository {
   }
 
   async getAvailableMonths(): Promise<string[]> {
-    // 정산월 컬럼만 조회 (전건이지만 1컬럼 → 전송량 최소)
-    const rows = await fetchAllPaginated<{ 정산월: string }>(async (page, pageSize) => {
-      const result = await supabase
-        .from('settlements')
-        .select('정산월')
-        .not('정산월', 'is', null)
-        .range(page * pageSize, (page + 1) * pageSize - 1);
-      return result as { data: { 정산월: string }[] | null; error: { message: string } | null };
+    // RPC: DB에서 DISTINCT 정산월 직접 반환 (전체 행 로드 제거)
+    const { data, error } = await supabase.rpc('get_distinct_settlement_months', {
+      p_matched_names: null,
     });
-    const months = [...new Set(rows.map(d => d.정산월))].filter(Boolean);
-    return months.sort().reverse();
+    if (error || !data) {
+      console.error('getAvailableMonths RPC error:', error);
+      return [];
+    }
+    return (data as { month: string }[]).map(r => r.month).filter(Boolean);
   }
 
   async getAvailableMonthsByCSOMatching(matchedNames: string[]): Promise<string[]> {
-    const rows = await fetchAllPaginated<{ 정산월: string }>(async (page, pageSize) => {
-      const result = await supabase
-        .from('settlements')
-        .select('정산월')
-        .in('CSO관리업체', matchedNames)
-        .not('정산월', 'is', null)
-        .range(page * pageSize, (page + 1) * pageSize - 1);
-      return result as { data: { 정산월: string }[] | null; error: { message: string } | null };
+    // RPC: DB에서 DISTINCT 정산월 (CSO 필터) 직접 반환
+    const { data, error } = await supabase.rpc('get_distinct_settlement_months', {
+      p_matched_names: matchedNames,
     });
-    const months = [...new Set(rows.map(d => d.정산월))].filter(Boolean);
-    return months.sort().reverse();
+    if (error || !data) {
+      console.error('getAvailableMonthsByCSOMatching RPC error:', error);
+      return [];
+    }
+    return (data as { month: string }[]).map(r => r.month).filter(Boolean);
   }
 
   async getBusinessNumbersForMonth(settlementMonth: string): Promise<string[]> {
@@ -496,29 +492,24 @@ export class SupabaseSettlementRepository implements SettlementRepository {
   }
 
   private async totalsQuery(matchedNames: string[] | null, settlementMonth?: string): Promise<SettlementTotals> {
-    type TotalRow = { 수량: number | null; 금액: number | null; 제약수수료_합계: number | null; 담당수수료_합계: number | null };
-
-    const allRows = await fetchAllPaginated<TotalRow>(async (page, pageSize) => {
-      let query = supabase
-        .from('settlements')
-        .select('수량, 금액, 제약수수료_합계, 담당수수료_합계');
-
-      if (matchedNames) {
-        query = query.in('CSO관리업체', matchedNames);
-      }
-      if (settlementMonth) {
-        query = query.eq('정산월', settlementMonth);
-      }
-
-      const result = await query.range(page * pageSize, (page + 1) * pageSize - 1);
-      return result as { data: TotalRow[] | null; error: { message: string } | null };
+    // RPC: DB에서 SUM 직접 계산 (전체 행 로드 제거)
+    const { data, error } = await supabase.rpc('get_settlement_totals', {
+      p_settlement_month: settlementMonth || null,
+      p_matched_names: matchedNames || null,
+      p_search: null,
     });
 
+    if (error || !data || (data as unknown[]).length === 0) {
+      console.error('totalsQuery RPC error:', error);
+      return { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0 };
+    }
+
+    const row = (data as Record<string, string | number>[])[0];
     return {
-      수량: allRows.reduce((sum, r) => sum + (Number(r.수량) || 0), 0),
-      금액: allRows.reduce((sum, r) => sum + (Number(r.금액) || 0), 0),
-      제약수수료_합계: allRows.reduce((sum, r) => sum + (Number(r.제약수수료_합계) || 0), 0),
-      담당수수료_합계: allRows.reduce((sum, r) => sum + (Number(r.담당수수료_합계) || 0), 0),
+      수량: Number(row['total_수량']) || 0,
+      금액: Number(row['total_금액']) || 0,
+      제약수수료_합계: Number(row['total_제약수수료_합계']) || 0,
+      담당수수료_합계: Number(row['total_담당수수료_합계']) || 0,
     };
   }
 

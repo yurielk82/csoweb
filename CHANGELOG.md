@@ -5,6 +5,25 @@
 
 ---
 
+## [0.18.2] - 2026-02-27
+
+### Performance
+
+- **합계 계산 RPC 전환**: `fetchAllPaginated` → PostgreSQL `get_settlement_totals()` 함수 (SUM을 DB에서 직접 처리, 전체 행 로드 완전 제거)
+- **정산월 목록 RPC 전환**: `fetchAllPaginated` → PostgreSQL `get_distinct_settlement_months()` 함수 (DISTINCT를 DB에서 직접 처리)
+- **DB 인덱스 추가**: `CSO관리업체` 단일 인덱스 + `(정산월, CSO관리업체)` 복합 인덱스 — IN/EQ 필터 성능 개선
+- **Supabase `.rpc()` 지원 추가**: supabase 래퍼에 `.rpc()` 메서드 노출
+
+### 변경 전후 비교 (7,122행 기준)
+
+| 작업 | v0.18.1 | v0.18.2 |
+|------|---------|---------|
+| 합계 계산 | 8회 API 왕복 (1000행씩 전체 로드) | **1회 RPC** (DB SUM) |
+| 정산월 목록 | 8회 API 왕복 (전체 로드 후 JS Set) | **1회 RPC** (DB DISTINCT) |
+| CSO 필터 | 인덱스 없음 (Full Scan) | **B-tree 인덱스** |
+
+---
+
 ## [0.18.1] - 2026-02-27
 
 ### Performance
