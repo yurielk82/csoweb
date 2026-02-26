@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { FileSpreadsheet, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -228,10 +229,12 @@ export default function LoginPage() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity"
             >
-              <img 
-                src="https://www.kogl.or.kr/open/web/images/images_2014/codetype/new_img_opencode1.jpg" 
-                alt="공공누리" 
-                className="h-4"
+              <Image
+                src="https://www.kogl.or.kr/open/web/images/images_2014/codetype/new_img_opencode1.jpg"
+                alt="공공누리"
+                width={64}
+                height={16}
+                className="h-4 w-auto"
               />
               <span className="text-[10px]">공공누리</span>
             </a>
@@ -243,8 +246,8 @@ export default function LoginPage() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-0.5 hover:opacity-70 transition-opacity"
             >
-              <img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="CC" className="h-3.5 w-3.5" />
-              <img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="BY" className="h-3.5 w-3.5" />
+              <Image src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="CC" width={14} height={14} className="h-3.5 w-3.5" />
+              <Image src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="BY" width={14} height={14} className="h-3.5 w-3.5" />
               <span className="text-[10px]">CC BY 4.0</span>
             </a>
           </div>
