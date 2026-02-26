@@ -56,6 +56,10 @@ export async function POST(request: NextRequest) {
           user: smtp_user,
           pass: smtp_password,
         },
+        authMethod: 'LOGIN',
+        tls: {
+          rejectUnauthorized: false,
+        },
         connectionTimeout: 10_000,
         greetingTimeout: 10_000,
       });

@@ -90,6 +90,10 @@ async function sendViaSMTP(
       user: settings.smtp_user,
       pass: settings.smtp_password,
     },
+    authMethod: 'LOGIN',
+    tls: {
+      rejectUnauthorized: false,
+    },
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
     socketTimeout: 30_000,
