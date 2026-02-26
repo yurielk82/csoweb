@@ -102,13 +102,14 @@ export interface ColumnSetting {
 }
 
 // Email Log Types
-export type EmailTemplateType = 
+export type EmailTemplateType =
   | 'registration_request'
   | 'approval_complete'
   | 'approval_rejected'
   | 'settlement_uploaded'
   | 'password_reset'
-  | 'mail_merge';
+  | 'mail_merge'
+  | 'settlement_email';
 
 export type EmailStatus = 'pending' | 'sent' | 'failed';
 

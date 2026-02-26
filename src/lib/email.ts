@@ -691,6 +691,105 @@ function getMailMergeEmail(data: {
 }
 
 // ============================================
+// 정산서 이메일 (Plain HTML Table - 가로 제한 없음)
+// ============================================
+
+interface SettlementEmailColumn {
+  key: string;
+  name: string;
+  isNumeric: boolean;
+}
+
+function getSettlementEmail(data: {
+  subject: string;
+  company_name: string;
+  year_month: string;
+  notice: string;
+  columns: SettlementEmailColumn[];
+  rows: Record<string, unknown>[];
+  summary: { 총_금액: number; 총_수수료: number; 데이터_건수: number; 총_수량: number };
+}, companyInfo: CompanyFooterInfo) {
+  const formatNumber = (val: unknown): string => {
+    if (val === null || val === undefined || val === '') return '';
+    const num = Number(val);
+    if (isNaN(num)) return String(val);
+    return num.toLocaleString('ko-KR');
+  };
+
+  // 테이블 헤더
+  const headerCells = data.columns
+    .map(col => `<th style="border:1px solid #999;padding:4px 8px;background:#e2e8f0;font-size:12px;white-space:nowrap;text-align:center;">${col.name}</th>`)
+    .join('');
+
+  // 테이블 본문
+  const bodyRows = data.rows.map((row, i) => {
+    const bgColor = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+    const cells = data.columns.map(col => {
+      const val = row[col.key];
+      const align = col.isNumeric ? 'right' : 'left';
+      const display = col.isNumeric ? formatNumber(val) : (val ?? '');
+      return `<td style="border:1px solid #ccc;padding:3px 6px;font-size:11px;white-space:nowrap;text-align:${align};">${display}</td>`;
+    }).join('');
+    return `<tr style="background:${bgColor};">${cells}</tr>`;
+  }).join('');
+
+  // Notice HTML
+  const noticeHtml = data.notice
+    ? `<div style="margin:16px 0;padding:12px 16px;border-left:4px solid #f59e0b;background:#fefce8;">
+        <p style="font-weight:bold;font-size:13px;color:#92400e;margin:0 0 8px;">[ Notice ]</p>
+        <div style="font-size:12px;color:#78350f;line-height:1.8;white-space:pre-line;">${data.notice}</div>
+      </div>`
+    : '';
+
+  // 합계 행
+  const summaryItems = [
+    `데이터 건수: ${data.summary.데이터_건수.toLocaleString('ko-KR')}건`,
+    `총 수량: ${data.summary.총_수량.toLocaleString('ko-KR')}`,
+    `총 금액: ${data.summary.총_금액.toLocaleString('ko-KR')}원`,
+    `총 수수료: ${data.summary.총_수수료.toLocaleString('ko-KR')}원`,
+  ].join('  |  ');
+
+  return {
+    subject: data.subject,
+    html: `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#f4f7fa;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f7fa;">
+<tr><td style="padding:20px;">
+
+<!-- 제목 -->
+<p style="font-size:18px;font-weight:bold;color:#1e293b;margin:0 0 4px;">${data.company_name} - ${data.year_month} 정산서</p>
+<p style="font-size:13px;color:#64748b;margin:0 0 16px;">발송일: ${new Date().toLocaleDateString('ko-KR')}</p>
+
+<!-- Notice -->
+${noticeHtml}
+
+<!-- 합계 요약 -->
+<p style="font-size:12px;color:#475569;margin:12px 0 8px;font-weight:600;">${summaryItems}</p>
+
+<!-- 정산 데이터 테이블 (가로 제한 없음) -->
+<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:monospace,sans-serif;">
+<thead><tr>${headerCells}</tr></thead>
+<tbody>${bodyRows}</tbody>
+</table>
+
+<!-- 푸터 -->
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:24px;">
+${generateEmailFooter(companyInfo)}
+</table>
+
+</td></tr>
+</table>
+</body>
+</html>`,
+  };
+}
+
+// ============================================
 // Send email function (프로바이더 스위칭)
 // ============================================
 
@@ -699,8 +798,8 @@ export async function sendEmail(
   templateType: EmailTemplateType,
   data: Record<string, unknown>
 ): Promise<{ success: boolean; error?: string }> {
-  // 알림 토글 체크 (mail_merge는 수동 발송이므로 항상 허용)
-  if (templateType !== 'mail_merge') {
+  // 알림 토글 체크 (mail_merge, settlement_email은 수동 발송이므로 항상 허용)
+  if (templateType !== 'mail_merge' && templateType !== 'settlement_email') {
     try {
       const settings = await getEmailSettings();
       const key = templateType as keyof EmailNotifications;
@@ -790,6 +889,12 @@ export async function sendEmail(
     case 'mail_merge':
       emailContent = getMailMergeEmail(
         data as Parameters<typeof getMailMergeEmail>[0],
+        companyInfo
+      );
+      break;
+    case 'settlement_email':
+      emailContent = getSettlementEmail(
+        data as Parameters<typeof getSettlementEmail>[0],
         companyInfo
       );
       break;
