@@ -182,18 +182,6 @@ async function main() {
     /* GitHub Markdown CSS */
     ${githubCSS}
 
-    /* 페이지 레이아웃 */
-    @page {
-      size: A4;
-      margin: 20mm 18mm 20mm 18mm;
-      @bottom-center {
-        content: "CSO 정산 포털 — 기술 문서  |  " counter(page) " / " counter(pages);
-        font-size: 8pt;
-        color: #656d76;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", Helvetica, Arial, sans-serif;
-      }
-    }
-
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR",
                    "Malgun Gothic", Helvetica, Arial, sans-serif;
