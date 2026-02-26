@@ -52,6 +52,11 @@ export interface Settlement {
   [key: string]: string | number | null | undefined;
 }
 
+/** Settlement 필드에 동적 키로 안전하게 접근하는 유틸 (인덱스 시그니처의 타입 안전한 대안) */
+export function getSettlementValue(settlement: Settlement, key: string): string | number | null | undefined {
+  return (settlement as Record<string, string | number | null | undefined>)[key];
+}
+
 export interface SettlementSummary {
   총_금액: number;
   총_수수료: number;

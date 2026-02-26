@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Loading } from '@/components/shared/loading';
 import type { Settlement, ColumnSetting } from '@/types';
+import { getSettlementValue } from '@/types';
 
 interface SettlementResponse {
   settlements: Settlement[];
@@ -640,13 +641,13 @@ export default function DashboardPage() {
                             {customer.rows.map((row, rowIdx) => (
                               <tr key={`${csoGroup.csoName}-${customer.customerName}-${rowIdx}`}>
                                 {displayColumns.map(col => (
-                                  <td 
+                                  <td
                                     key={col.column_key}
-                                    className={typeof row[col.column_key] === 'number' ? 'number-cell' : ''}
+                                    className={typeof getSettlementValue(row, col.column_key) === 'number' ? 'number-cell' : ''}
                                   >
-                                    {typeof row[col.column_key] === 'number' 
-                                      ? formatNumber(row[col.column_key] as number)
-                                      : row[col.column_key] || '-'
+                                    {typeof getSettlementValue(row, col.column_key) === 'number'
+                                      ? formatNumber(getSettlementValue(row, col.column_key) as number)
+                                      : getSettlementValue(row, col.column_key) || '-'
                                     }
                                   </td>
                                 ))}

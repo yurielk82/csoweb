@@ -41,6 +41,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loading } from '@/components/shared/loading';
 import { useToast } from '@/hooks/use-toast';
 import type { Settlement, ColumnSetting } from '@/types';
+import { getSettlementValue } from '@/types';
 
 const DEFAULT_NOTICE = `1. 세금계산서 작성일자: {{정산월}} 29일 이내
 2. 세금계산서 취합 마감일: {{정산월}} 29일 (기간내 미발행 할 경우 무통보 이월)
@@ -750,13 +751,13 @@ export default function AdminMasterPage() {
                             {customer.rows.map((row, rowIdx) => (
                               <tr key={`${csoGroup.csoName}-${customer.customerName}-${rowIdx}`}>
                                 {displayColumns.map(col => (
-                                  <td 
+                                  <td
                                     key={col.column_key}
-                                    className={typeof row[col.column_key] === 'number' ? 'number-cell' : ''}
+                                    className={typeof getSettlementValue(row, col.column_key) === 'number' ? 'number-cell' : ''}
                                   >
-                                    {typeof row[col.column_key] === 'number' 
-                                      ? formatNumber(row[col.column_key] as number)
-                                      : row[col.column_key] || '-'
+                                    {typeof getSettlementValue(row, col.column_key) === 'number'
+                                      ? formatNumber(getSettlementValue(row, col.column_key) as number)
+                                      : getSettlementValue(row, col.column_key) || '-'
                                     }
                                   </td>
                                 ))}
