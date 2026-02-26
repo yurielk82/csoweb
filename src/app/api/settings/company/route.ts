@@ -73,9 +73,10 @@ export async function PUT(request: NextRequest) {
       message: '회사 정보가 저장되었습니다.',
     });
   } catch (error) {
-    console.error('Update company info error:', error);
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+    console.error('Update company info error:', errorMessage, error);
     return NextResponse.json(
-      { success: false, error: '회사 정보 저장 중 오류가 발생했습니다.' },
+      { success: false, error: `회사 정보 저장 중 오류가 발생했습니다: ${errorMessage}` },
       { status: 500 }
     );
   }

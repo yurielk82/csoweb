@@ -151,6 +151,7 @@ export interface DbCompanySettings {
   smtp_from_name: string | null;
   smtp_from_email: string | null;
   email_send_delay_ms: number | null;
+  email_notifications: Record<string, boolean> | null;
   created_at: string;
   updated_at: string;
 }
