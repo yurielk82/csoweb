@@ -8,10 +8,22 @@
  */
 
 import { chromium } from 'playwright';
-import { marked } from 'marked';
+import { marked, type Tokens } from 'marked';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+
+// --- slug 생성 (GitHub 방식) ---
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/<[^>]*>/g, '')           // HTML 태그 제거
+    .replace(/[^\w\s가-힣-]/g, '')     // 특수문자 제거 (한글 유지)
+    .replace(/\s+/g, '-')             // 공백 → 하이픈
+    .replace(/-+/g, '-')              // 중복 하이픈 제거
+    .replace(/^-|-$/g, '');           // 양 끝 하이픈 제거
+}
 
 // --- 설정 ---
 
@@ -120,7 +132,7 @@ function buildCoverPage(): string {
 
 function buildToc(): string {
   const items = DOCS.map(
-    (d, i) => `<li><span class="toc-num">${i + 1}.</span> ${d.title}</li>`
+    (d, i) => `<li><a href="#${docPrefix(d.path)}"><span class="toc-num">${i + 1}.</span> ${d.title}</a></li>`
   ).join('\n');
 
   return `
@@ -128,6 +140,29 @@ function buildToc(): string {
     <h1>목차</h1>
     <ol>${items}</ol>
   </div>`;
+}
+
+// 문서 파일명 → 앵커 프리픽스 (문서 간 링크용)
+function docPrefix(docPath: string): string {
+  // "docs/MIGRATION.md" → "migration", "README.md" → "readme"
+  return docPath.replace(/^docs\//, '').replace(/\.md$/i, '').toLowerCase();
+}
+
+// 문서 간 상대 링크를 PDF 내부 앵커로 변환
+// 예: [ONBOARDING.md](ONBOARDING.md) → <a href="#onboarding">
+//     [API-DATABASE.md#스키마](API-DATABASE.md#스키마) → <a href="#api-database-스키마">
+function rewriteDocLinks(html: string): string {
+  // href="docs/FILE.md#section" 또는 href="FILE.md#section" 또는 href="FILE.md"
+  return html.replace(
+    /href="(?:docs\/)?([A-Za-z0-9_-]+)\.md(?:#([^"]*))?" /g,
+    (_match, file: string, fragment: string | undefined) => {
+      const prefix = file.toLowerCase();
+      if (fragment) {
+        return `href="#${prefix}-${fragment}"`;
+      }
+      return `href="#${prefix}"`;
+    }
+  );
 }
 
 async function buildChapter(doc: typeof DOCS[0], index: number): Promise<string> {
@@ -141,11 +176,28 @@ async function buildChapter(doc: typeof DOCS[0], index: number): Promise<string>
   }
 
   md = preprocessMarkdown(md);
-  const html = await marked.parse(md, { gfm: true, breaks: false });
+
+  // 첫 번째 h1 제거 (chapter-header와 중복 방지)
+  md = md.replace(/^#\s+.+$/m, '');
+
+  const prefix = docPrefix(doc.path);
+
+  // marked에 heading renderer를 설정하여 id 속성 부여
+  const renderer = new marked.Renderer();
+  renderer.heading = function ({ text, depth }: Tokens.Heading) {
+    const slug = slugify(text);
+    const id = `${prefix}-${slug}`;
+    return `<h${depth} id="${id}"><a href="#${id}">${text}</a></h${depth}>`;
+  };
+
+  let html = await marked.parse(md, { gfm: true, breaks: false, renderer });
+
+  // 문서 간 .md 링크를 PDF 내부 앵커로 변환
+  html = rewriteDocLinks(html);
 
   console.log(`  [OK] ${doc.path}`);
   return `
-  <div class="chapter">
+  <div class="chapter" id="${prefix}">
     <div class="chapter-header">
       <span class="chapter-num">Chapter ${index + 1}</span>
       <h1>${doc.title}</h1>
@@ -284,6 +336,14 @@ async function main() {
       color: #656d76;
       font-weight: 600;
     }
+    .toc-page a {
+      color: #1f2328;
+      text-decoration: none;
+      display: block;
+    }
+    .toc-page a:hover {
+      color: #0969da;
+    }
 
     /* 각 챕터 */
     .chapter {
@@ -309,6 +369,15 @@ async function main() {
       color: #656d76;
       display: block;
       margin-bottom: 4px;
+    }
+
+    /* heading 내부 앵커 링크 */
+    .markdown-body h1 a,
+    .markdown-body h2 a,
+    .markdown-body h3 a,
+    .markdown-body h4 a {
+      color: inherit;
+      text-decoration: none;
     }
 
     /* 배지 (본문 내) */
