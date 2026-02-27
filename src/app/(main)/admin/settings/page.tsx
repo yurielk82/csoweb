@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Settings, Save, Loader2, Building2, Phone, Mail, Globe, MapPin, FileText, Plug, Server, BellRing } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Settings, Save, Loader2, Building2, Phone, Mail, Globe, MapPin, FileText, Plug, Server, BellRing, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -92,13 +92,18 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [formData, setFormData] = useState<CompanyInfo>(defaultCompanyInfo);
+  const initialDataRef = useRef<CompanyInfo>(defaultCompanyInfo);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     fetch('/api/settings/company', { cache: 'no-store' })
       .then(res => res.json())
       .then(result => {
         if (result.success && result.data) {
-          setFormData({ ...defaultCompanyInfo, ...result.data });
+          const merged = { ...defaultCompanyInfo, ...result.data };
+          setFormData(merged);
+          initialDataRef.current = merged;
         }
       })
       .catch(console.error)
@@ -109,6 +114,48 @@ export default function SettingsPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // 변경된 필드만 PATCH로 저장
+  const patchFields = async (fields: Partial<CompanyInfo>) => {
+    setSaveStatus('saving');
+    try {
+      const res = await fetch('/api/settings/company', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fields),
+      });
+      const result = await res.json();
+      if (result.success) {
+        initialDataRef.current = { ...initialDataRef.current, ...fields };
+        setSaveStatus('saved');
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
+      } else {
+        setSaveStatus('error');
+        toast({ variant: 'destructive', title: '저장 실패', description: result.error });
+      }
+    } catch (error) {
+      console.error('자동 저장 오류:', error);
+      setSaveStatus('error');
+      toast({ variant: 'destructive', title: '오류', description: '저장 중 오류가 발생했습니다.' });
+    }
+  };
+
+  // 텍스트/숫자 필드: blur 시 변경 감지 후 저장
+  const handleBlur = (field: keyof CompanyInfo) => {
+    const currentValue = formData[field];
+    const initialValue = initialDataRef.current[field];
+    if (currentValue !== initialValue) {
+      patchFields({ [field]: currentValue } as Partial<CompanyInfo>);
+    }
+  };
+
+  // 체크박스/라디오: 변경 즉시 저장
+  const handleChangeAndSave = (field: keyof CompanyInfo, value: string | number | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    patchFields({ [field]: value } as Partial<CompanyInfo>);
+  };
+
+  // 전체 저장 (fallback)
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -121,6 +168,7 @@ export default function SettingsPage() {
       const result = await res.json();
 
       if (result.success) {
+        initialDataRef.current = { ...formData };
         toast({
           title: '저장 완료',
           description: '회사 정보가 저장되었습니다.',
@@ -147,11 +195,27 @@ export default function SettingsPage() {
   const handleConnectionTest = async () => {
     setTesting(true);
     try {
-      // 먼저 설정을 DB에 저장
+      // 이메일 관련 필드만 PATCH로 저장
+      const emailFields: Partial<CompanyInfo> = {
+        email_provider: formData.email_provider,
+        test_recipient_email: formData.test_recipient_email,
+      };
+      if (formData.email_provider === 'smtp') {
+        emailFields.smtp_host = formData.smtp_host;
+        emailFields.smtp_port = formData.smtp_port;
+        emailFields.smtp_secure = formData.smtp_secure;
+        emailFields.smtp_user = formData.smtp_user;
+        emailFields.smtp_password = formData.smtp_password;
+        emailFields.smtp_from_name = formData.smtp_from_name;
+        emailFields.smtp_from_email = formData.smtp_from_email;
+      } else {
+        emailFields.resend_from_email = formData.resend_from_email;
+      }
+
       const saveRes = await fetch('/api/settings/company', {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(emailFields),
       });
       const saveResult = await saveRes.json();
       if (!saveResult.success) {
@@ -162,6 +226,7 @@ export default function SettingsPage() {
         });
         return;
       }
+      initialDataRef.current = { ...initialDataRef.current, ...emailFields };
 
       // 저장된 DB 값으로 연결 테스트
       const res = await fetch('/api/settings/email-test', {
@@ -216,14 +281,31 @@ export default function SettingsPage() {
           </h1>
           <p className="text-muted-foreground">로그인 화면 푸터에 표시될 회사 정보를 설정합니다.</p>
         </div>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4 mr-2" />
+        <div className="flex items-center gap-3">
+          {saveStatus === 'saving' && (
+            <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              저장 중...
+            </span>
           )}
-          저장
-        </Button>
+          {saveStatus === 'saved' && (
+            <span className="text-sm text-green-600 flex items-center gap-1.5">
+              <Check className="h-3.5 w-3.5" />
+              저장됨
+            </span>
+          )}
+          {saveStatus === 'error' && (
+            <span className="text-sm text-red-600">저장 실패</span>
+          )}
+          <Button onClick={handleSave} variant="outline" size="sm" disabled={saving}>
+            {saving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            전체 저장
+          </Button>
+        </div>
       </div>
 
       {/* Company Basic Info */}
@@ -243,6 +325,7 @@ export default function SettingsPage() {
                 id="company_name"
                 value={formData.company_name}
                 onChange={(e) => handleChange('company_name', e.target.value)}
+                onBlur={() => handleBlur('company_name')}
                 placeholder="(주)회사명"
               />
             </div>
@@ -252,6 +335,7 @@ export default function SettingsPage() {
                 id="ceo_name"
                 value={formData.ceo_name}
                 onChange={(e) => handleChange('ceo_name', e.target.value)}
+                onBlur={() => handleBlur('ceo_name')}
                 placeholder="홍길동"
               />
             </div>
@@ -262,6 +346,7 @@ export default function SettingsPage() {
               id="business_number"
               value={formData.business_number}
               onChange={(e) => handleChange('business_number', e.target.value)}
+              onBlur={() => handleBlur('business_number')}
               placeholder="000-00-00000"
             />
           </div>
@@ -274,6 +359,7 @@ export default function SettingsPage() {
               id="address"
               value={formData.address}
               onChange={(e) => handleChange('address', e.target.value)}
+              onBlur={() => handleBlur('address')}
               placeholder="서울특별시 강남구 테헤란로 123"
             />
           </div>
@@ -297,6 +383,7 @@ export default function SettingsPage() {
                 id="phone"
                 value={formData.phone}
                 onChange={(e) => handleChange('phone', e.target.value)}
+                onBlur={() => handleBlur('phone')}
                 placeholder="02-1234-5678"
               />
             </div>
@@ -306,6 +393,7 @@ export default function SettingsPage() {
                 id="fax"
                 value={formData.fax}
                 onChange={(e) => handleChange('fax', e.target.value)}
+                onBlur={() => handleBlur('fax')}
                 placeholder="02-1234-5679"
               />
             </div>
@@ -320,6 +408,7 @@ export default function SettingsPage() {
               type="email"
               value={formData.email}
               onChange={(e) => handleChange('email', e.target.value)}
+              onBlur={() => handleBlur('email')}
               placeholder="info@company.com"
             />
           </div>
@@ -332,6 +421,7 @@ export default function SettingsPage() {
               id="website"
               value={formData.website}
               onChange={(e) => handleChange('website', e.target.value)}
+              onBlur={() => handleBlur('website')}
               placeholder="https://www.company.com"
             />
           </div>
@@ -365,6 +455,7 @@ export default function SettingsPage() {
               id="additional_info"
               value={formData.additional_info}
               onChange={(e) => handleChange('additional_info', e.target.value)}
+              onBlur={() => handleBlur('additional_info')}
               placeholder="추가로 표시할 정보를 입력하세요."
               rows={3}
             />
@@ -387,7 +478,7 @@ export default function SettingsPage() {
             <Label>발송 프로바이더</Label>
             <RadioGroup
               value={formData.email_provider}
-              onValueChange={(v) => handleChange('email_provider', v)}
+              onValueChange={(v) => handleChangeAndSave('email_provider', v)}
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="resend" id="provider-resend" />
@@ -419,6 +510,7 @@ export default function SettingsPage() {
                   type="email"
                   value={formData.resend_from_email}
                   onChange={(e) => handleChange('resend_from_email', e.target.value)}
+                  onBlur={() => handleBlur('resend_from_email')}
                   placeholder="onboarding@resend.dev"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -460,6 +552,7 @@ export default function SettingsPage() {
                     id="smtp_host"
                     value={formData.smtp_host}
                     onChange={(e) => handleChange('smtp_host', e.target.value)}
+                    onBlur={() => handleBlur('smtp_host')}
                     placeholder="smtps.hiworks.com"
                   />
                 </div>
@@ -471,13 +564,14 @@ export default function SettingsPage() {
                       type="number"
                       value={formData.smtp_port}
                       onChange={(e) => handleChange('smtp_port', parseInt(e.target.value) || 465)}
+                      onBlur={() => handleBlur('smtp_port')}
                       className="w-24"
                     />
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="smtp_secure"
                         checked={formData.smtp_secure}
-                        onCheckedChange={(checked) => handleChange('smtp_secure', !!checked)}
+                        onCheckedChange={(checked) => handleChangeAndSave('smtp_secure', !!checked)}
                       />
                       <Label htmlFor="smtp_secure" className="text-sm cursor-pointer">
                         SSL/TLS
@@ -493,6 +587,7 @@ export default function SettingsPage() {
                   id="smtp_user"
                   value={formData.smtp_user}
                   onChange={(e) => handleChange('smtp_user', e.target.value)}
+                  onBlur={() => handleBlur('smtp_user')}
                   placeholder="user@company.com"
                 />
               </div>
@@ -504,6 +599,7 @@ export default function SettingsPage() {
                   type="password"
                   value={formData.smtp_password}
                   onChange={(e) => handleChange('smtp_password', e.target.value)}
+                  onBlur={() => handleBlur('smtp_password')}
                   placeholder="비밀번호 입력"
                 />
               </div>
@@ -515,6 +611,7 @@ export default function SettingsPage() {
                     id="smtp_from_name"
                     value={formData.smtp_from_name}
                     onChange={(e) => handleChange('smtp_from_name', e.target.value)}
+                    onBlur={() => handleBlur('smtp_from_name')}
                     placeholder="CSO 정산서 포털"
                   />
                 </div>
@@ -524,6 +621,7 @@ export default function SettingsPage() {
                     id="smtp_from_email"
                     value={formData.smtp_from_email}
                     onChange={(e) => handleChange('smtp_from_email', e.target.value)}
+                    onBlur={() => handleBlur('smtp_from_email')}
                     placeholder="noreply@company.com"
                   />
                 </div>
@@ -564,6 +662,7 @@ export default function SettingsPage() {
                     handleChange('email_send_delay_ms', Math.round(clamped * 1000));
                   }
                 }}
+                onBlur={() => handleBlur('email_send_delay_ms')}
                 className="w-24"
               />
               <span className="text-sm text-muted-foreground">초 (0.5~30)</span>
@@ -581,6 +680,7 @@ export default function SettingsPage() {
               type="email"
               value={formData.test_recipient_email}
               onChange={(e) => handleChange('test_recipient_email', e.target.value)}
+              onBlur={() => handleBlur('test_recipient_email')}
               placeholder="test@example.com"
             />
             <p className="text-xs text-muted-foreground">
@@ -606,13 +706,15 @@ export default function SettingsPage() {
                 id={`notif-${key}`}
                 checked={formData.email_notifications[key as keyof typeof formData.email_notifications]}
                 onCheckedChange={(checked) => {
+                  const newNotifications = {
+                    ...formData.email_notifications,
+                    [key]: !!checked,
+                  };
                   setFormData(prev => ({
                     ...prev,
-                    email_notifications: {
-                      ...prev.email_notifications,
-                      [key]: !!checked,
-                    },
+                    email_notifications: newNotifications,
                   }));
+                  patchFields({ email_notifications: newNotifications });
                 }}
               />
               <div className="space-y-0.5 leading-none">

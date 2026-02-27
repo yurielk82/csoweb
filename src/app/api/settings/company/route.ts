@@ -39,8 +39,8 @@ export async function GET() {
   }
 }
 
-// 회사 정보 수정 (관리자만)
-export async function PUT(request: NextRequest) {
+// 회사 정보 저장 공통 로직
+async function handleUpdate(request: NextRequest) {
   try {
     const session = await getSession();
 
@@ -58,8 +58,6 @@ export async function PUT(request: NextRequest) {
       delete data.smtp_password;
     }
 
-    console.log('PUT /api/settings/company - Saving data (password masked)');
-
     await getCompanyRepository().update(data);
 
     // 캐시 갱신: footer-data 태그 무효화
@@ -68,16 +66,23 @@ export async function PUT(request: NextRequest) {
     // 이메일 설정 캐시 무효화
     invalidateEmailSettingsCache();
 
-    return NextResponse.json({
-      success: true,
-      message: '회사 정보가 저장되었습니다.',
-    });
+    return NextResponse.json({ success: true });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
     console.error('Update company info error:', errorMessage, error);
     return NextResponse.json(
-      { success: false, error: `회사 정보 저장 중 오류가 발생했습니다: ${errorMessage}` },
+      { success: false, error: `저장 중 오류가 발생했습니다: ${errorMessage}` },
       { status: 500 }
     );
   }
+}
+
+// 회사 정보 전체 수정 (관리자만)
+export async function PUT(request: NextRequest) {
+  return handleUpdate(request);
+}
+
+// 회사 정보 부분 수정 (관리자만) — 필드 단위 자동 저장
+export async function PATCH(request: NextRequest) {
+  return handleUpdate(request);
 }

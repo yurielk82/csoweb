@@ -86,7 +86,7 @@
 | Method | Path | 설명 | 인증 |
 |--------|------|------|------|
 | GET/PUT | `/api/columns` | 정산 테이블 컬럼 표시 설정 | 관리자 |
-| GET/PUT | `/api/settings/company` | 회사 기본 정보 설정 | 관리자 |
+| GET/PUT/PATCH | `/api/settings/company` | 회사 기본 정보 설정 (PATCH: 필드 단위 자동 저장) | 관리자 |
 | GET | `/api/system/status` | 시스템 상태 확인 | 회원 |
 
 ---

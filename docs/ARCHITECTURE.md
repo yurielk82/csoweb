@@ -115,6 +115,35 @@ domain/ (인터페이스 정의) ← infrastructure/ (구현체)
 
 ---
 
+## 서버사이드 캐시 레이어
+
+`src/lib/data-cache.ts`에서 Next.js `unstable_cache` + `revalidateTag`를 사용하여 자주 조회되지만 거의 변경되지 않는 데이터를 캐시합니다.
+
+### 캐시 함수 → 태그 → 무효화 시점
+
+| 캐시 함수 | 태그 | 무효화 트리거 |
+|-----------|------|--------------|
+| `getCachedColumns()` | `column-settings` | PUT/DELETE `/api/columns` |
+| `getCachedCompanyInfo()` | `footer-data` | PUT/PATCH `/api/settings/company` |
+| `getCachedMatchedNames()` | `cso-matching` | POST/DELETE `/api/admin/cso-matching/upsert` |
+| `getCachedAvailableMonths()` | `settlement-data` | POST `/api/upload`, DELETE `/api/settlements/month/[month]` |
+| `getCachedTotals()` | `settlement-data` | (위와 동일) |
+| `getCachedCSOList()` | `user-data` | POST `/api/users/approve`, `/reject`, `/approve-batch` |
+
+### 통합 init API (`GET /api/dashboard/init`)
+
+대시보드와 마스터 조회의 초기 로드를 1회 API 호출로 처리합니다.
+
+| 파라미터 | 기본값 | 설명 |
+|---------|--------|------|
+| `include_settlements` | `true` | `false`면 정산 데이터 생략 (마스터 조회 초기화용) |
+| `include_cso_list` | `false` | `true`면 승인된 CSO 목록 포함 (마스터 조회 거래처 드롭다운) |
+| `page`, `page_size` | `1`, `50` | 정산 데이터 페이지네이션 |
+| `settlement_month` | 최신 월 | 정산월 필터 |
+| `business_number` | - | 특정 CSO 필터 (관리자용) |
+
+---
+
 ## 인증 흐름
 
 인증은 Supabase Auth를 쓰지 않고 **자체 JWT**를 사용합니다.
