@@ -200,16 +200,17 @@ export default function AdminDashboardPage() {
             ))}
           </div>
         </div>
-        <div className="flex flex-wrap gap-3">
-          {Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-2.5 rounded-lg border bg-card p-3">
-              <Skeleton className="h-8 w-8 rounded-lg flex-shrink-0" />
-              <div>
-                <Skeleton className="h-3 w-14 mb-1.5" />
-                <Skeleton className="h-5 w-20" />
+        <div>
+          <Skeleton className="h-6 w-24 mb-4" />
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Skeleton className="h-4 w-4 rounded" />
+                <Skeleton className="h-4 w-14" />
+                <Skeleton className="h-5 w-12 rounded-full" />
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -300,104 +301,69 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* System Info */}
-      <div className="flex flex-wrap gap-3 text-sm">
-        <div className="flex items-center gap-2.5 rounded-lg border bg-card p-3">
-          <div className="p-2 rounded-lg bg-slate-500">
-            <Tag className="h-4 w-4 text-white" />
+      <div>
+        <h2 className="text-lg font-semibold mb-4">시스템 정보</h2>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+          <div className="flex items-center gap-2">
+            <Tag className="h-4 w-4 text-slate-400" />
+            <span className="text-muted-foreground">버전</span>
+            <span className="font-medium font-mono">{systemStatus.version}</span>
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">버전</p>
-            <p className="text-sm font-medium font-mono">{systemStatus.version}</p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2.5 rounded-lg border bg-card p-3">
-          <div className="p-2 rounded-lg bg-emerald-500">
-            <Database className="h-4 w-4 text-white" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">데이터베이스</p>
-            <Badge className={`mt-0.5 ${systemStatus.supabase ? 'bg-blue-600' : 'bg-gray-400'}`}>
-              Supabase {systemStatus.supabase ? '연결됨' : '미연결'}
+          <div className="flex items-center gap-2">
+            <Database className="h-4 w-4 text-emerald-400" />
+            <span className="text-muted-foreground">데이터베이스</span>
+            <Badge variant={systemStatus.supabase ? 'default' : 'secondary'}>
+              {systemStatus.supabase ? '연결됨' : '미연결'}
             </Badge>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2.5 rounded-lg border bg-card p-3">
-          <div className="p-2 rounded-lg bg-indigo-500">
-            <FileText className="h-4 w-4 text-white" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">국세청 API</p>
-            <Badge className={`mt-0.5 ${systemStatus.nts_api ? 'bg-blue-600' : 'bg-gray-400'}`}>
-              NTS {systemStatus.nts_api ? '설정됨' : '미설정'}
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-indigo-400" />
+            <span className="text-muted-foreground">국세청 API</span>
+            <Badge variant={systemStatus.nts_api ? 'default' : 'secondary'}>
+              {systemStatus.nts_api ? '설정됨' : '미설정'}
             </Badge>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2.5 rounded-lg border bg-card p-3">
-          <div className="p-2 rounded-lg bg-sky-500">
-            <Building2 className="h-4 w-4 text-white" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">심평원 병원정보</p>
-            <Badge className={`mt-0.5 ${systemStatus.hira_hospital_api ? 'bg-blue-600' : 'bg-gray-400'}`}>
-              HIRA {systemStatus.hira_hospital_api ? '설정됨' : '미설정'}
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-sky-400" />
+            <span className="text-muted-foreground">심평원 병원</span>
+            <Badge variant={systemStatus.hira_hospital_api ? 'default' : 'secondary'}>
+              {systemStatus.hira_hospital_api ? '설정됨' : '미설정'}
             </Badge>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2.5 rounded-lg border bg-card p-3">
-          <div className="p-2 rounded-lg bg-teal-500">
-            <Pill className="h-4 w-4 text-white" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">심평원 약국정보</p>
-            <Badge className={`mt-0.5 ${systemStatus.hira_pharmacy_api ? 'bg-blue-600' : 'bg-gray-400'}`}>
-              HIRA {systemStatus.hira_pharmacy_api ? '설정됨' : '미설정'}
+          <div className="flex items-center gap-2">
+            <Pill className="h-4 w-4 text-teal-400" />
+            <span className="text-muted-foreground">심평원 약국</span>
+            <Badge variant={systemStatus.hira_pharmacy_api ? 'default' : 'secondary'}>
+              {systemStatus.hira_pharmacy_api ? '설정됨' : '미설정'}
             </Badge>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2.5 rounded-lg border bg-card p-3">
-          <div className="p-2 rounded-lg bg-amber-500">
-            <Globe className="h-4 w-4 text-white" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">환경</p>
-            <Badge className={`mt-0.5 ${systemStatus.environment === 'Production' ? 'bg-blue-600' : 'bg-yellow-500'}`}>
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-amber-400" />
+            <span className="text-muted-foreground">환경</span>
+            <Badge variant={systemStatus.environment === 'Production' ? 'default' : 'outline'}>
               {systemStatus.environment}
             </Badge>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2.5 rounded-lg border bg-card p-3">
-          <div className="p-2 rounded-lg bg-orange-500">
-            <Mail className="h-4 w-4 text-white" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">이메일 서비스</p>
-            <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-              {activeProvider === 'smtp' ? (
-                <>
-                  <Badge className={systemStatus.smtp.configured ? 'bg-blue-600' : 'bg-gray-400'}>
-                    SMTP (활성) {systemStatus.smtp.configured ? '설정됨' : '미설정'}
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    Resend {systemStatus.resend ? '설정됨' : '미설정'}
-                  </Badge>
-                </>
-              ) : (
-                <>
-                  <Badge className={systemStatus.resend ? 'bg-blue-600' : 'bg-gray-400'}>
-                    Resend (활성) {systemStatus.resend ? '설정됨' : '미설정'}
-                  </Badge>
-                  <Badge variant="outline" className={`text-xs ${!systemStatus.smtp.configured ? 'text-muted-foreground' : ''}`}>
-                    SMTP {systemStatus.smtp.configured ? '설정됨' : '미설정'}
-                  </Badge>
-                </>
-              )}
-            </div>
+          <div className="flex items-center gap-2">
+            <Mail className="h-4 w-4 text-orange-400" />
+            <span className="text-muted-foreground">이메일</span>
+            {activeProvider === 'smtp' ? (
+              <>
+                <Badge variant={systemStatus.smtp.configured ? 'default' : 'secondary'}>SMTP</Badge>
+                {systemStatus.resend && <Badge variant="outline">Resend</Badge>}
+              </>
+            ) : (
+              <>
+                <Badge variant={systemStatus.resend ? 'default' : 'secondary'}>Resend</Badge>
+                {systemStatus.smtp.configured && <Badge variant="outline">SMTP</Badge>}
+              </>
+            )}
           </div>
         </div>
       </div>

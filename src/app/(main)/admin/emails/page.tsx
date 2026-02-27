@@ -281,10 +281,10 @@ export default function EmailLogsPage() {
               <TableRow>
                 <TableHead className="w-[100px]">발송일시</TableHead>
                 <TableHead className="w-[170px]">수신자</TableHead>
-                <TableHead className="w-[25%]">제목</TableHead>
+                <TableHead>제목</TableHead>
                 <TableHead className="w-[100px]">유형</TableHead>
                 <TableHead className="w-[70px]">상태</TableHead>
-                <TableHead>오류 내용</TableHead>
+                <TableHead className="w-[200px]">오류 내용</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -314,18 +314,18 @@ export default function EmailLogsPage() {
                           minute: '2-digit',
                         })}
                       </TableCell>
-                      <TableCell className="truncate text-sm">
-                        {log.recipient_email}
+                      <TableCell className="text-sm">
+                        <div className="truncate">{log.recipient_email}</div>
                       </TableCell>
-                      <TableCell className="truncate text-sm">
-                        {log.subject}
+                      <TableCell className="text-sm">
+                        <div className="truncate">{log.subject}</div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <Badge variant="outline" className="text-xs">
                           {TEMPLATE_LABELS[log.template_type] || log.template_type}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <Badge variant={statusConfig.variant} className="text-xs">
                           <StatusIcon className="h-3 w-3 mr-1" />
                           {statusConfig.label}
@@ -333,7 +333,7 @@ export default function EmailLogsPage() {
                       </TableCell>
                       <TableCell className="text-xs">
                         {isFailed ? (
-                          <span className="text-red-600 dark:text-red-400 leading-relaxed">
+                          <span className="text-red-600 dark:text-red-400">
                             {getErrorSummary(log.error_message) ?? '-'}
                           </span>
                         ) : (
