@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserRepository } from '@/infrastructure/supabase';
-import { 
-  hashPassword, 
-  normalizeBusinessNumber, 
-  isValidBusinessNumber, 
-  isValidEmail, 
-  isValidPassword 
+import { getSupabase } from '@/lib/supabase';
+import {
+  hashPassword,
+  normalizeBusinessNumber,
+  isValidBusinessNumber,
+  isValidEmail,
+  isValidPassword
 } from '@/lib/auth';
 import { notifyAdmin } from '@/lib/email';
-import { invalidateUserCache } from '@/lib/data-cache';
+import { invalidateUserCache, invalidateCSOMatchingCache } from '@/lib/data-cache';
 
 export async function POST(request: NextRequest) {
   try {
@@ -94,6 +95,25 @@ export async function POST(request: NextRequest) {
     });
     
     invalidateUserCache();
+
+    // CSO 매핑 자동 생성: 회사명 → 사업자번호 (실패해도 가입에 영향 없음)
+    try {
+      const supabase = getSupabase();
+      await supabase
+        .from('cso_matching')
+        .upsert(
+          {
+            cso_company_name: company_name.trim(),
+            business_number: normalizedBN,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'cso_company_name', ignoreDuplicates: true }
+        );
+      invalidateCSOMatchingCache();
+      console.log(`CSO 매핑 자동 생성 (회원가입): ${company_name} → ${normalizedBN}`);
+    } catch (error) {
+      console.error('CSO 매핑 자동 생성 실패 (회원가입은 정상 처리됨):', error);
+    }
 
     // Notify admin about new registration
     const fullAddress = address2 ? `${address1} ${address2}` : address1;

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { parseExcelFile } from '@/lib/excel';
 import { getSettlementRepository } from '@/infrastructure/supabase';
-import { invalidateSettlementCache } from '@/lib/data-cache';
+import { getSupabase } from '@/lib/supabase';
+import { invalidateSettlementCache, invalidateCSOMatchingCache } from '@/lib/data-cache';
 
 // 메모리 제한 증가
 export const maxDuration = 60; // 60초 타임아웃
@@ -103,6 +104,42 @@ export async function POST(request: NextRequest) {
 
     // 정산 데이터 캐시 무효화 (months, totals 등)
     invalidateSettlementCache();
+
+    // CSO관리업체 → business_number 자동 매핑 (비동기, 실패해도 업로드 성공에 영향 없음)
+    try {
+      const csoMappings = new Map<string, string>();
+      for (const row of data) {
+        const csoName = row.CSO관리업체?.toString().trim();
+        const bn = row.business_number?.toString().trim();
+        if (csoName && bn && bn.length === 10) {
+          csoMappings.set(csoName, bn);
+        }
+      }
+
+      if (csoMappings.size > 0) {
+        const upsertItems = Array.from(csoMappings.entries()).map(([name, bn]) => ({
+          cso_company_name: name,
+          business_number: bn,
+          updated_at: new Date().toISOString(),
+        }));
+
+        const supabase = getSupabase();
+        const batchSize = 100;
+        for (let i = 0; i < upsertItems.length; i += batchSize) {
+          await supabase
+            .from('cso_matching')
+            .upsert(upsertItems.slice(i, i + batchSize), {
+              onConflict: 'cso_company_name',
+              ignoreDuplicates: false,
+            });
+        }
+
+        invalidateCSOMatchingCache();
+        console.log(`CSO 매핑 자동 생성: ${upsertItems.length}건`);
+      }
+    } catch (error) {
+      console.error('CSO 매핑 자동 생성 실패 (업로드는 정상 처리됨):', error);
+    }
 
     return NextResponse.json({
       success: true,

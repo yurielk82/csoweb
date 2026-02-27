@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { 
-  FileSpreadsheet, 
-  LogOut, 
-  Menu, 
-  X, 
+import { useRouter, usePathname } from 'next/navigation';
+import {
+  FileSpreadsheet,
+  LogOut,
+  Menu,
+  X,
   User,
   Settings,
   LayoutDashboard,
@@ -21,7 +21,8 @@ import {
   Search,
   Calculator,
   Link2,
-  Loader2
+  Loader2,
+  ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,23 +34,224 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
+import type { LucideIcon } from 'lucide-react';
 
+/* ─── 메뉴 타입 ─── */
+interface MenuItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+interface MenuGroup {
+  label: string;
+  icon: LucideIcon;
+  items: MenuItem[];
+}
+
+type NavEntry = MenuItem | MenuGroup;
+
+function isGroup(entry: NavEntry): entry is MenuGroup {
+  return 'items' in entry;
+}
+
+/* ─── 관리자 메뉴 구조 (그룹 드롭다운) ─── */
+const ADMIN_NAV: NavEntry[] = [
+  { href: '/admin', label: '대시보드', icon: LayoutDashboard },
+  {
+    label: '정산 관리',
+    icon: FileSpreadsheet,
+    items: [
+      { href: '/admin/upload', label: '정산서 업로드', icon: Upload },
+      { href: '/admin/columns', label: '컬럼 설정', icon: Columns },
+      { href: '/admin/data', label: '데이터 관리', icon: Database },
+    ],
+  },
+  {
+    label: '회원 관리',
+    icon: Users,
+    items: [
+      { href: '/admin/members', label: '회원 관리', icon: UserCog },
+      { href: '/admin/approvals', label: '회원 승인', icon: Users },
+      { href: '/admin/integrity', label: '거래처 매핑', icon: Link2 },
+    ],
+  },
+  {
+    label: '이메일',
+    icon: Mail,
+    items: [
+      { href: '/admin/mailmerge', label: '메일머지', icon: MailPlus },
+      { href: '/admin/emails', label: '이메일 이력', icon: Mail },
+    ],
+  },
+  { href: '/admin/master', label: '마스터 조회', icon: Search },
+];
+
+/* ─── 일반 사용자 메뉴 ─── */
+const USER_NAV: NavEntry[] = [
+  { href: '/dashboard', label: '정산서 조회', icon: FileSpreadsheet },
+  { href: '/monthly-summary', label: '월별 합계', icon: Calculator },
+];
+
+/* ─── 그룹 드롭다운 (데스크톱) ─── */
+function NavGroupDropdown({ group, pathname }: { group: MenuGroup; pathname: string }) {
+  const isActive = group.items.some((item) => pathname === item.href);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn(
+            'gap-1.5',
+            isActive && 'bg-accent text-accent-foreground'
+          )}
+        >
+          <group.icon className="h-4 w-4" />
+          {group.label}
+          <ChevronDown className="h-3 w-3 opacity-50" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-48">
+        {group.items.map((item) => (
+          <DropdownMenuItem key={item.href} asChild>
+            <Link
+              href={item.href}
+              className={cn(
+                'cursor-pointer gap-2',
+                pathname === item.href && 'bg-accent'
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </Link>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/* ─── 데스크톱 네비게이션 ─── */
+function DesktopNav({ entries, pathname }: { entries: NavEntry[]; pathname: string }) {
+  return (
+    <nav className="hidden md:flex items-center gap-1 flex-1">
+      {entries.map((entry) => {
+        if (isGroup(entry)) {
+          return <NavGroupDropdown key={entry.label} group={entry} pathname={pathname} />;
+        }
+        return (
+          <Link key={entry.href} href={entry.href}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'gap-2',
+                pathname === entry.href && 'bg-accent text-accent-foreground'
+              )}
+            >
+              <entry.icon className="h-4 w-4" />
+              {entry.label}
+            </Button>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+/* ─── 모바일 네비게이션 ─── */
+function MobileNav({
+  entries,
+  pathname,
+  onNavigate,
+  isAdmin,
+}: {
+  entries: NavEntry[];
+  pathname: string;
+  onNavigate: () => void;
+  isAdmin: boolean;
+}) {
+  return (
+    <nav className="md:hidden border-t p-4 space-y-1 bg-background">
+      {entries.map((entry) => {
+        if (isGroup(entry)) {
+          return (
+            <div key={entry.label}>
+              {/* 그룹 라벨 */}
+              <p className="px-4 pt-3 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {entry.label}
+              </p>
+              {entry.items.map((item) => (
+                <Link key={item.href} href={item.href} onClick={onNavigate}>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      'w-full justify-start gap-2 pl-8',
+                      pathname === item.href && 'bg-accent text-accent-foreground'
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.label}
+                  </Button>
+                </Link>
+              ))}
+            </div>
+          );
+        }
+        return (
+          <Link key={entry.href} href={entry.href} onClick={onNavigate}>
+            <Button
+              variant="ghost"
+              className={cn(
+                'w-full justify-start gap-2',
+                pathname === entry.href && 'bg-accent text-accent-foreground'
+              )}
+            >
+              <entry.icon className="h-4 w-4" />
+              {entry.label}
+            </Button>
+          </Link>
+        );
+      })}
+
+      {/* 프로필/설정 */}
+      <div className="border-t pt-2 mt-2">
+        <Link href="/profile" onClick={onNavigate}>
+          <Button variant="ghost" className="w-full justify-start gap-2">
+            <User className="h-4 w-4" />
+            내 정보 수정
+          </Button>
+        </Link>
+        {isAdmin && (
+          <Link href="/admin/settings" onClick={onNavigate}>
+            <Button variant="ghost" className="w-full justify-start gap-2">
+              <Settings className="h-4 w-4" />
+              사이트 설정
+            </Button>
+          </Link>
+        )}
+      </div>
+    </nav>
+  );
+}
+
+/* ─── Header ─── */
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isMounted, clearUser } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
-      // 1. 클라이언트 상태 먼저 초기화 (즉각 UI 반영)
       clearUser();
-      // 2. 서버 세션 삭제
       await fetch('/api/auth/logout', { method: 'POST' });
-      // 3. 로그인 페이지로 이동
       router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);
-      // 에러가 나도 로그인 페이지로 이동
       router.push('/login');
     }
   };
@@ -64,32 +266,13 @@ export function Header() {
             <span className="font-bold text-lg hidden sm:inline">CSO Portal</span>
           </Link>
           <div className="flex-1" />
-          {/* 마운트 전에는 스피너 숨김 (Hydration 일치) */}
           {isMounted && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
         </div>
       </header>
     );
   }
 
-  const adminMenuItems = [
-    { href: '/admin', label: '대시보드', icon: LayoutDashboard },
-    { href: '/admin/master', label: '정산서 마스터 조회', icon: Search },
-    { href: '/admin/upload', label: '정산서 업로드', icon: Upload },
-    { href: '/admin/columns', label: '컬럼 설정', icon: Columns },
-    { href: '/admin/data', label: '데이터 관리', icon: Database },
-    { href: '/admin/approvals', label: '회원 승인', icon: Users },
-    { href: '/admin/members', label: '회원 관리', icon: UserCog },
-    { href: '/admin/integrity', label: '거래처 매핑', icon: Link2 },
-    { href: '/admin/emails', label: '이메일 이력', icon: Mail },
-    { href: '/admin/mailmerge', label: '메일머지', icon: MailPlus },
-  ];
-
-  const userMenuItems = [
-    { href: '/dashboard', label: '정산서 조회', icon: FileSpreadsheet },
-    { href: '/monthly-summary', label: '월별 합계', icon: Calculator },
-  ];
-
-  const menuItems = user.is_admin ? adminMenuItems : userMenuItems;
+  const navEntries = user.is_admin ? ADMIN_NAV : USER_NAV;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -101,16 +284,7 @@ export function Header() {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1 flex-1">
-          {menuItems.map((item) => (
-            <Link key={item.href} href={item.href}>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Button>
-            </Link>
-          ))}
-        </nav>
+        <DesktopNav entries={navEntries} pathname={pathname} />
 
         {/* User Menu */}
         <div className="flex items-center gap-2 ml-auto">
@@ -173,34 +347,12 @@ export function Header() {
 
       {/* Mobile Navigation */}
       {mobileMenuOpen && (
-        <nav className="md:hidden border-t p-4 space-y-2 bg-background">
-          {menuItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Button>
-            </Link>
-          ))}
-          <Link href="/profile" onClick={() => setMobileMenuOpen(false)}>
-            <Button variant="ghost" className="w-full justify-start gap-2">
-              <User className="h-4 w-4" />
-              내 정보 수정
-            </Button>
-          </Link>
-          {user.is_admin && (
-            <Link href="/admin/settings" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <Settings className="h-4 w-4" />
-                사이트 설정
-              </Button>
-            </Link>
-          )}
-        </nav>
+        <MobileNav
+          entries={navEntries}
+          pathname={pathname}
+          onNavigate={() => setMobileMenuOpen(false)}
+          isAdmin={user.is_admin}
+        />
       )}
     </header>
   );
