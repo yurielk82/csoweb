@@ -53,7 +53,7 @@ export function DropZone({
                   파일을 드래그하거나 클릭하여 선택
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  .xlsx, .xls (최대 20MB)
+                  .xlsx, .xls (최대 4MB)
                 </p>
               </>
             )}

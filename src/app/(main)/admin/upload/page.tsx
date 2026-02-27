@@ -40,7 +40,7 @@ export default function UploadPage() {
       'application/vnd.ms-excel': ['.xls'],
     },
     maxFiles: 1,
-    maxSize: 20 * 1024 * 1024, // 20MB
+    maxSize: 4 * 1024 * 1024, // 4MB
   });
 
   return (

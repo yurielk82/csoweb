@@ -271,12 +271,12 @@ export function validateExcelFile(file: File): {
     };
   }
   
-  // Check file size (50MB limit)
-  const maxSize = 50 * 1024 * 1024;
+  // Check file size (4MB limit — Next.js body parser 기본값과 통일)
+  const maxSize = 4 * 1024 * 1024;
   if (file.size > maxSize) {
     return {
       valid: false,
-      error: '파일 크기는 50MB를 초과할 수 없습니다.',
+      error: '파일 크기는 4MB를 초과할 수 없습니다.',
     };
   }
   

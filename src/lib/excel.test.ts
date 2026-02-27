@@ -33,21 +33,21 @@ describe('validateExcelFile', () => {
     expect(result.error).toContain('엑셀 파일');
   });
 
-  it('50MB 초과 파일은 무효하다', () => {
+  it('4MB 초과 파일은 무효하다', () => {
     const file = createFile(
       'large.xlsx',
-      51 * 1024 * 1024,
+      5 * 1024 * 1024,
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     );
     const result = validateExcelFile(file);
     expect(result.valid).toBe(false);
-    expect(result.error).toContain('50MB');
+    expect(result.error).toContain('4MB');
   });
 
-  it('50MB 이하 파일은 유효하다', () => {
+  it('4MB 이하 파일은 유효하다', () => {
     const file = createFile(
       'ok.xlsx',
-      50 * 1024 * 1024,
+      4 * 1024 * 1024,
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     );
     expect(validateExcelFile(file)).toEqual({ valid: true });

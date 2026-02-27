@@ -5,6 +5,21 @@
 
 ---
 
+## [0.18.9] - 2026-02-27
+
+### Fix — 엑셀 업로드 파일 크기 제한 4MB 통일
+
+- **API route** (`upload/route.ts`): 20MB → 4MB (Next.js body parser 기본값과 일치)
+- **클라이언트 dropzone** (`upload/page.tsx`): 20MB → 4MB
+- **클라이언트 검증** (`lib/excel.ts`): 50MB → 4MB
+- **DropZone UI 텍스트**: "최대 20MB" → "최대 4MB"
+- **무결성 관리자** (`SettlementIntegrityManager.tsx`): 10MB → 4MB
+- **테스트**: 50MB 기준 → 4MB 기준으로 수정
+
+이전에는 클라이언트(20MB/50MB), 서버(20MB), Next.js(4MB) 제한이 불일치하여 4MB 초과 파일 업로드 시 서버에서 무응답 에러 발생 가능. 모두 4MB로 통일.
+
+---
+
 ## [0.18.8] - 2026-02-27
 
 ### Performance — 전체 메뉴 성능 전수 검사 & 캐시 확대 적용

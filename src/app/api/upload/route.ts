@@ -52,11 +52,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 파일 크기 체크 (20MB 제한)
+    // 파일 크기 체크 (4MB 제한 — Next.js body parser 기본값과 통일)
     const fileSizeMB = file.size / (1024 * 1024);
-    if (file.size > 20 * 1024 * 1024) {
+    if (file.size > 4 * 1024 * 1024) {
       return NextResponse.json(
-        { success: false, error: `파일 크기(${fileSizeMB.toFixed(1)}MB)가 20MB를 초과합니다. 파일을 분할해주세요.` },
+        { success: false, error: `파일 크기(${fileSizeMB.toFixed(1)}MB)가 4MB를 초과합니다. 파일을 분할해주세요.` },
         { status: 400 }
       );
     }

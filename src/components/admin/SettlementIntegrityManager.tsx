@@ -1002,7 +1002,7 @@ export default function SettlementIntegrityManager() {
       'application/vnd.ms-excel': ['.xls'],
     },
     maxFiles: 1,
-    maxSize: 10 * 1024 * 1024,
+    maxSize: 4 * 1024 * 1024,
   });
 
   const handleUpload = async () => {
@@ -1472,7 +1472,7 @@ export default function SettlementIntegrityManager() {
                 ) : (
                   <>
                     <p className="text-muted-foreground">파일을 드래그하거나 클릭하여 선택</p>
-                    <p className="text-sm text-muted-foreground mt-2">.xlsx, .xls (최대 10MB)</p>
+                    <p className="text-sm text-muted-foreground mt-2">.xlsx, .xls (최대 4MB)</p>
                   </>
                 )}
               </div>
