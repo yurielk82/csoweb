@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
@@ -94,44 +94,49 @@ const USER_NAV: NavEntry[] = [
   { href: '/monthly-summary', label: '월별 합계', icon: Calculator },
 ];
 
-/* ─── 그룹 드롭다운 (데스크톱) ─── */
+/* ─── 그룹 드롭다운 (데스크톱 — hover로 열림) ─── */
 function NavGroupDropdown({ group, pathname }: { group: MenuGroup; pathname: string }) {
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isActive = group.items.some((item) => pathname === item.href);
   const firstHref = group.items[0].href;
 
+  const handleEnter = useCallback(() => {
+    if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null; }
+    setOpen(true);
+  }, []);
+
+  const handleLeave = useCallback(() => {
+    closeTimer.current = setTimeout(() => setOpen(false), 150);
+  }, []);
+
   return (
-    <div className="flex items-center">
-      {/* 라벨 클릭 → 첫 번째 하위 메뉴로 이동 */}
-      <Link href={firstHref}>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn(
-            'gap-1.5 pr-1 rounded-r-none',
-            isActive && 'bg-accent text-accent-foreground'
-          )}
-        >
-          <group.icon className="h-4 w-4" />
-          {group.label}
-        </Button>
-      </Link>
-      {/* 화살표 클릭 → 드롭다운 */}
-      <DropdownMenu>
+    <div className="flex items-center" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
+      <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(
-              'px-1 rounded-l-none',
-              isActive && 'bg-accent text-accent-foreground'
-            )}
-          >
-            <ChevronDown className="h-3 w-3 opacity-50" />
-          </Button>
+          <Link href={firstHref}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'gap-1.5',
+                isActive && 'bg-accent text-accent-foreground'
+              )}
+            >
+              <group.icon className="h-4 w-4" />
+              {group.label}
+              <ChevronDown className={cn("h-3 w-3 opacity-50 transition-transform", open && "rotate-180")} />
+            </Button>
+          </Link>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-48">
+        <DropdownMenuContent
+          align="start"
+          className="w-48"
+          onMouseEnter={handleEnter}
+          onMouseLeave={handleLeave}
+        >
           {group.items.map((item) => (
-            <DropdownMenuItem key={item.href} asChild>
+            <DropdownMenuItem key={item.href} asChild onSelect={() => setOpen(false)}>
               <Link
                 href={item.href}
                 className={cn(
