@@ -38,28 +38,30 @@ const STATUS_CONFIG: Record<EmailStatus, { label: string; variant: 'default' | '
   failed: { label: '실패', variant: 'destructive', icon: XCircle },
 };
 
-/* ─── 에러 메시지 한글 요약 ─── */
+/* ─── 에러 메시지 한글 설명 ─── */
 const ERROR_PATTERNS: { pattern: RegExp; label: string }[] = [
-  { pattern: /SMTP 설정 미완료/i, label: 'SMTP 설정 미완료' },
-  { pattern: /RESEND_API_KEY/i, label: 'Resend API 키 미설정' },
-  { pattern: /invalid.*(from|sender)/i, label: '발신자 주소 오류' },
-  { pattern: /invalid.*(to|recipient)/i, label: '수신자 주소 오류' },
-  { pattern: /rate.?limit/i, label: 'API 호출 한도 초과' },
-  { pattern: /timeout|timed?\s*out|ETIMEDOUT/i, label: '서버 응답 시간 초과' },
-  { pattern: /ECONNREFUSED|ECONNRESET|ENOTFOUND/i, label: '메일 서버 연결 실패' },
-  { pattern: /auth|credential|login/i, label: 'SMTP 인증 실패' },
-  { pattern: /rejected|bounced|undeliverable/i, label: '수신자 거부 (반송)' },
-  { pattern: /quota|limit.*exceeded/i, label: '발송 한도 초과' },
-  { pattern: /missing.*required/i, label: '필수 항목 누락' },
-  { pattern: /dns|MX/i, label: '수신 도메인 DNS 오류' },
+  { pattern: /SMTP 설정 미완료/i, label: '관리자 설정에서 SMTP 호스트 또는 계정 정보가 입력되지 않았습니다' },
+  { pattern: /RESEND_API_KEY/i, label: '서버 환경변수에 Resend API 키가 설정되지 않았습니다' },
+  { pattern: /invalid.*(from|sender)/i, label: '발신자 이메일 주소 형식이 올바르지 않거나 인증되지 않은 도메인입니다' },
+  { pattern: /invalid.*(to|recipient)/i, label: '수신자 이메일 주소 형식이 올바르지 않습니다' },
+  { pattern: /rate.?limit/i, label: '이메일 API 호출 한도를 초과했습니다. 잠시 후 재시도하세요' },
+  { pattern: /timeout|timed?\s*out|ETIMEDOUT/i, label: '메일 서버가 응답하지 않아 시간이 초과되었습니다' },
+  { pattern: /ECONNREFUSED/i, label: '메일 서버(SMTP)에 연결이 거부되었습니다. 호스트/포트 설정을 확인하세요' },
+  { pattern: /ECONNRESET/i, label: '메일 서버와의 연결이 중간에 끊어졌습니다' },
+  { pattern: /ENOTFOUND/i, label: 'SMTP 호스트 주소를 찾을 수 없습니다. 서버 주소를 확인하세요' },
+  { pattern: /auth|credential|login/i, label: 'SMTP 인증에 실패했습니다. 계정 또는 비밀번호를 확인하세요' },
+  { pattern: /rejected|bounced|undeliverable/i, label: '수신자 메일 서버에서 수신을 거부했습니다 (메일함 용량 초과, 주소 없음 등)' },
+  { pattern: /quota|limit.*exceeded/i, label: '일일 발송 한도를 초과했습니다. 다음 날 재시도하세요' },
+  { pattern: /missing.*required/i, label: '이메일 발송에 필요한 필수 항목(제목, 본문 등)이 누락되었습니다' },
+  { pattern: /dns|MX/i, label: '수신자 도메인의 DNS/MX 레코드를 찾을 수 없습니다. 이메일 주소를 확인하세요' },
 ];
 
-function getErrorSummary(errorMessage: string | null): string {
-  if (!errorMessage) return '-';
+function getErrorSummary(errorMessage: string | null): string | null {
+  if (!errorMessage) return null;
   for (const { pattern, label } of ERROR_PATTERNS) {
     if (pattern.test(errorMessage)) return label;
   }
-  return '발송 중 오류 발생';
+  return '알 수 없는 오류로 발송에 실패했습니다. 원문: ' + errorMessage;
 }
 
 /* ─── 날짜 프리셋 ─── */
@@ -274,15 +276,15 @@ export default function EmailLogsPage() {
       {/* Logs Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
+          <Table className="table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[120px]">발송일시</TableHead>
-                <TableHead className="w-[200px]">수신자</TableHead>
-                <TableHead>제목</TableHead>
-                <TableHead className="w-[120px]">유형</TableHead>
-                <TableHead className="w-[90px]">상태</TableHead>
-                <TableHead className="w-[160px]">오류 내용</TableHead>
+                <TableHead className="w-[100px]">발송일시</TableHead>
+                <TableHead className="w-[170px]">수신자</TableHead>
+                <TableHead className="w-[25%]">제목</TableHead>
+                <TableHead className="w-[100px]">유형</TableHead>
+                <TableHead className="w-[70px]">상태</TableHead>
+                <TableHead>오류 내용</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -312,10 +314,10 @@ export default function EmailLogsPage() {
                           minute: '2-digit',
                         })}
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-sm">
+                      <TableCell className="truncate text-sm">
                         {log.recipient_email}
                       </TableCell>
-                      <TableCell className="max-w-[300px] truncate text-sm">
+                      <TableCell className="truncate text-sm">
                         {log.subject}
                       </TableCell>
                       <TableCell>
@@ -329,10 +331,10 @@ export default function EmailLogsPage() {
                           {statusConfig.label}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm">
+                      <TableCell className="text-xs">
                         {isFailed ? (
-                          <span className="text-red-600 dark:text-red-400" title={log.error_message ?? undefined}>
-                            {getErrorSummary(log.error_message)}
+                          <span className="text-red-600 dark:text-red-400 leading-relaxed">
+                            {getErrorSummary(log.error_message) ?? '-'}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">-</span>
