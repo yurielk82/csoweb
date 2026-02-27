@@ -72,7 +72,7 @@ function setSecurityHeaders(response: NextResponse): NextResponse {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https://*.supabase.co",
+      "connect-src 'self' https://*.supabase.co https://vitals.vercel-insights.com",
       "frame-src 'none'",
       "object-src 'none'",
       "base-uri 'self'",

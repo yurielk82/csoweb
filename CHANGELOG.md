@@ -5,13 +5,19 @@
 
 ---
 
-## [0.18.10] - 2026-02-27
+## [0.18.11] - 2026-02-27
 
-### Chore — Vercel Speed Insights 제거
+### Fix — Vercel Speed Insights 복원 + CSP connect-src 허용
 
-- `@vercel/speed-insights` 패키지 및 `<SpeedInsights />` 컴포넌트 제거
-- Netlify 배포 환경에서 불필요 (Vercel 전용), CSP `connect-src`에서도 차단되고 있었음
-- layout.tsx에서 import 및 렌더링 제거, `npm uninstall`로 의존성 삭제
+- `@vercel/speed-insights` 복원 (Vercel 개발 서버에서 사용 중)
+- CSP `connect-src`에 `https://vitals.vercel-insights.com` 추가 — 프로덕션에서도 차단 없이 동작
+
+## [0.18.10] - 2026-02-27 (reverted)
+
+### ~~Chore — Vercel Speed Insights 제거~~ → v0.18.11에서 복원
+
+- ~~`@vercel/speed-insights` 패키지 및 `<SpeedInsights />` 컴포넌트 제거~~
+- ~~Netlify 배포 환경에서 불필요 (Vercel 전용), CSP `connect-src`에서도 차단되고 있었음~~
 
 ---
 
