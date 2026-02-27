@@ -112,11 +112,11 @@ function TableSkeleton() {
     <>
       {[0, 1, 2, 3, 4].map((i) => (
         <TableRow key={i}>
+          <TableCell><div className="h-5 w-14 bg-muted animate-pulse rounded-full" /></TableCell>
           <TableCell><div className="h-4 w-20 bg-muted animate-pulse rounded" /></TableCell>
           <TableCell><div className="h-4 w-32 bg-muted animate-pulse rounded" /></TableCell>
           <TableCell><div className="h-4 w-48 bg-muted animate-pulse rounded" /></TableCell>
-          <TableCell><div className="h-4 w-16 bg-muted animate-pulse rounded" /></TableCell>
-          <TableCell><div className="h-4 w-14 bg-muted animate-pulse rounded" /></TableCell>
+          <TableCell><div className="h-5 w-16 bg-muted animate-pulse rounded-full" /></TableCell>
         </TableRow>
       ))}
     </>
@@ -280,11 +280,11 @@ export default function EmailLogsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>상태</TableHead>
                   <TableHead>발송일시</TableHead>
                   <TableHead>수신자</TableHead>
                   <TableHead>제목</TableHead>
                   <TableHead>유형</TableHead>
-                  <TableHead>상태</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -307,6 +307,27 @@ export default function EmailLogsPage() {
 
                     return (
                       <TableRow key={log.id} className={cn(isFailed && 'bg-red-50/50 dark:bg-red-950/20')}>
+                        <TableCell className="whitespace-nowrap">
+                          {isFailed && errorSummary ? (
+                            <Tooltip>
+                              <TooltipTrigger className="cursor-help">
+                                <Badge variant={statusConfig.variant} className="text-xs gap-1">
+                                  <StatusIcon className="h-3 w-3" />
+                                  {statusConfig.label}
+                                  <AlertCircle className="h-3 w-3" />
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="max-w-xs">
+                                {errorSummary}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <Badge variant={statusConfig.variant} className="text-xs">
+                              <StatusIcon className="h-3 w-3 mr-1" />
+                              {statusConfig.label}
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="whitespace-nowrap text-sm">
                           {new Date(log.created_at).toLocaleString('ko-KR', {
                             month: '2-digit',
@@ -325,27 +346,6 @@ export default function EmailLogsPage() {
                           <Badge variant="outline" className="text-xs">
                             {TEMPLATE_LABELS[log.template_type] || log.template_type}
                           </Badge>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {isFailed && errorSummary ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant={statusConfig.variant} className="text-xs cursor-help gap-1">
-                                  <StatusIcon className="h-3 w-3" />
-                                  {statusConfig.label}
-                                  <AlertCircle className="h-3 w-3" />
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent side="left" className="max-w-xs text-xs">
-                                {errorSummary}
-                              </TooltipContent>
-                            </Tooltip>
-                          ) : (
-                            <Badge variant={statusConfig.variant} className="text-xs">
-                              <StatusIcon className="h-3 w-3 mr-1" />
-                              {statusConfig.label}
-                            </Badge>
-                          )}
                         </TableCell>
                       </TableRow>
                     );
