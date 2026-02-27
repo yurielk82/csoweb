@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getColumnSettingRepository } from '@/infrastructure/supabase';
 import { DEFAULT_COLUMN_SETTINGS } from '@/types';
+import { invalidateColumnCache } from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,7 +53,8 @@ export async function PUT(request: NextRequest) {
     }
     
     await getColumnSettingRepository().update(columns);
-    
+    invalidateColumnCache();
+
     return NextResponse.json({
       success: true,
       message: '컬럼 설정이 저장되었습니다.',
@@ -83,7 +85,8 @@ export async function DELETE() {
       ...c,
       display_order: index + 1,
     })));
-    
+    invalidateColumnCache();
+
     return NextResponse.json({
       success: true,
       message: '컬럼 설정이 기본값으로 초기화되었습니다.',

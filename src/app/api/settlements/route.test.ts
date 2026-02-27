@@ -16,17 +16,19 @@ const mockSettlementRepo = {
   getTotals: vi.fn(),
   getTotalsByCSOMatching: vi.fn(),
 };
-const mockCSOMatchingRepo = {
-  getMatchedCompanyNames: vi.fn(),
-};
-const mockColumnSettingRepo = {
-  findAll: vi.fn(),
-};
 
 vi.mock('@/infrastructure/supabase', () => ({
   getSettlementRepository: vi.fn(() => mockSettlementRepo),
-  getCSOMatchingRepository: vi.fn(() => mockCSOMatchingRepo),
-  getColumnSettingRepository: vi.fn(() => mockColumnSettingRepo),
+}));
+
+const mockGetCachedColumns = vi.fn();
+const mockGetCachedMatchedNames = vi.fn();
+const mockGetCachedTotals = vi.fn();
+
+vi.mock('@/lib/data-cache', () => ({
+  getCachedColumns: (...args: unknown[]) => mockGetCachedColumns(...args),
+  getCachedMatchedNames: (...args: unknown[]) => mockGetCachedMatchedNames(...args),
+  getCachedTotals: (...args: unknown[]) => mockGetCachedTotals(...args),
 }));
 
 const { getSession } = await import('@/lib/auth');
@@ -51,9 +53,8 @@ function createGetRequest(params: Record<string, string> = {}): NextRequest {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockColumnSettingRepo.findAll.mockResolvedValue(mockColumnSettings);
-  mockSettlementRepo.getTotals.mockResolvedValue(mockTotals);
-  mockSettlementRepo.getTotalsByCSOMatching.mockResolvedValue(mockTotals);
+  mockGetCachedColumns.mockResolvedValue(mockColumnSettings);
+  mockGetCachedTotals.mockResolvedValue(mockTotals);
 });
 
 describe('GET /api/settlements', () => {
@@ -86,7 +87,7 @@ describe('GET /api/settlements', () => {
 
   it('일반 회원은 CSO 매칭 기반으로 조회한다', async () => {
     mockGetSession.mockResolvedValue(mockRegularSession);
-    mockCSOMatchingRepo.getMatchedCompanyNames.mockResolvedValue(['CSO업체A']);
+    mockGetCachedMatchedNames.mockResolvedValue(['CSO업체A']);
     mockSettlementRepo.findByCSOMatchingPaginated.mockResolvedValue({
       data: [mockSettlements[0]],
       total: 1,
@@ -96,7 +97,7 @@ describe('GET /api/settlements', () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(mockCSOMatchingRepo.getMatchedCompanyNames).toHaveBeenCalled();
+    expect(mockGetCachedMatchedNames).toHaveBeenCalledWith(mockRegularSession.business_number);
     expect(mockSettlementRepo.findByCSOMatchingPaginated).toHaveBeenCalled();
     expect(json.data.settlements).toHaveLength(1);
   });
@@ -141,7 +142,7 @@ describe('GET /api/settlements', () => {
       total: 3,
     });
 
-    const res = await GET(createGetRequest());
+    const res = await GET(createGetRequest({ settlement_month: '2025-02' }));
     const json = await res.json();
 
     expect(json.data.totals.금액).toBe(350000);

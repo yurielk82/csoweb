@@ -5,6 +5,31 @@
 
 ---
 
+## [0.18.4] - 2026-02-27
+
+### Performance — 서버사이드 데이터 캐시 (`unstable_cache` + `revalidateTag`)
+
+#### 캐시 레이어 도입
+- **신규 `src/lib/data-cache.ts`**: `unstable_cache`로 데이터를 Vercel Data Cache에 저장, `revalidateTag`로 변경 시점에만 무효화
+- 캐시 대상: 컬럼 설정(`column-settings`), 회사 정보(`footer-data`), CSO 매칭(`cso-matching`), 정산월 목록/합계(`settlement-data`)
+- 변경 빈도: 정산/CSO 매칭(월 1회), 컬럼/회사(거의 없음) → 매 요청 DB 조회 불필요
+
+#### 캐시 무효화 포인트
+- `POST /api/upload`, `DELETE /api/settlements/month/[month]` → `invalidateSettlementCache()`
+- `PUT /api/columns`, `DELETE /api/columns` → `invalidateColumnCache()`
+- `POST /api/admin/cso-matching/upsert`, `DELETE /api/admin/cso-matching/upsert` → `invalidateCSOMatchingCache()`
+
+#### 변경 전후 비교
+
+| 항목 | v0.18.3 | v0.18.4 |
+|------|---------|---------|
+| 컬럼 설정 조회 | 매 요청 DB | **캐시** (변경 시만 무효화) |
+| CSO 매칭 조회 | 매 요청 DB | **캐시** (변경 시만 무효화) |
+| 정산월 목록/합계 | 매 요청 DB (RPC) | **캐시** (업로드/삭제 시만 무효화) |
+| 회사 정보 | `cache: 'no-store'` 매번 DB | **캐시** (설정 변경 시만 무효화) |
+
+---
+
 ## [0.18.3] - 2026-02-27
 
 ### Performance — 사이트 전체 성능 리뷰 반영

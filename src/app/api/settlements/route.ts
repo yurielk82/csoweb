@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getSettlementRepository, getCSOMatchingRepository, getColumnSettingRepository } from '@/infrastructure/supabase';
+import { getSettlementRepository } from '@/infrastructure/supabase';
+import {
+  getCachedColumns,
+  getCachedMatchedNames,
+  getCachedTotals,
+} from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,11 +32,10 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('page_size') || '50');
     const search = searchParams.get('search') || undefined;
-    // 관리자용: 특정 CSO의 business_number로 필터링
     const filterBusinessNumber = searchParams.get('business_number') || undefined;
 
-    // 표시 가능한 컬럼만 조회하여 SELECT 최적화
-    const columnSettings = await getColumnSettingRepository().findAll();
+    // 캐시된 컬럼 설정 사용
+    const columnSettings = await getCachedColumns();
     const visibleColumnKeys = columnSettings
       .filter(c => c.is_visible)
       .map(c => c.column_key);
@@ -40,11 +44,12 @@ export async function GET(request: NextRequest) {
     const settlementRepo = getSettlementRepository();
     const queryParams = { settlementMonth, selectColumns, page, pageSize, search };
 
+    // 캐시된 CSO 매칭 결과 사용
     let matchedNames: string[] | null = null;
 
     if (session.is_admin) {
       if (filterBusinessNumber) {
-        matchedNames = await getCSOMatchingRepository().getMatchedCompanyNames(filterBusinessNumber);
+        matchedNames = await getCachedMatchedNames(filterBusinessNumber);
         if (matchedNames.length === 0) {
           return NextResponse.json({
             success: true,
@@ -57,7 +62,7 @@ export async function GET(request: NextRequest) {
         }
       }
     } else {
-      matchedNames = await getCSOMatchingRepository().getMatchedCompanyNames(session.business_number);
+      matchedNames = await getCachedMatchedNames(session.business_number);
       if (matchedNames.length === 0) {
         return NextResponse.json({
           success: true,
@@ -70,14 +75,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // DB 레벨 페이지네이션 + 검색 (전건 로드 제거)
+    const matchedNamesKey = matchedNames ? JSON.stringify(matchedNames) : 'ALL';
+
+    // 캐시된 합계 + DB 페이지 데이터 병렬 조회
     const [paginated, totals] = await Promise.all([
       matchedNames
         ? settlementRepo.findByCSOMatchingPaginated(matchedNames, queryParams)
         : settlementRepo.findAllPaginated(queryParams),
-      matchedNames
-        ? settlementRepo.getTotalsByCSOMatching(matchedNames, settlementMonth)
-        : settlementRepo.getTotals(settlementMonth),
+      settlementMonth
+        ? getCachedTotals(matchedNamesKey, settlementMonth)
+        : Promise.resolve({ 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0 }),
     ]);
 
     return NextResponse.json({

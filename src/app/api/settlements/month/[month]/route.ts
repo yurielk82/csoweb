@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getSettlementRepository } from '@/infrastructure/supabase';
+import { invalidateSettlementCache } from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +24,10 @@ export async function DELETE(
     const decodedMonth = decodeURIComponent(month);
     
     const deletedCount = await getSettlementRepository().deleteByMonth(decodedMonth);
-    
+
+    // 정산 데이터 캐시 무효화
+    invalidateSettlementCache();
+
     return NextResponse.json({
       success: true,
       data: { deletedCount },

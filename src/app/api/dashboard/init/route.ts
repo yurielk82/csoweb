@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { unstable_cache } from 'next/cache';
 import { getSession } from '@/lib/auth';
+import { getSettlementRepository } from '@/infrastructure/supabase';
 import {
-  getSettlementRepository,
-  getCSOMatchingRepository,
-  getColumnSettingRepository,
-  getCompanyRepository,
-} from '@/infrastructure/supabase';
-import { DEFAULT_COLUMN_SETTINGS } from '@/types';
+  getCachedColumns,
+  getCachedCompanyInfo,
+  getCachedMatchedNames,
+  getCachedAvailableMonths,
+  getCachedTotals,
+} from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,26 +18,13 @@ const ALWAYS_NEEDED_COLUMNS = [
   '수량', '금액', '제약수수료_합계', '담당수수료_합계',
 ];
 
-// 회사 정보 캐시 (footer-data 태그 — settings PUT 시 무효화됨)
-const getCachedCompanyInfo = unstable_cache(
-  async () => getCompanyRepository().get(),
-  ['company-info'],
-  { tags: ['footer-data'] }
-);
-
 /**
  * 대시보드/마스터 초기화 통합 API
  *
- * 4개의 개별 API(columns, year-months, company, settlements)를
- * 1회 호출로 병합하여 Vercel cold start × 4 → × 1 로 감소.
- *
- * Query params:
- *   - page (default 1)
- *   - page_size (default 50)
- *   - settlement_month (default: 최신월)
- *   - search
- *   - business_number (관리자: 특정 CSO 필터)
- *   - include_settlements (default true, false면 메타만 반환)
+ * 캐시 전략:
+ * - columns, company, CSO matching, months, totals → unstable_cache (Vercel Data Cache)
+ * - settlements (페이지 데이터) → DB 직접 조회 (페이지/검색 조합이 다양하여 캐시 불적합)
+ * - 캐시 무효화: 관리자 업로드/설정 변경 시 revalidateTag()
  */
 export async function GET(request: NextRequest) {
   try {
@@ -58,31 +45,33 @@ export async function GET(request: NextRequest) {
     const includeSettlements = sp.get('include_settlements') !== 'false';
 
     const settlementRepo = getSettlementRepository();
-    const csoMatchingRepo = getCSOMatchingRepository();
-    const columnSettingRepo = getColumnSettingRepository();
 
-    // ── Phase 1: 병렬로 메타데이터 + CSO 매칭 조회 ──
+    // ── Phase 1: 캐시된 메타데이터 병렬 조회 (DB 미접근 시 즉시 반환) ──
     const [columns, companyInfo, matchedNames] = await Promise.all([
-      columnSettingRepo.initialize(DEFAULT_COLUMN_SETTINGS).then(() => columnSettingRepo.findAll()),
+      getCachedColumns(),
       getCachedCompanyInfo(),
       session.is_admin
         ? filterBusinessNumber
-          ? csoMatchingRepo.getMatchedCompanyNames(filterBusinessNumber)
+          ? getCachedMatchedNames(filterBusinessNumber)
           : Promise.resolve(null)
-        : csoMatchingRepo.getMatchedCompanyNames(session.business_number),
+        : getCachedMatchedNames(session.business_number),
     ]);
+
+    const visibleColumns = columns.filter(c => c.is_visible);
+    const notice = { notice_content: companyInfo.notice_content, ceo_name: companyInfo.ceo_name };
+    const emptyTotals = { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0 };
 
     // 일반 회원인데 매칭 없으면 빈 결과
     if (!session.is_admin && (!matchedNames || matchedNames.length === 0)) {
       return NextResponse.json({
         success: true,
         data: {
-          columns: columns.filter(c => c.is_visible),
+          columns: visibleColumns,
           yearMonths: [],
-          notice: { notice_content: companyInfo.notice_content, ceo_name: companyInfo.ceo_name },
+          notice,
           settlements: [],
           pagination: { page, pageSize, total: 0, totalPages: 0 },
-          totals: { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0 },
+          totals: emptyTotals,
           noMatching: true,
         },
       });
@@ -90,65 +79,61 @@ export async function GET(request: NextRequest) {
 
     // 관리자 + 특정 CSO 선택인데 매칭 없으면
     if (session.is_admin && filterBusinessNumber && matchedNames && matchedNames.length === 0) {
-      // yearMonths는 전체 기준으로 반환 (CSO 매칭 없어도 월은 보여야 함)
-      const yearMonths = await settlementRepo.getAvailableMonths();
+      const yearMonths = await getCachedAvailableMonths('ALL');
       return NextResponse.json({
         success: true,
         data: {
-          columns: columns.filter(c => c.is_visible),
+          columns: visibleColumns,
           yearMonths,
-          notice: { notice_content: companyInfo.notice_content, ceo_name: companyInfo.ceo_name },
+          notice,
           settlements: [],
           pagination: { page, pageSize, total: 0, totalPages: 0 },
-          totals: { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0 },
+          totals: emptyTotals,
         },
       });
     }
 
-    // ── Phase 2: yearMonths 조회 ──
-    const yearMonths = matchedNames
-      ? await settlementRepo.getAvailableMonthsByCSOMatching(matchedNames)
-      : await settlementRepo.getAvailableMonths();
+    // ── Phase 2: 캐시된 yearMonths 조회 ──
+    const matchedNamesKey = matchedNames ? JSON.stringify(matchedNames) : 'ALL';
+    const yearMonths = await getCachedAvailableMonths(matchedNamesKey);
 
-    // settlement_month 결정: 쿼리 파라미터 > 최신월
     const settlementMonth = sp.get('settlement_month') || yearMonths[0] || undefined;
 
-    // ── Phase 3: 데이터 조회 (include_settlements=true일 때만) ──
+    // ── Phase 3: 데이터 조회 ──
     if (!includeSettlements || !settlementMonth) {
       return NextResponse.json({
         success: true,
         data: {
-          columns: columns.filter(c => c.is_visible),
+          columns: visibleColumns,
           yearMonths,
-          notice: { notice_content: companyInfo.notice_content, ceo_name: companyInfo.ceo_name },
+          notice,
           settlements: [],
           pagination: { page: 1, pageSize, total: 0, totalPages: 0 },
-          totals: { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0 },
+          totals: emptyTotals,
         },
       });
     }
 
-    const visibleColumnKeys = columns
-      .filter(c => c.is_visible)
-      .map(c => c.column_key);
+    const visibleColumnKeys = visibleColumns.map(c => c.column_key);
     const selectColumns = [...new Set([...ALWAYS_NEEDED_COLUMNS, ...visibleColumnKeys])].join(',');
     const queryParams = { settlementMonth, selectColumns, page, pageSize, search };
 
+    // 캐시된 totals + DB 페이지네이션 병렬 실행
     const [paginated, totals] = await Promise.all([
+      // 페이지 데이터: 항상 DB 직접 조회 (페이지/검색 조합이 다양)
       matchedNames
         ? settlementRepo.findByCSOMatchingPaginated(matchedNames, queryParams)
         : settlementRepo.findAllPaginated(queryParams),
-      matchedNames
-        ? settlementRepo.getTotalsByCSOMatching(matchedNames, settlementMonth)
-        : settlementRepo.getTotals(settlementMonth),
+      // 합계: 캐시 (검색 없이 월 전체 합계)
+      getCachedTotals(matchedNamesKey, settlementMonth),
     ]);
 
     return NextResponse.json({
       success: true,
       data: {
-        columns: columns.filter(c => c.is_visible),
+        columns: visibleColumns,
         yearMonths,
-        notice: { notice_content: companyInfo.notice_content, ceo_name: companyInfo.ceo_name },
+        notice,
         settlements: paginated.data,
         pagination: {
           page,

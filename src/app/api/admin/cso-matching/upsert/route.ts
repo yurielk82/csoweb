@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
 import { getSession } from '@/lib/auth';
+import { invalidateCSOMatchingCache } from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -101,6 +102,9 @@ export async function POST(request: NextRequest) {
 
       upsertedCount += batch.length;
     }
+
+    // CSO 매칭 캐시 무효화
+    invalidateCSOMatchingCache();
 
     return NextResponse.json({
       success: true,
@@ -203,6 +207,9 @@ export async function DELETE(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // CSO 매칭 캐시 무효화
+    invalidateCSOMatchingCache();
 
     return NextResponse.json({
       success: true,

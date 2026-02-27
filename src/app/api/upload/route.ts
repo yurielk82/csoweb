@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { parseExcelFile } from '@/lib/excel';
 import { getSettlementRepository } from '@/infrastructure/supabase';
+import { invalidateSettlementCache } from '@/lib/data-cache';
 
 // 메모리 제한 증가
 export const maxDuration = 60; // 60초 타임아웃
@@ -99,9 +100,10 @@ export async function POST(request: NextRequest) {
     
     // Insert settlements (정산월 기준으로 자동 관리)
     const { rowCount, settlementMonths } = await getSettlementRepository().insert(data);
-    
-    // 이메일 자동 발송 제거 - 별도 메뉴에서 수동 발송
-    
+
+    // 정산 데이터 캐시 무효화 (months, totals 등)
+    invalidateSettlementCache();
+
     return NextResponse.json({
       success: true,
       data: {

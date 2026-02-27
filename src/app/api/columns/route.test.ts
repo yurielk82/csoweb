@@ -22,6 +22,10 @@ vi.mock('@/types', () => ({
   ],
 }));
 
+vi.mock('@/lib/data-cache', () => ({
+  invalidateColumnCache: vi.fn(),
+}));
+
 const { getSession } = await import('@/lib/auth');
 const { GET, PUT, DELETE } = await import('./route');
 
