@@ -99,7 +99,7 @@ const MappingStatusIcon = memo(function MappingStatusIcon({ row }: MappingStatus
   const isRegistered = row.registration_status === 'registered';
   
   if (isRegistered && hasCSO) {
-    return <span className="text-green-500 text-base" title="매핑완료">✅</span>;
+    return <span className="text-green-500 text-base" title="처리 완료">✅</span>;
   }
   
   if (!isRegistered || !hasCSO) {
@@ -484,26 +484,26 @@ export default function SettlementIntegrityManager() {
       // 정산서: 마지막정산월에 값이 있는 행
       results = results.filter((r) => r.last_settlement_month !== null);
     } else if (filterStatus === 'complete') {
-      // 매핑완료: 정산서 기준 중 CSO매핑 O + 회원가입 O
+      // 처리 완료: 정산서 기준 중 CSO매핑 O + 회원가입 O
       results = results.filter((r) => 
         r.last_settlement_month !== null &&
         r.cso_company_names.length > 0 && 
         r.registration_status === 'registered'
       );
     } else if (filterStatus === 'not_registered') {
-      // 회원 미가입: 정산서 기준 중 회원가입 X
+      // 미가입: 정산서 기준 중 회원 미가입
       results = results.filter((r) => 
         r.last_settlement_month !== null &&
         (r.registration_status === 'unregistered' || r.registration_status === 'pending_approval')
       );
     } else if (filterStatus === 'no_cso') {
-      // CSO관리업체명 X: 정산서 기준 중 CSO매핑 없음
-      results = results.filter((r) => 
+      // CSO 미매핑: 정산서 기준 중 CSO관리업체명 매핑 없음
+      results = results.filter((r) =>
         r.last_settlement_month !== null &&
         r.cso_company_names.length === 0
       );
     } else if (filterStatus === 'unprocessed') {
-      // 미처리: 회원가입 X AND CSO관리업체명 X
+      // 미가입+미매핑: 회원 미가입 AND CSO 미매핑
       results = results.filter((r) => 
         r.last_settlement_month !== null &&
         (r.registration_status === 'unregistered' || r.registration_status === 'pending_approval') &&
@@ -526,24 +526,24 @@ export default function SettlementIntegrityManager() {
     // 전체: 매핑테이블에 등록된 전체 사업자 수
     const total = filteredByMonth.length;
     
-    // 정산서DB: 마지막정산월에 값이 있는 행
+    // 정산 대상: 마지막정산월에 값이 있는 행
     const settlementData = filteredByMonth.filter((r) => r.last_settlement_month !== null);
     const settlement = settlementData.length;
     
-    // 매핑완료: 정산서 기준 중 CSO매핑 O + 회원가입 O
+    // 처리 완료: 정산서 기준 중 CSO매핑 O + 회원가입 O
     const complete = settlementData.filter((r) => 
       r.cso_company_names.length > 0 && r.registration_status === 'registered'
     ).length;
     
-    // 회원가입 X: 정산서 기준 중 회원가입 X (CSO매핑 여부 무관)
+    // 미가입: 정산서 기준 중 회원 미가입 (CSO매핑 여부 무관)
     const notRegistered = settlementData.filter((r) => 
       r.registration_status === 'unregistered' || r.registration_status === 'pending_approval'
     ).length;
     
-    // CSO관리업체명 X: 정산서 기준 중 CSO매핑 없음 (회원가입 여부 무관)
+    // CSO 미매핑: 정산서 기준 중 CSO관리업체명 매핑 없음 (회원가입 여부 무관)
     const noCso = settlementData.filter((r) => r.cso_company_names.length === 0).length;
     
-    // 미처리: 회원가입 X AND CSO관리업체명 X (중복 집계)
+    // 미가입+미매핑: 회원 미가입 AND CSO 미매핑 (중복 집계)
     const unprocessed = settlementData.filter((r) => 
       (r.registration_status === 'unregistered' || r.registration_status === 'pending_approval') &&
       r.cso_company_names.length === 0
@@ -1064,8 +1064,8 @@ export default function SettlementIntegrityManager() {
         .map((r) => ({
           '사업자번호': formatBusinessNumber(r.business_number),
           '사업자명': r.business_name || '-',
-          '회원가입상태': r.registration_status === 'registered' ? '가입완료' : '미가입',
-          'CSO관리업체명': r.cso_company_names.join(', ') || '-',
+          '가입 상태': r.registration_status === 'registered' ? '가입완료' : '미가입',
+          'CSO 매핑': r.cso_company_names.join(', ') || '-',
           '마지막정산월': r.last_settlement_month || '-',
           '정산건수': r.row_count,
         }));
@@ -1116,7 +1116,7 @@ export default function SettlementIntegrityManager() {
             거래처 매핑
           </h1>
           <p className="text-muted-foreground">
-            사업자번호별 CSO관리업체명 매핑 상태를 관리합니다.
+            사업자번호별 CSO관리업체명의 매핑 상태를 관리합니다.
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -1135,7 +1135,7 @@ export default function SettlementIntegrityManager() {
         </div>
       </div>
 
-      {/* Stats Cards - 6개 카드: 전체, 정산서DB, 매핑완료, 회원가입 X, CSO관리업체명 X, 미처리 */}
+      {/* Stats Cards - 6개 카드: 전체, 정산 대상, 처리 완료, 미가입, CSO 미매핑, 미가입+미매핑 */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {/* 전체 - 회색 (참고용) */}
         <Card
@@ -1156,7 +1156,7 @@ export default function SettlementIntegrityManager() {
           </CardContent>
         </Card>
 
-        {/* 정산서DB - 남색 (기준) */}
+        {/* 정산 대상 - 남색 (기준) */}
         <Card
           className={cn(
             "cursor-pointer transition-all hover:shadow-md border-indigo-200 bg-indigo-50/50 dark:bg-indigo-950/20",
@@ -1167,7 +1167,7 @@ export default function SettlementIntegrityManager() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
               <FileText className="h-4 w-4" />
-              정산서DB
+              정산 대상
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1175,7 +1175,7 @@ export default function SettlementIntegrityManager() {
           </CardContent>
         </Card>
 
-        {/* 매핑완료 - 초록색 (정상) */}
+        {/* 처리 완료 - 초록색 (정상) */}
         <Card
           className={cn(
             "cursor-pointer transition-all hover:shadow-md border-green-200 bg-green-50/50 dark:bg-green-950/20",
@@ -1186,7 +1186,7 @@ export default function SettlementIntegrityManager() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-1">
               <CheckCircle2 className="h-4 w-4" />
-              매핑완료
+              처리 완료
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1194,7 +1194,7 @@ export default function SettlementIntegrityManager() {
           </CardContent>
         </Card>
 
-        {/* 회원가입 X - 노란색 (주의 - 한 가지 문제) */}
+        {/* 미가입 - 노란색 (주의 - 한 가지 문제) */}
         <Card
           className={cn(
             "cursor-pointer transition-all hover:shadow-md border-amber-200 bg-amber-50/50 dark:bg-amber-950/20",
@@ -1205,7 +1205,7 @@ export default function SettlementIntegrityManager() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1">
               <UserX className="h-4 w-4" />
-              회원가입 X
+              미가입
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1213,7 +1213,7 @@ export default function SettlementIntegrityManager() {
           </CardContent>
         </Card>
 
-        {/* CSO관리업체명 X - 노란색 (주의 - 한 가지 문제) */}
+        {/* CSO 미매핑 - 노란색 (주의 - 한 가지 문제) */}
         <Card
           className={cn(
             "cursor-pointer transition-all hover:shadow-md border-amber-200 bg-amber-50/50 dark:bg-amber-950/20",
@@ -1224,7 +1224,7 @@ export default function SettlementIntegrityManager() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1">
               <CircleAlert className="h-4 w-4" />
-              CSO관리업체명 X
+              CSO 미매핑
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1232,7 +1232,7 @@ export default function SettlementIntegrityManager() {
           </CardContent>
         </Card>
 
-        {/* 미처리 - 빨간색 (긴급 - 두 가지 문제) */}
+        {/* 미가입+미매핑 - 빨간색 (긴급 - 두 가지 문제) */}
         <Card
           className={cn(
             "cursor-pointer transition-all hover:shadow-md border-red-200 bg-red-50/50 dark:bg-red-950/20",
@@ -1243,7 +1243,7 @@ export default function SettlementIntegrityManager() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-red-700 dark:text-red-400 flex items-center gap-1">
               <CircleAlert className="h-4 w-4" />
-              미처리
+              미가입+미매핑
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1338,8 +1338,8 @@ export default function SettlementIntegrityManager() {
                   <TableRow>
                     <TableHead className="w-[140px]">사업자번호</TableHead>
                     <TableHead className="w-[160px]">사업자명</TableHead>
-                    <TableHead className="w-[100px]">회원가입상태</TableHead>
-                    <TableHead className="min-w-[200px]">CSO관리업체명 매핑</TableHead>
+                    <TableHead className="w-[100px]">가입 상태</TableHead>
+                    <TableHead className="min-w-[200px]">CSO 매핑</TableHead>
                     <TableHead className="w-[110px]">마지막정산월</TableHead>
                     <TableHead className="w-[80px] text-right">정산건수</TableHead>
                     <TableHead className="w-[60px] text-center">관리</TableHead>
