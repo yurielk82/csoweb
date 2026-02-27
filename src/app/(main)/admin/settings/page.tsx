@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Save, Loader2, Building2, Phone, Mail, Globe, MapPin, FileText, Plug, Server, BellRing, Check } from 'lucide-react';
+import { Settings, Save, Loader2, Building2, Phone, Mail, Globe, MapPin, FileText, Plug, Server, BellRing, Check, Database, Tag, Pill } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,6 +54,18 @@ const EMAIL_NOTIFICATION_LABELS: Record<string, { label: string; description: st
   password_reset: { label: '비밀번호 재설정', description: '비밀번호 재설정 요청 시 사용자에게 이메일 발송' },
 };
 
+interface SystemStatus {
+  supabase: boolean;
+  resend: boolean;
+  smtp: { configured: boolean; host: string | null };
+  email_provider: string;
+  version: string;
+  environment: string;
+  nts_api: boolean;
+  hira_hospital_api: boolean;
+  hira_pharmacy_api: boolean;
+}
+
 const defaultCompanyInfo: CompanyInfo = {
   company_name: '',
   ceo_name: '',
@@ -95,15 +107,21 @@ export default function SettingsPage() {
   const initialDataRef = useRef<CompanyInfo>(defaultCompanyInfo);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
 
   useEffect(() => {
-    fetch('/api/settings/company', { cache: 'no-store' })
-      .then(res => res.json())
-      .then(result => {
-        if (result.success && result.data) {
-          const merged = { ...defaultCompanyInfo, ...result.data };
+    Promise.all([
+      fetch('/api/settings/company', { cache: 'no-store' }).then(r => r.json()),
+      fetch('/api/system/status').then(r => r.json()),
+    ])
+      .then(([companyResult, statusResult]) => {
+        if (companyResult.success && companyResult.data) {
+          const merged = { ...defaultCompanyInfo, ...companyResult.data };
           setFormData(merged);
           initialDataRef.current = merged;
+        }
+        if (statusResult.success) {
+          setSystemStatus(statusResult.data);
         }
       })
       .catch(console.error)
@@ -762,6 +780,64 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+      {/* System Info (읽기전용) */}
+      {systemStatus && (
+        <Card id="system-info">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Server className="h-4 w-4" />
+              시스템 정보
+            </CardTitle>
+            <CardDescription>현재 시스템 연결 상태를 표시합니다. (읽기전용)</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-0">
+            {[
+              { icon: Tag, label: '버전', value: systemStatus.version, isText: true },
+              { icon: Globe, label: '환경', value: systemStatus.environment, ok: systemStatus.environment === 'Production' },
+              { icon: Database, label: '데이터베이스', value: systemStatus.supabase ? '연결됨' : '미연결', ok: systemStatus.supabase },
+              { icon: FileText, label: '국세청 API', value: systemStatus.nts_api ? '설정됨' : '미설정', ok: systemStatus.nts_api },
+              { icon: Building2, label: '심평원 병원정보 API', value: systemStatus.hira_hospital_api ? '설정됨' : '미설정', ok: systemStatus.hira_hospital_api },
+              { icon: Pill, label: '심평원 약국정보 API', value: systemStatus.hira_pharmacy_api ? '설정됨' : '미설정', ok: systemStatus.hira_pharmacy_api },
+            ].map(({ icon: Icon, label, value, ok, isText }) => (
+              <div key={label} className="flex items-center justify-between py-2.5 border-b last:border-0">
+                <span className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </span>
+                {isText ? (
+                  <span className="text-sm font-medium font-mono">{value}</span>
+                ) : (
+                  <Badge variant={ok ? 'default' : 'secondary'}>{value}</Badge>
+                )}
+              </div>
+            ))}
+            {/* 이메일 서비스 (듀얼 프로바이더) */}
+            <div className="flex items-center justify-between py-2.5">
+              <span className="text-sm text-muted-foreground flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                이메일 서비스
+              </span>
+              <div className="flex items-center gap-1.5">
+                {systemStatus.email_provider === 'smtp' ? (
+                  <>
+                    <Badge variant={systemStatus.smtp.configured ? 'default' : 'secondary'}>
+                      SMTP {systemStatus.smtp.configured ? '(활성)' : '(미설정)'}
+                    </Badge>
+                    {systemStatus.resend && <Badge variant="outline">Resend</Badge>}
+                  </>
+                ) : (
+                  <>
+                    <Badge variant={systemStatus.resend ? 'default' : 'secondary'}>
+                      Resend {systemStatus.resend ? '(활성)' : '(미설정)'}
+                    </Badge>
+                    {systemStatus.smtp.configured && <Badge variant="outline">SMTP</Badge>}
+                  </>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
