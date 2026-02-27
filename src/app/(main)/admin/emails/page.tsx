@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Mail, RefreshCw, CheckCircle, XCircle, Clock, Filter, Calendar, Loader2 } from 'lucide-react';
+import { Mail, RefreshCw, CheckCircle, XCircle, Clock, Filter, Calendar, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { EmailLog, EmailTemplateType, EmailStatus } from '@/types';
 
@@ -271,40 +277,64 @@ export default function EmailLogsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                logs.map((log) => {
-                  const statusConfig = STATUS_CONFIG[log.status];
-                  const StatusIcon = statusConfig.icon;
+                <TooltipProvider delayDuration={200}>
+                  {logs.map((log) => {
+                    const statusConfig = STATUS_CONFIG[log.status];
+                    const StatusIcon = statusConfig.icon;
+                    const isFailed = log.status === 'failed';
 
-                  return (
-                    <TableRow key={log.id}>
-                      <TableCell className="whitespace-nowrap text-sm">
-                        {new Date(log.created_at).toLocaleString('ko-KR', {
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-sm">
-                        {log.recipient_email}
-                      </TableCell>
-                      <TableCell className="max-w-[300px] truncate text-sm">
-                        {log.subject}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {TEMPLATE_LABELS[log.template_type] || log.template_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={statusConfig.variant} className="text-xs">
-                          <StatusIcon className="h-3 w-3 mr-1" />
-                          {statusConfig.label}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                    return (
+                      <TableRow key={log.id} className={cn(isFailed && 'bg-red-50/50 dark:bg-red-950/20')}>
+                        <TableCell className="whitespace-nowrap text-sm">
+                          {new Date(log.created_at).toLocaleString('ko-KR', {
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate text-sm">
+                          {log.recipient_email}
+                        </TableCell>
+                        <TableCell className="max-w-[300px] text-sm">
+                          <div className="truncate">{log.subject}</div>
+                          {isFailed && log.error_message && (
+                            <div className="flex items-center gap-1 mt-0.5 text-xs text-red-600 dark:text-red-400">
+                              <AlertCircle className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{log.error_message}</span>
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {TEMPLATE_LABELS[log.template_type] || log.template_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {isFailed && log.error_message ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant={statusConfig.variant} className="text-xs cursor-help">
+                                  <StatusIcon className="h-3 w-3 mr-1" />
+                                  {statusConfig.label}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="left" className="max-w-xs">
+                                <p className="text-xs font-medium mb-1">실패 사유</p>
+                                <p className="text-xs text-muted-foreground">{log.error_message}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <Badge variant={statusConfig.variant} className="text-xs">
+                              <StatusIcon className="h-3 w-3 mr-1" />
+                              {statusConfig.label}
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TooltipProvider>
               )}
             </TableBody>
           </Table>
