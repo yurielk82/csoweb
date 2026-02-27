@@ -19,6 +19,10 @@ vi.mock('@/lib/email', () => ({
   sendEmail: vi.fn(() => ({ success: true })),
 }));
 
+vi.mock('@/lib/data-cache', () => ({
+  invalidateUserCache: vi.fn(),
+}));
+
 const { getSession } = await import('@/lib/auth');
 const { POST } = await import('./route');
 

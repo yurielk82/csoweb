@@ -10,6 +10,7 @@ import {
   getCSOMatchingRepository,
   getColumnSettingRepository,
   getCompanyRepository,
+  getUserRepository,
 } from '@/infrastructure/supabase';
 import { DEFAULT_COLUMN_SETTINGS } from '@/types';
 
@@ -79,6 +80,20 @@ export const getCachedTotals = unstable_cache(
   { tags: ['settlement-data'] }
 );
 
+// ── CSO List (승인된 일반 회원 목록 — 마스터 조회 거래처 드롭다운) ──
+// 태그: user-data
+// 무효화 시점: POST /api/users/approve, POST /api/users/approve-batch, POST /api/users/reject
+export const getCachedCSOList = unstable_cache(
+  async () => {
+    const users = await getUserRepository().findAll();
+    return users
+      .filter(u => u.is_approved && !u.is_admin)
+      .map(u => ({ business_number: u.business_number, company_name: u.company_name }));
+  },
+  ['cso-list-data'],
+  { tags: ['user-data'] }
+);
+
 // ── Cache Invalidation Functions ──
 // 각 쓰기 API에서 호출
 
@@ -96,4 +111,8 @@ export function invalidateCSOMatchingCache() {
 
 export function invalidateCompanyCache() {
   revalidateTag('footer-data');
+}
+
+export function invalidateUserCache() {
+  revalidateTag('user-data');
 }

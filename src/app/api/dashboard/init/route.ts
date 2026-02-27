@@ -7,6 +7,7 @@ import {
   getCachedMatchedNames,
   getCachedAvailableMonths,
   getCachedTotals,
+  getCachedCSOList,
 } from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
@@ -43,11 +44,12 @@ export async function GET(request: NextRequest) {
     const search = sp.get('search') || undefined;
     const filterBusinessNumber = sp.get('business_number') || undefined;
     const includeSettlements = sp.get('include_settlements') !== 'false';
+    const includeCsoList = sp.get('include_cso_list') === 'true';
 
     const settlementRepo = getSettlementRepository();
 
     // ── Phase 1: 캐시된 메타데이터 병렬 조회 (DB 미접근 시 즉시 반환) ──
-    const [columns, companyInfo, matchedNames] = await Promise.all([
+    const [columns, companyInfo, matchedNames, csoList] = await Promise.all([
       getCachedColumns(),
       getCachedCompanyInfo(),
       session.is_admin
@@ -55,6 +57,9 @@ export async function GET(request: NextRequest) {
           ? getCachedMatchedNames(filterBusinessNumber)
           : Promise.resolve(null)
         : getCachedMatchedNames(session.business_number),
+      includeCsoList && session.is_admin
+        ? getCachedCSOList()
+        : Promise.resolve(undefined),
     ]);
 
     const visibleColumns = columns.filter(c => c.is_visible);
@@ -89,6 +94,7 @@ export async function GET(request: NextRequest) {
           settlements: [],
           pagination: { page, pageSize, total: 0, totalPages: 0 },
           totals: emptyTotals,
+          ...(csoList && { csoList }),
         },
       });
     }
@@ -110,6 +116,7 @@ export async function GET(request: NextRequest) {
           settlements: [],
           pagination: { page: 1, pageSize, total: 0, totalPages: 0 },
           totals: emptyTotals,
+          ...(csoList && { csoList }),
         },
       });
     }
@@ -142,6 +149,7 @@ export async function GET(request: NextRequest) {
           totalPages: Math.ceil(paginated.total / pageSize),
         },
         totals,
+        ...(csoList && { csoList }),
       },
     });
   } catch (error) {

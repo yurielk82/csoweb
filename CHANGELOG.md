@@ -5,6 +5,28 @@
 
 ---
 
+## [0.18.5] - 2026-02-27
+
+### Performance — 마스터 조회 초기 로드 최적화
+
+#### API 호출 통합
+- 마스터 조회 초기화: **2개 API (init + users) → 1개 API** (`include_cso_list=true`)
+- 별도 `/api/users` cold start 제거 — 가장 큰 체감 개선
+
+#### CSO 목록 캐시
+- **신규 `getCachedCSOList()`**: 승인된 일반 회원 목록을 `unstable_cache`로 캐시 (태그: `user-data`)
+- 무효화 시점: 회원 승인(`approve`), 거부(`reject`), 일괄 승인(`approve-batch`)
+
+#### 변경 전후 비교
+
+| 항목 | v0.18.4 | v0.18.5 |
+|------|---------|---------|
+| 마스터 조회 초기 API | 2회 (init + users) | **1회** (init) |
+| Lambda cold start | 2회 | **1회** |
+| CSO 목록 조회 | 매번 DB (전체 유저 로드) | **캐시** (승인 시만 무효화) |
+
+---
+
 ## [0.18.4] - 2026-02-27
 
 ### Performance — 서버사이드 데이터 캐시 (`unstable_cache` + `revalidateTag`)

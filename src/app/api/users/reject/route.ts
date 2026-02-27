@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getUserRepository } from '@/infrastructure/supabase';
 import { sendEmail } from '@/lib/email';
+import { invalidateUserCache } from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,9 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // CSO 목록 캐시 무효화
+    invalidateUserCache();
+
     return NextResponse.json({
       success: true,
       message: `${user.company_name}의 회원가입이 거부되었습니다.`,

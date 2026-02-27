@@ -126,14 +126,12 @@ export default function AdminMasterPage() {
       )
     : csoList;
 
-  // 초기화: 통합 init API 1회 + users API 1회 (기존 4회 → 2회)
+  // 초기화: 통합 init API 1회 (columns + yearMonths + notice + csoList)
   useEffect(() => {
     const init = async () => {
       try {
-        const [initRes, usersRes] = await Promise.all([
-          fetch('/api/dashboard/init?include_settlements=false').then(r => r.json()).catch(() => ({ success: false })),
-          fetch('/api/users?status=approved').then(r => r.json()).catch(() => ({ success: false })),
-        ]);
+        const res = await fetch('/api/dashboard/init?include_settlements=false&include_cso_list=true');
+        const initRes = await res.json();
 
         if (initRes.success) {
           const d = initRes.data;
@@ -156,13 +154,10 @@ export default function AdminMasterPage() {
           if (d.notice) {
             setNoticeSettings(d.notice);
           }
-        }
 
-        if (usersRes.success) {
-          setCsoList(usersRes.data.map((u: { business_number: string; company_name: string }) => ({
-            business_number: u.business_number,
-            company_name: u.company_name
-          })));
+          if (d.csoList) {
+            setCsoList(d.csoList);
+          }
         }
       } catch (err) {
         console.error('Init error:', err);

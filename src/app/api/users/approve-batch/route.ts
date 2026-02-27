@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getUserRepository } from '@/infrastructure/supabase';
 import { sendEmail } from '@/lib/email';
+import { invalidateUserCache } from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
 // 대량 처리를 위한 타임아웃 연장
@@ -100,6 +101,11 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[Batch Approve] Complete - Emails sent: ${results.emailSent.length}, failed: ${results.emailFailed.length}`);
+
+    // CSO 목록 캐시 무효화
+    if (results.success.length > 0) {
+      invalidateUserCache();
+    }
 
     return NextResponse.json({
       success: true,
