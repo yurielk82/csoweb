@@ -5,6 +5,16 @@
 
 ---
 
+## [0.18.10] - 2026-02-27
+
+### Chore — Vercel Speed Insights 제거
+
+- `@vercel/speed-insights` 패키지 및 `<SpeedInsights />` 컴포넌트 제거
+- Netlify 배포 환경에서 불필요 (Vercel 전용), CSP `connect-src`에서도 차단되고 있었음
+- layout.tsx에서 import 및 렌더링 제거, `npm uninstall`로 의존성 삭제
+
+---
+
 ## [0.18.9] - 2026-02-27
 
 ### Fix — 엑셀 업로드 파일 크기 제한 4MB 통일
