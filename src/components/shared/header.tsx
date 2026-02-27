@@ -97,40 +97,56 @@ const USER_NAV: NavEntry[] = [
 /* ─── 그룹 드롭다운 (데스크톱) ─── */
 function NavGroupDropdown({ group, pathname }: { group: MenuGroup; pathname: string }) {
   const isActive = group.items.some((item) => pathname === item.href);
+  const firstHref = group.items[0].href;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <div className="flex items-center">
+      {/* 라벨 클릭 → 첫 번째 하위 메뉴로 이동 */}
+      <Link href={firstHref}>
         <Button
           variant="ghost"
           size="sm"
           className={cn(
-            'gap-1.5',
+            'gap-1.5 pr-1 rounded-r-none',
             isActive && 'bg-accent text-accent-foreground'
           )}
         >
           <group.icon className="h-4 w-4" />
           {group.label}
-          <ChevronDown className="h-3 w-3 opacity-50" />
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-48">
-        {group.items.map((item) => (
-          <DropdownMenuItem key={item.href} asChild>
-            <Link
-              href={item.href}
-              className={cn(
-                'cursor-pointer gap-2',
-                pathname === item.href && 'bg-accent'
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </Link>
+      {/* 화살표 클릭 → 드롭다운 */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'px-1 rounded-l-none',
+              isActive && 'bg-accent text-accent-foreground'
+            )}
+          >
+            <ChevronDown className="h-3 w-3 opacity-50" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-48">
+          {group.items.map((item) => (
+            <DropdownMenuItem key={item.href} asChild>
+              <Link
+                href={item.href}
+                className={cn(
+                  'cursor-pointer gap-2',
+                  pathname === item.href && 'bg-accent'
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
 
@@ -180,10 +196,12 @@ function MobileNav({
         if (isGroup(entry)) {
           return (
             <div key={entry.label}>
-              {/* 그룹 라벨 */}
-              <p className="px-4 pt-3 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                {entry.label}
-              </p>
+              {/* 그룹 라벨 — 클릭 시 첫 번째 하위 메뉴로 이동 */}
+              <Link href={entry.items[0].href} onClick={onNavigate}>
+                <p className="px-4 pt-3 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors cursor-pointer">
+                  {entry.label}
+                </p>
+              </Link>
               {entry.items.map((item) => (
                 <Link key={item.href} href={item.href} onClick={onNavigate}>
                   <Button
