@@ -202,13 +202,17 @@ export default function AdminDashboardPage() {
         </div>
         <div>
           <Skeleton className="h-6 w-24 mb-4" />
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
             {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <Skeleton className="h-4 w-4 rounded" />
-                <Skeleton className="h-4 w-14" />
-                <Skeleton className="h-5 w-12 rounded-full" />
-              </div>
+              <Card key={i}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-4 w-4" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
@@ -303,68 +307,98 @@ export default function AdminDashboardPage() {
       {/* System Info */}
       <div>
         <h2 className="text-lg font-semibold mb-4">시스템 정보</h2>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
-          <div className="flex items-center gap-2">
-            <Tag className="h-4 w-4 text-slate-400" />
-            <span className="text-muted-foreground">버전</span>
-            <span className="font-medium font-mono">{systemStatus.version}</span>
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">버전</CardTitle>
+              <Tag className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-bold font-mono">{systemStatus.version}</div>
+            </CardContent>
+          </Card>
 
-          <div className="flex items-center gap-2">
-            <Database className="h-4 w-4 text-emerald-400" />
-            <span className="text-muted-foreground">데이터베이스</span>
-            <Badge variant={systemStatus.supabase ? 'default' : 'secondary'}>
-              {systemStatus.supabase ? '연결됨' : '미연결'}
-            </Badge>
-          </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">데이터베이스</CardTitle>
+              <Database className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <Badge variant={systemStatus.supabase ? 'default' : 'secondary'}>
+                {systemStatus.supabase ? '연결됨' : '미연결'}
+              </Badge>
+            </CardContent>
+          </Card>
 
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-indigo-400" />
-            <span className="text-muted-foreground">국세청 API</span>
-            <Badge variant={systemStatus.nts_api ? 'default' : 'secondary'}>
-              {systemStatus.nts_api ? '설정됨' : '미설정'}
-            </Badge>
-          </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">국세청 API</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <Badge variant={systemStatus.nts_api ? 'default' : 'secondary'}>
+                {systemStatus.nts_api ? '설정됨' : '미설정'}
+              </Badge>
+            </CardContent>
+          </Card>
 
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-sky-400" />
-            <span className="text-muted-foreground">심평원 병원</span>
-            <Badge variant={systemStatus.hira_hospital_api ? 'default' : 'secondary'}>
-              {systemStatus.hira_hospital_api ? '설정됨' : '미설정'}
-            </Badge>
-          </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">심평원 병원</CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <Badge variant={systemStatus.hira_hospital_api ? 'default' : 'secondary'}>
+                {systemStatus.hira_hospital_api ? '설정됨' : '미설정'}
+              </Badge>
+            </CardContent>
+          </Card>
 
-          <div className="flex items-center gap-2">
-            <Pill className="h-4 w-4 text-teal-400" />
-            <span className="text-muted-foreground">심평원 약국</span>
-            <Badge variant={systemStatus.hira_pharmacy_api ? 'default' : 'secondary'}>
-              {systemStatus.hira_pharmacy_api ? '설정됨' : '미설정'}
-            </Badge>
-          </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">심평원 약국</CardTitle>
+              <Pill className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <Badge variant={systemStatus.hira_pharmacy_api ? 'default' : 'secondary'}>
+                {systemStatus.hira_pharmacy_api ? '설정됨' : '미설정'}
+              </Badge>
+            </CardContent>
+          </Card>
 
-          <div className="flex items-center gap-2">
-            <Globe className="h-4 w-4 text-amber-400" />
-            <span className="text-muted-foreground">환경</span>
-            <Badge variant={systemStatus.environment === 'Production' ? 'default' : 'outline'}>
-              {systemStatus.environment}
-            </Badge>
-          </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">환경</CardTitle>
+              <Globe className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <Badge variant={systemStatus.environment === 'Production' ? 'default' : 'outline'}>
+                {systemStatus.environment}
+              </Badge>
+            </CardContent>
+          </Card>
 
-          <div className="flex items-center gap-2">
-            <Mail className="h-4 w-4 text-orange-400" />
-            <span className="text-muted-foreground">이메일</span>
-            {activeProvider === 'smtp' ? (
-              <>
-                <Badge variant={systemStatus.smtp.configured ? 'default' : 'secondary'}>SMTP</Badge>
-                {systemStatus.resend && <Badge variant="outline">Resend</Badge>}
-              </>
-            ) : (
-              <>
-                <Badge variant={systemStatus.resend ? 'default' : 'secondary'}>Resend</Badge>
-                {systemStatus.smtp.configured && <Badge variant="outline">SMTP</Badge>}
-              </>
-            )}
-          </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">이메일</CardTitle>
+              <Mail className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-1.5">
+                {activeProvider === 'smtp' ? (
+                  <>
+                    <Badge variant={systemStatus.smtp.configured ? 'default' : 'secondary'}>SMTP</Badge>
+                    {systemStatus.resend && <Badge variant="outline">Resend</Badge>}
+                  </>
+                ) : (
+                  <>
+                    <Badge variant={systemStatus.resend ? 'default' : 'secondary'}>Resend</Badge>
+                    {systemStatus.smtp.configured && <Badge variant="outline">SMTP</Badge>}
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

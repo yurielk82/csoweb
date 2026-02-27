@@ -9,11 +9,10 @@
 
 ### 개선 — 대시보드 시스템 정보 디자인 재정비
 
-- "시스템 정보" 섹션 제목 복원
-- 각 항목을 border 없이 아이콘 + 라벨 + Badge 한 줄로 가로 나열
-- shadcn Badge variant(`default`/`secondary`/`outline`) 활용으로 상태 구분
-- `gap-x-6 gap-y-3`으로 항목 간 여유 있는 간격 확보
-- 커스텀 색상 Badge 제거 → 디자인 시스템 표준 variant 통일
+- Stats Cards와 동일한 shadcn `Card` + `CardHeader` + `CardContent` 패턴 적용
+- 7열 반응형 그리드 (`2col → 3col → 4col → 7col`)
+- 커스텀 색상 제거, shadcn Badge `variant` 표준 사용
+- 아이콘 `text-muted-foreground`로 Stats Cards 패턴 통일
 
 ---
 
