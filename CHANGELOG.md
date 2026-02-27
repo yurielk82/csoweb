@@ -5,6 +5,27 @@
 
 ---
 
+## [0.20.1] - 2026-02-27
+
+### 개선 — 이메일 이력 페이지 UX 강화
+
+#### Progressive Rendering
+- 전체 화면 블로킹 로더 제거, 스켈레톤(Stats/Table) 표시 후 데이터 도착 시 교체
+- 헤더에 Loader2 스피너로 백그라운드 로딩 상태 표시
+
+#### 날짜 프리셋 필터
+- 기간 선택: 최근 7일 / 30일 / 90일 / 전체 (기본값: 30일)
+- Stats 카드도 선택 기간에 맞춰 집계 (전체 기간 고정이 아닌 동적 필터링)
+- Repository `findAll` + `getStats` 모두 `start_date` / `end_date` 지원
+
+#### 기타
+- 테이블 하단 건수 표시 (200건 제한 안내 포함)
+- 빈 상태 메시지가 선택된 기간에 따라 동적 변경
+
+**변경 파일**: `domain/email/types.ts`, `domain/email/EmailLogRepository.ts`, `infrastructure/supabase/SupabaseEmailLogRepository.ts`, `api/email/logs/route.ts`, `admin/emails/page.tsx`
+
+---
+
 ## [0.20.0] - 2026-02-27
 
 ### 기능 — CSO 매핑 자동화 + 네비게이션 그룹 드롭다운

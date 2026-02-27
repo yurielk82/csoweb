@@ -9,27 +9,35 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
-    
+
     if (!session || !session.is_admin) {
       return NextResponse.json(
         { success: false, error: '관리자 권한이 필요합니다.' },
         { status: 403 }
       );
     }
-    
+
     const searchParams = request.nextUrl.searchParams;
     const templateType = searchParams.get('template_type') as EmailTemplateType | null;
     const status = searchParams.get('status') as EmailStatus | null;
     const limit = parseInt(searchParams.get('limit') || String(EMAIL_LOG_DEFAULT_LIMIT));
-    
-    const logs = await getEmailLogRepository().findAll({
+    const startDate = searchParams.get('start_date');
+    const endDate = searchParams.get('end_date');
+
+    const filter = {
       template_type: templateType || undefined,
       status: status || undefined,
       limit,
+      start_date: startDate || undefined,
+      end_date: endDate || undefined,
+    };
+
+    const logs = await getEmailLogRepository().findAll(filter);
+    const stats = await getEmailLogRepository().getStats({
+      start_date: startDate || undefined,
+      end_date: endDate || undefined,
     });
 
-    const stats = await getEmailLogRepository().getStats();
-    
     return NextResponse.json({
       success: true,
       data: {

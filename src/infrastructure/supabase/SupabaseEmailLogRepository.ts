@@ -51,6 +51,12 @@ export class SupabaseEmailLogRepository implements EmailLogRepository {
     if (filter?.status) {
       query = query.eq('status', filter.status);
     }
+    if (filter?.start_date) {
+      query = query.gte('created_at', filter.start_date);
+    }
+    if (filter?.end_date) {
+      query = query.lte('created_at', filter.end_date);
+    }
     if (filter?.limit) {
       query = query.limit(filter.limit);
     }
@@ -61,10 +67,19 @@ export class SupabaseEmailLogRepository implements EmailLogRepository {
     return data as EmailLog[];
   }
 
-  async getStats(): Promise<EmailStats> {
-    const { data, error } = await supabase
+  async getStats(filter?: EmailLogFilter): Promise<EmailStats> {
+    let query = supabase
       .from('email_logs')
       .select('status');
+
+    if (filter?.start_date) {
+      query = query.gte('created_at', filter.start_date);
+    }
+    if (filter?.end_date) {
+      query = query.lte('created_at', filter.end_date);
+    }
+
+    const { data, error } = await query;
 
     if (error || !data) {
       return { total: 0, sent: 0, failed: 0, pending: 0 };

@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Mail, RefreshCw, CheckCircle, XCircle, Clock, Filter } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Mail, RefreshCw, CheckCircle, XCircle, Clock, Filter, Calendar, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select';
 import {
   Table,
@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loading } from '@/components/shared/loading';
+import { cn } from '@/lib/utils';
 import type { EmailLog, EmailTemplateType, EmailStatus } from '@/types';
 
 const TEMPLATE_LABELS: Record<EmailTemplateType, string> = {
@@ -38,11 +38,62 @@ const STATUS_CONFIG: Record<EmailStatus, { label: string; variant: 'default' | '
   failed: { label: '실패', variant: 'destructive', icon: XCircle },
 };
 
+/* ─── 날짜 프리셋 ─── */
+type DatePreset = '7d' | '30d' | '90d' | 'all';
+
+const DATE_PRESETS: { value: DatePreset; label: string }[] = [
+  { value: '7d', label: '최근 7일' },
+  { value: '30d', label: '최근 30일' },
+  { value: '90d', label: '최근 90일' },
+  { value: 'all', label: '전체 기간' },
+];
+
+function getStartDate(preset: DatePreset): string | undefined {
+  if (preset === 'all') return undefined;
+  const days = preset === '7d' ? 7 : preset === '30d' ? 30 : 90;
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  date.setHours(0, 0, 0, 0);
+  return date.toISOString();
+}
+
 interface EmailStats {
   total: number;
   sent: number;
   failed: number;
   pending: number;
+}
+
+/* ─── 스켈레톤 ─── */
+function StatsSkeleton() {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {[0, 1, 2, 3].map((i) => (
+        <Card key={i}>
+          <CardHeader className="pb-2">
+            <div className="h-4 w-12 bg-muted animate-pulse rounded" />
+            <div className="h-8 w-16 bg-muted animate-pulse rounded mt-1" />
+          </CardHeader>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function TableSkeleton() {
+  return (
+    <>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <TableRow key={i}>
+          <TableCell><div className="h-4 w-20 bg-muted animate-pulse rounded" /></TableCell>
+          <TableCell><div className="h-4 w-32 bg-muted animate-pulse rounded" /></TableCell>
+          <TableCell><div className="h-4 w-48 bg-muted animate-pulse rounded" /></TableCell>
+          <TableCell><div className="h-4 w-16 bg-muted animate-pulse rounded" /></TableCell>
+          <TableCell><div className="h-4 w-14 bg-muted animate-pulse rounded" /></TableCell>
+        </TableRow>
+      ))}
+    </>
+  );
 }
 
 export default function EmailLogsPage() {
@@ -51,13 +102,17 @@ export default function EmailLogsPage() {
   const [stats, setStats] = useState<EmailStats>({ total: 0, sent: 0, failed: 0, pending: 0 });
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [datePreset, setDatePreset] = useState<DatePreset>('30d');
+
+  const startDate = useMemo(() => getStartDate(datePreset), [datePreset]);
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ limit: '100' });
+      const params = new URLSearchParams({ limit: '200' });
       if (filterType !== 'all') params.set('template_type', filterType);
       if (filterStatus !== 'all') params.set('status', filterStatus);
+      if (startDate) params.set('start_date', startDate);
 
       const response = await fetch(`/api/email/logs?${params}`);
       const result = await response.json();
@@ -71,15 +126,11 @@ export default function EmailLogsPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterType, filterStatus]);
+  }, [filterType, filterStatus, startDate]);
 
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
-
-  if (loading && logs.length === 0) {
-    return <Loading text="이메일 발송 이력을 불러오는 중..." />;
-  }
 
   return (
     <div className="space-y-6">
@@ -89,42 +140,47 @@ export default function EmailLogsPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Mail className="h-6 w-6" />
             이메일 발송 이력
+            {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           </h1>
           <p className="text-muted-foreground">발송된 이메일 내역을 조회합니다.</p>
         </div>
-        <Button variant="outline" onClick={fetchLogs}>
-          <RefreshCw className="h-4 w-4 mr-2" />
+        <Button variant="outline" onClick={fetchLogs} disabled={loading}>
+          <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
           새로고침
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>전체</CardDescription>
-            <CardTitle className="text-2xl">{stats.total}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>발송 성공</CardDescription>
-            <CardTitle className="text-2xl text-green-600">{stats.sent}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>발송 실패</CardDescription>
-            <CardTitle className="text-2xl text-red-600">{stats.failed}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>대기중</CardDescription>
-            <CardTitle className="text-2xl text-yellow-600">{stats.pending}</CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
+      {loading && logs.length === 0 ? (
+        <StatsSkeleton />
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>전체</CardDescription>
+              <CardTitle className="text-2xl">{stats.total}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>발송 성공</CardDescription>
+              <CardTitle className="text-2xl text-green-600">{stats.sent}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>발송 실패</CardDescription>
+              <CardTitle className="text-2xl text-red-600">{stats.failed}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>대기중</CardDescription>
+              <CardTitle className="text-2xl text-yellow-600">{stats.pending}</CardTitle>
+            </CardHeader>
+          </Card>
+        </div>
+      )}
 
       {/* Filters */}
       <Card>
@@ -134,8 +190,31 @@ export default function EmailLogsPage() {
             필터
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-4">
-          <div className="w-48">
+        <CardContent className="flex flex-wrap gap-4 items-end">
+          {/* 날짜 프리셋 */}
+          <div>
+            <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              기간
+            </p>
+            <div className="flex gap-1">
+              {DATE_PRESETS.map((preset) => (
+                <Button
+                  key={preset.value}
+                  variant={datePreset === preset.value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setDatePreset(preset.value)}
+                  className="text-xs"
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* 템플릿 유형 */}
+          <div className="w-44">
+            <p className="text-xs text-muted-foreground mb-1.5">유형</p>
             <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger>
                 <SelectValue placeholder="템플릿 유형" />
@@ -148,7 +227,10 @@ export default function EmailLogsPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="w-48">
+
+          {/* 상태 */}
+          <div className="w-36">
+            <p className="text-xs text-muted-foreground mb-1.5">상태</p>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger>
                 <SelectValue placeholder="상태" />
@@ -170,57 +252,68 @@ export default function EmailLogsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>발송일시</TableHead>
-                <TableHead>수신자</TableHead>
+                <TableHead className="w-[120px]">발송일시</TableHead>
+                <TableHead className="w-[200px]">수신자</TableHead>
                 <TableHead>제목</TableHead>
-                <TableHead>유형</TableHead>
-                <TableHead>상태</TableHead>
+                <TableHead className="w-[120px]">유형</TableHead>
+                <TableHead className="w-[90px]">상태</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {logs.map((log) => {
-                const statusConfig = STATUS_CONFIG[log.status];
-                const StatusIcon = statusConfig.icon;
-                
-                return (
-                  <TableRow key={log.id}>
-                    <TableCell className="whitespace-nowrap">
-                      {new Date(log.created_at).toLocaleString('ko-KR', {
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate">
-                      {log.recipient_email}
-                    </TableCell>
-                    <TableCell className="max-w-[300px] truncate">
-                      {log.subject}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {TEMPLATE_LABELS[log.template_type] || log.template_type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusConfig.variant}>
-                        <StatusIcon className="h-3 w-3 mr-1" />
-                        {statusConfig.label}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {logs.length === 0 && (
+              {loading && logs.length === 0 ? (
+                <TableSkeleton />
+              ) : logs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    이메일 발송 내역이 없습니다.
+                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                    {datePreset !== 'all'
+                      ? `${DATE_PRESETS.find(p => p.value === datePreset)?.label} 동안 이메일 발송 내역이 없습니다.`
+                      : '이메일 발송 내역이 없습니다.'}
                   </TableCell>
                 </TableRow>
+              ) : (
+                logs.map((log) => {
+                  const statusConfig = STATUS_CONFIG[log.status];
+                  const StatusIcon = statusConfig.icon;
+
+                  return (
+                    <TableRow key={log.id}>
+                      <TableCell className="whitespace-nowrap text-sm">
+                        {new Date(log.created_at).toLocaleString('ko-KR', {
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate text-sm">
+                        {log.recipient_email}
+                      </TableCell>
+                      <TableCell className="max-w-[300px] truncate text-sm">
+                        {log.subject}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {TEMPLATE_LABELS[log.template_type] || log.template_type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusConfig.variant} className="text-xs">
+                          <StatusIcon className="h-3 w-3 mr-1" />
+                          {statusConfig.label}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
+          {!loading && logs.length > 0 && (
+            <div className="px-4 py-3 border-t text-xs text-muted-foreground">
+              {logs.length}건 표시
+              {logs.length >= 200 && ' (최대 200건)'}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

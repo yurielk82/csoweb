@@ -45,4 +45,6 @@ export interface EmailLogFilter {
   template_type?: EmailTemplateType;
   status?: EmailStatus;
   limit?: number;
+  start_date?: string;
+  end_date?: string;
 }
