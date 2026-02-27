@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Mail, RefreshCw, CheckCircle, XCircle, Clock, Filter, Calendar, Loader2, AlertCircle } from 'lucide-react';
+import { Mail, RefreshCw, CheckCircle, XCircle, Clock, Filter, Calendar, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,12 +20,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { EmailLog, EmailTemplateType, EmailStatus } from '@/types';
 
@@ -43,6 +37,30 @@ const STATUS_CONFIG: Record<EmailStatus, { label: string; variant: 'default' | '
   sent: { label: '발송됨', variant: 'default', icon: CheckCircle },
   failed: { label: '실패', variant: 'destructive', icon: XCircle },
 };
+
+/* ─── 에러 메시지 한글 요약 ─── */
+const ERROR_PATTERNS: { pattern: RegExp; label: string }[] = [
+  { pattern: /SMTP 설정 미완료/i, label: 'SMTP 설정 미완료' },
+  { pattern: /RESEND_API_KEY/i, label: 'Resend API 키 미설정' },
+  { pattern: /invalid.*(from|sender)/i, label: '발신자 주소 오류' },
+  { pattern: /invalid.*(to|recipient)/i, label: '수신자 주소 오류' },
+  { pattern: /rate.?limit/i, label: 'API 호출 한도 초과' },
+  { pattern: /timeout|timed?\s*out|ETIMEDOUT/i, label: '서버 응답 시간 초과' },
+  { pattern: /ECONNREFUSED|ECONNRESET|ENOTFOUND/i, label: '메일 서버 연결 실패' },
+  { pattern: /auth|credential|login/i, label: 'SMTP 인증 실패' },
+  { pattern: /rejected|bounced|undeliverable/i, label: '수신자 거부 (반송)' },
+  { pattern: /quota|limit.*exceeded/i, label: '발송 한도 초과' },
+  { pattern: /missing.*required/i, label: '필수 항목 누락' },
+  { pattern: /dns|MX/i, label: '수신 도메인 DNS 오류' },
+];
+
+function getErrorSummary(errorMessage: string | null): string {
+  if (!errorMessage) return '-';
+  for (const { pattern, label } of ERROR_PATTERNS) {
+    if (pattern.test(errorMessage)) return label;
+  }
+  return '발송 중 오류 발생';
+}
 
 /* ─── 날짜 프리셋 ─── */
 type DatePreset = '7d' | '30d' | '90d' | 'all';
@@ -96,6 +114,7 @@ function TableSkeleton() {
           <TableCell><div className="h-4 w-48 bg-muted animate-pulse rounded" /></TableCell>
           <TableCell><div className="h-4 w-16 bg-muted animate-pulse rounded" /></TableCell>
           <TableCell><div className="h-4 w-14 bg-muted animate-pulse rounded" /></TableCell>
+          <TableCell><div className="h-4 w-24 bg-muted animate-pulse rounded" /></TableCell>
         </TableRow>
       ))}
     </>
@@ -263,6 +282,7 @@ export default function EmailLogsPage() {
                 <TableHead>제목</TableHead>
                 <TableHead className="w-[120px]">유형</TableHead>
                 <TableHead className="w-[90px]">상태</TableHead>
+                <TableHead className="w-[160px]">오류 내용</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -270,71 +290,57 @@ export default function EmailLogsPage() {
                 <TableSkeleton />
               ) : logs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     {datePreset !== 'all'
                       ? `${DATE_PRESETS.find(p => p.value === datePreset)?.label} 동안 이메일 발송 내역이 없습니다.`
                       : '이메일 발송 내역이 없습니다.'}
                   </TableCell>
                 </TableRow>
               ) : (
-                <TooltipProvider delayDuration={200}>
-                  {logs.map((log) => {
-                    const statusConfig = STATUS_CONFIG[log.status];
-                    const StatusIcon = statusConfig.icon;
-                    const isFailed = log.status === 'failed';
+                logs.map((log) => {
+                  const statusConfig = STATUS_CONFIG[log.status];
+                  const StatusIcon = statusConfig.icon;
+                  const isFailed = log.status === 'failed';
 
-                    return (
-                      <TableRow key={log.id} className={cn(isFailed && 'bg-red-50/50 dark:bg-red-950/20')}>
-                        <TableCell className="whitespace-nowrap text-sm">
-                          {new Date(log.created_at).toLocaleString('ko-KR', {
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </TableCell>
-                        <TableCell className="max-w-[200px] truncate text-sm">
-                          {log.recipient_email}
-                        </TableCell>
-                        <TableCell className="max-w-[300px] text-sm">
-                          <div className="truncate">{log.subject}</div>
-                          {isFailed && log.error_message && (
-                            <div className="flex items-center gap-1 mt-0.5 text-xs text-red-600 dark:text-red-400">
-                              <AlertCircle className="h-3 w-3 shrink-0" />
-                              <span className="truncate">{log.error_message}</span>
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {TEMPLATE_LABELS[log.template_type] || log.template_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {isFailed && log.error_message ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant={statusConfig.variant} className="text-xs cursor-help">
-                                  <StatusIcon className="h-3 w-3 mr-1" />
-                                  {statusConfig.label}
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent side="left" className="max-w-xs">
-                                <p className="text-xs font-medium mb-1">실패 사유</p>
-                                <p className="text-xs text-muted-foreground">{log.error_message}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          ) : (
-                            <Badge variant={statusConfig.variant} className="text-xs">
-                              <StatusIcon className="h-3 w-3 mr-1" />
-                              {statusConfig.label}
-                            </Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TooltipProvider>
+                  return (
+                    <TableRow key={log.id} className={cn(isFailed && 'bg-red-50/50 dark:bg-red-950/20')}>
+                      <TableCell className="whitespace-nowrap text-sm">
+                        {new Date(log.created_at).toLocaleString('ko-KR', {
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate text-sm">
+                        {log.recipient_email}
+                      </TableCell>
+                      <TableCell className="max-w-[300px] truncate text-sm">
+                        {log.subject}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {TEMPLATE_LABELS[log.template_type] || log.template_type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusConfig.variant} className="text-xs">
+                          <StatusIcon className="h-3 w-3 mr-1" />
+                          {statusConfig.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {isFailed ? (
+                          <span className="text-red-600 dark:text-red-400" title={log.error_message ?? undefined}>
+                            {getErrorSummary(log.error_message)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
