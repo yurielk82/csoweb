@@ -17,7 +17,6 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loading } from '@/components/shared/loading';
 import { useToast } from '@/hooks/use-toast';
 
 interface PendingUser {
@@ -233,10 +232,6 @@ export default function ApprovalsPage() {
     return num;
   };
 
-  if (loading) {
-    return <Loading text="승인 대기 목록을 불러오는 중..." />;
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -372,8 +367,17 @@ export default function ApprovalsPage() {
       ) : (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>승인 대기 중인 회원가입 신청이 없습니다.</p>
+            {loading ? (
+              <>
+                <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin" />
+                <p>불러오는 중...</p>
+              </>
+            ) : (
+              <>
+                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>승인 대기 중인 회원가입 신청이 없습니다.</p>
+              </>
+            )}
           </CardContent>
         </Card>
       )}

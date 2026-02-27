@@ -22,8 +22,8 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loading } from '@/components/shared/loading';
 import { EMAIL_LOG_DEFAULT_LIMIT } from '@/constants/defaults';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface DashboardStats {
   pendingApprovals: number;
@@ -73,21 +73,19 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        // Fetch pending approvals
-        const usersRes = await fetch('/api/users?pending=true');
-        const usersData = await usersRes.json();
-
-        // Fetch all users
-        const allUsersRes = await fetch('/api/users');
-        const allUsersData = await allUsersRes.json();
-
-        // Fetch email stats
-        const emailRes = await fetch(`/api/email/logs?limit=${EMAIL_LOG_DEFAULT_LIMIT}`);
-        const emailData = await emailRes.json();
-
-        // Fetch system status
-        const statusRes = await fetch('/api/system/status');
-        const statusData = await statusRes.json();
+        // 4개 API 병렬 호출
+        const [usersRes, allUsersRes, emailRes, statusRes] = await Promise.all([
+          fetch('/api/users?pending=true'),
+          fetch('/api/users'),
+          fetch(`/api/email/logs?limit=${EMAIL_LOG_DEFAULT_LIMIT}`),
+          fetch('/api/system/status'),
+        ]);
+        const [usersData, allUsersData, emailData, statusData] = await Promise.all([
+          usersRes.json(),
+          allUsersRes.json(),
+          emailRes.json(),
+          statusRes.json(),
+        ]);
         if (statusData.success) {
           setSystemStatus(statusData.data);
         }
@@ -107,10 +105,6 @@ export default function AdminDashboardPage() {
 
     fetchStats();
   }, []);
-
-  if (loading) {
-    return <Loading text="대시보드를 불러오는 중..." />;
-  }
 
   const quickActions = [
     {
@@ -166,6 +160,71 @@ export default function AdminDashboardPage() {
   ];
 
   const activeProvider = systemStatus.email_provider;
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">관리자 대시보드</h1>
+          <p className="text-muted-foreground">CSO 정산서 포털 관리</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <Skeleton className="h-4 w-20" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-28" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold mb-4">빠른 작업</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {quickActions.map((action) => (
+              <Link key={action.href} href={action.href}>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <div className={`p-2 rounded-lg ${action.color}`}>
+                        <action.icon className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+                    <CardTitle className="text-base mt-2">{action.title}</CardTitle>
+                    <CardDescription className="text-sm">{action.description}</CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Server className="h-5 w-5" />
+              시스템 정보
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className={`flex items-center gap-3 rounded-lg border p-3 ${i === 7 ? 'sm:col-span-2' : ''}`}>
+                  <Skeleton className="h-8 w-8 rounded-lg flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <Skeleton className="h-3 w-16 mb-1.5" />
+                    <Skeleton className="h-5 w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -11,7 +11,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loading } from '@/components/shared/loading';
 import { DEFAULT_SMTP_PORT, DEFAULT_EMAIL_SEND_DELAY_MS } from '@/constants/defaults';
 
 interface CompanyInfo {
@@ -265,10 +264,6 @@ export default function SettingsPage() {
     }
   };
 
-  if (loading) {
-    return <Loading text="설정을 불러오는 중..." />;
-  }
-
   const delaySeconds = formData.email_send_delay_ms / 1000;
 
   return (
@@ -279,6 +274,7 @@ export default function SettingsPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Settings className="h-6 w-6" />
             사이트 설정
+            {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           </h1>
           <p className="text-muted-foreground">로그인 화면 푸터에 표시될 회사 정보를 설정합니다.</p>
         </div>

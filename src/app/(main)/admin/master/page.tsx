@@ -38,7 +38,6 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Loading } from '@/components/shared/loading';
 import { useToast } from '@/hooks/use-toast';
 import type { Settlement, ColumnSetting } from '@/types';
 import { getSettlementValue } from '@/types';
@@ -397,10 +396,6 @@ export default function AdminMasterPage() {
     }
   }
 
-  if (initLoading) {
-    return <Loading text="설정을 불러오는 중..." />;
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -409,6 +404,7 @@ export default function AdminMasterPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <FileSpreadsheet className="h-6 w-6" />
             정산서 마스터 조회
+            {initLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           </h1>
           <p className="text-muted-foreground">전체 CSO 업체의 월별 정산 내역을 조회하고 관리합니다.</p>
         </div>

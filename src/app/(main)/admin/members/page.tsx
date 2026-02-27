@@ -31,7 +31,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loading } from '@/components/shared/loading';
 
 interface User {
   id: string;
@@ -359,10 +358,6 @@ export default function MembersPage() {
     pending: users.filter(u => !u.is_approved && !u.is_admin).length,
   };
 
-  if (loading) {
-    return <Loading text="회원 목록을 불러오는 중..." />;
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -370,6 +365,7 @@ export default function MembersPage() {
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Users className="h-6 w-6" />
           회원 관리
+          {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </h1>
         <p className="text-muted-foreground">전체 회원을 조회하고 관리합니다.</p>
       </div>
@@ -536,7 +532,12 @@ export default function MembersPage() {
               {filteredUsers.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    회원이 없습니다.
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        불러오는 중...
+                      </span>
+                    ) : '회원이 없습니다.'}
                   </TableCell>
                 </TableRow>
               )}

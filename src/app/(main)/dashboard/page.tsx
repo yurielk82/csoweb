@@ -9,8 +9,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loading } from '@/components/shared/loading';
 import { useSettlementData } from '@/hooks/useSettlementData';
+import { Skeleton } from '@/components/ui/skeleton';
 import { SettlementFilters } from '@/components/settlement/SettlementFilters';
 import { NoticeCard } from '@/components/settlement/NoticeCard';
 import { SummaryCards } from '@/components/settlement/SummaryCards';
@@ -28,9 +28,39 @@ export default function DashboardPage() {
     fetchSettlements, handleSearch, handleKeyDown, toggleColumn, handleExport, replaceNoticeVars,
   } = useSettlementData();
 
-  // 1. 초기 로딩 중
+  // 1. 초기 로딩 중 — 셸 + 스켈레톤
   if (initialLoading) {
-    return <Loading text="정산 정보를 확인하는 중..." />;
+    return (
+      <div className="space-y-6">
+        <PageHeader />
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Skeleton className="h-10 w-40" />
+              <Skeleton className="h-10 flex-1" />
+            </div>
+          </CardContent>
+        </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="pt-6">
+                <Skeleton className="h-4 w-16 mb-2" />
+                <Skeleton className="h-7 w-28" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card>
+          <CardContent className="pt-6 space-y-3">
+            <Skeleton className="h-8 w-full" />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   // 2. 인증 오류

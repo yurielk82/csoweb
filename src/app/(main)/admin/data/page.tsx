@@ -27,7 +27,6 @@ import {
   AlertTitle,
 } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { Loading } from '@/components/shared/loading';
 
 interface SettlementMonthData {
   month: string;
@@ -113,10 +112,6 @@ export default function DataManagementPage() {
   const formatNumber = (num: number) => num.toLocaleString('ko-KR');
   const formatCurrency = (num: number) => num.toLocaleString('ko-KR') + '원';
 
-  if (loading) {
-    return <Loading text="정산 데이터를 불러오는 중..." />;
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -125,6 +120,7 @@ export default function DataManagementPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Database className="h-6 w-6" />
             정산 데이터 관리
+            {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           </h1>
           <p className="text-muted-foreground">업로드된 정산 데이터를 정산월 기준으로 관리합니다.</p>
         </div>
@@ -242,7 +238,12 @@ export default function DataManagementPage() {
               {data.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    업로드된 정산 데이터가 없습니다.
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        불러오는 중...
+                      </span>
+                    ) : '업로드된 정산 데이터가 없습니다.'}
                   </TableCell>
                 </TableRow>
               )}

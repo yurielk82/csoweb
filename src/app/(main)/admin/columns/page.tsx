@@ -24,7 +24,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loading } from '@/components/shared/loading';
 import { useToast } from '@/hooks/use-toast';
 import type { ColumnSetting } from '@/types';
 import { NUMERIC_COLUMN_KEYS } from '@/types';
@@ -307,10 +306,6 @@ export default function ColumnsPage() {
     }
   };
 
-  if (loading) {
-    return <Loading text="컬럼 설정을 불러오는 중..." />;
-  }
-
   const visibleCount = columns.filter(c => c.is_visible).length;
   const requiredCount = columns.filter(c => c.is_required).length;
   const summaryCount = columns.filter(c => c.is_summary).length;
@@ -323,6 +318,7 @@ export default function ColumnsPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Columns className="h-6 w-6" />
             컬럼 설정
+            {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           </h1>
           <p className="text-muted-foreground">업체에게 보여줄 컬럼을 설정합니다.</p>
         </div>
@@ -417,6 +413,12 @@ export default function ColumnsPage() {
               items={columns.map(c => c.column_key)}
               strategy={verticalListSortingStrategy}
             >
+              {loading && columns.length === 0 && (
+                <div className="flex items-center justify-center py-8 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  컬럼 설정을 불러오는 중...
+                </div>
+              )}
               {columns.map((column) => (
                 <SortableColumn
                   key={column.column_key}
