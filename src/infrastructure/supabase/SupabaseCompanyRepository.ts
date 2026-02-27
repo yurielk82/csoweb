@@ -6,39 +6,12 @@ import { supabase } from './client';
 import type { CompanyRepository } from '@/domain/company/CompanyRepository';
 import type { CompanyInfo, EmailNotifications } from '@/domain/company/types';
 import { DEFAULT_EMAIL_NOTIFICATIONS } from '@/domain/company/types';
-
-const DEFAULT_NOTICE_CONTENT = `1. 세금계산서 작성일자: {{정산월}} 29일 이내
-2. 세금계산서 취합 마감일: {{정산월}} 29일 (기간내 미발행 할 경우 무통보 이월)
-3. 세금계산서 메일 주소: unioncsosale@ukp.co.kr
-4. 품목명: "마케팅 용역 수수료" 또는 "판매대행 수수료" ('00월'표기 금지)
-5. 대표자: {{대표자명}}
-6. 다음달 EDI 입력 마감일: {{정산월+1}} 11일 (수)까지 (설 연휴 등으로 일자변경 가능)`;
-
-const DEFAULT_COMPANY_INFO: CompanyInfo = {
-  company_name: '',
-  ceo_name: '',
-  business_number: '',
-  address: '',
-  phone: '',
-  fax: '',
-  email: '',
-  website: '',
-  copyright: '',
-  additional_info: '',
-  notice_content: DEFAULT_NOTICE_CONTENT,
-  email_provider: 'resend',
-  smtp_host: '',
-  smtp_port: 465,
-  smtp_secure: true,
-  smtp_user: '',
-  smtp_password: '',
-  smtp_from_name: '',
-  smtp_from_email: '',
-  resend_from_email: '',
-  test_recipient_email: '',
-  email_send_delay_ms: 6000,
-  email_notifications: { ...DEFAULT_EMAIL_NOTIFICATIONS },
-};
+import {
+  DEFAULT_COMPANY_INFO,
+  DEFAULT_NOTICE_CONTENT,
+  DEFAULT_SMTP_PORT,
+  DEFAULT_EMAIL_SEND_DELAY_MS,
+} from '@/constants/defaults';
 
 function parseEmailNotifications(raw: unknown): EmailNotifications {
   if (!raw || typeof raw !== 'object') {
@@ -85,7 +58,7 @@ export class SupabaseCompanyRepository implements CompanyRepository {
       notice_content: data.notice_content || DEFAULT_NOTICE_CONTENT,
       email_provider: data.email_provider || 'resend',
       smtp_host: data.smtp_host || '',
-      smtp_port: data.smtp_port ?? 465,
+      smtp_port: data.smtp_port ?? DEFAULT_SMTP_PORT,
       smtp_secure: data.smtp_secure ?? true,
       smtp_user: data.smtp_user || '',
       smtp_password: data.smtp_password || '',
@@ -93,7 +66,7 @@ export class SupabaseCompanyRepository implements CompanyRepository {
       smtp_from_email: data.smtp_from_email || '',
       resend_from_email: data.resend_from_email || '',
       test_recipient_email: data.test_recipient_email || '',
-      email_send_delay_ms: data.email_send_delay_ms ?? 6000,
+      email_send_delay_ms: data.email_send_delay_ms ?? DEFAULT_EMAIL_SEND_DELAY_MS,
       email_notifications: parseEmailNotifications(data.email_notifications),
     };
   }

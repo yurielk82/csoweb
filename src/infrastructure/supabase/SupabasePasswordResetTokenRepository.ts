@@ -6,6 +6,7 @@ import { supabase } from './client';
 import type { PasswordResetTokenRepository } from '@/domain/password-reset-token/PasswordResetTokenRepository';
 import type { PasswordResetToken } from '@/domain/password-reset-token/types';
 import type { DbPasswordResetToken } from './client';
+import { TOKEN_EXPIRY_MINUTES } from '@/constants/defaults';
 
 function mapDbTokenToToken(dbToken: DbPasswordResetToken): PasswordResetToken {
   return {
@@ -30,7 +31,7 @@ export class SupabasePasswordResetTokenRepository implements PasswordResetTokenR
       .is('used_at', null);
 
     const token = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + TOKEN_EXPIRY_MINUTES * 60 * 1000).toISOString();
 
     const { data, error } = await supabase
       .from('password_reset_tokens')

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { DEFAULT_EMAIL_SEND_DELAY_MS } from '@/constants/defaults';
 
 // ─── 타입 정의 ───────────────────────────────────────────
 
@@ -57,16 +58,6 @@ export interface TestCompany {
 }
 
 // ─── 상수 ───────────────────────────────────────────────
-
-export function generateYearMonthOptions(): string[] {
-  const options: string[] = [];
-  const now = new Date();
-  for (let i = 0; i < 12; i++) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    options.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
-  }
-  return options;
-}
 
 export const AVAILABLE_VARIABLES = [
   { key: '업체명', description: '업체명' },
@@ -130,11 +121,29 @@ export function useMailMerge() {
   const [sendLogs, setSendLogs] = useState<SendLog[]>([]);
   const [result, setResult] = useState<SendResult | null>(null);
 
+  // 정산월 옵션 (DB에서 실제 데이터가 있는 월만)
+  const [yearMonthOptions, setYearMonthOptions] = useState<string[]>([]);
+
   const abortControllerRef = useRef<AbortController | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
-  const yearMonthOptions = generateYearMonthOptions();
 
   // ─── Effects ──────────────────────────────────────────
+
+  // mount 시 실제 정산 데이터가 있는 월 목록 조회
+  useEffect(() => {
+    async function fetchAvailableMonths() {
+      try {
+        const res = await fetch('/api/email/mailmerge?type=available_months');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data.months)) {
+          setYearMonthOptions(data.data.months);
+        }
+      } catch (error) {
+        console.error('정산월 목록 조회 오류:', error);
+      }
+    }
+    fetchAvailableMonths();
+  }, []);
 
   // 수신 대상이 all로 바뀌면 테이블 첨부 해제 + 섹션 초기화
   useEffect(() => {
@@ -353,11 +362,11 @@ export function useMailMerge() {
             try {
               const event: ProgressEvent = JSON.parse(dataMatch[1]);
               if (event.type === 'start') {
-                setProgress({ current: 0, total: event.total, sent: 0, failed: 0, delay: event.delay || 6000 });
+                setProgress({ current: 0, total: event.total, sent: 0, failed: 0, delay: event.delay || DEFAULT_EMAIL_SEND_DELAY_MS });
               } else if (event.type === 'progress') {
                 setProgress(prev => ({
                   current: event.current || 0, total: event.total,
-                  sent: event.sent || 0, failed: event.failed || 0, delay: prev?.delay || 6000,
+                  sent: event.sent || 0, failed: event.failed || 0, delay: prev?.delay || DEFAULT_EMAIL_SEND_DELAY_MS,
                 }));
                 if (event.company_name && event.status) {
                   setSendLogs(prev => [...prev, {

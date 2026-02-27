@@ -16,6 +16,7 @@ import type {
   SettlementStatsByMonth,
   InsertSettlementsResult,
 } from '@/domain/settlement/types';
+import { SUPABASE_PAGE_SIZE, SUPABASE_BATCH_SIZE } from '@/constants/defaults';
 
 /**
  * Supabase 페이지네이션으로 전체 데이터 조회 헬퍼
@@ -24,7 +25,7 @@ async function fetchAllPaginated<T>(
   queryBuilder: (page: number, pageSize: number) => Promise<{ data: T[] | null; error: { message: string } | null }>
 ): Promise<T[]> {
   const allRows: T[] = [];
-  const pageSize = 1000;
+  const pageSize = SUPABASE_PAGE_SIZE;
   let page = 0;
 
   while (true) {
@@ -55,7 +56,7 @@ export class SupabaseSettlementRepository implements SettlementRepository {
 
     // 새 데이터 삽입 (배치)
     const validData = data.filter(d => d.정산월);
-    const batchSize = 500;
+    const batchSize = SUPABASE_BATCH_SIZE;
 
     for (let i = 0; i < validData.length; i += batchSize) {
       const batch = validData.slice(i, i + batchSize).map(row => ({

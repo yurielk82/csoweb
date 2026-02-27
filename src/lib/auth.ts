@@ -2,24 +2,24 @@ import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
 import type { UserSession } from '@/types';
+import { SESSION_EXPIRY_HOURS, BCRYPT_SALT_ROUNDS } from '@/constants/defaults';
+import { COOKIE_NAME } from '@/constants/auth';
 
 if (!process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET 환경변수가 설정되지 않았습니다.');
 }
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
-
-const COOKIE_NAME = 'cso_session';
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax' as const,
-  maxAge: 60 * 60 * 24, // 24 hours
+  maxAge: 60 * 60 * SESSION_EXPIRY_HOURS,
   path: '/',
 };
 
 // Password hashing
 export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12);
+  return bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
@@ -31,7 +31,7 @@ export async function createToken(user: UserSession): Promise<string> {
   return new SignJWT({ user })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('24h')
+    .setExpirationTime(`${SESSION_EXPIRY_HOURS}h`)
     .sign(JWT_SECRET);
 }
 

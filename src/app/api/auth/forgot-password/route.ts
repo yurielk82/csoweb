@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { normalizeBusinessNumber, isValidBusinessNumber, isValidEmail, formatBusinessNumber } from '@/lib/auth';
 import { requestPasswordReset } from '@/application/auth';
 import { sendEmail } from '@/lib/email';
+import { TOKEN_EXPIRY_MINUTES } from '@/constants/defaults';
 
 export const dynamic = 'force-dynamic';
-
-// 토큰 유효 시간 (30분)
-const TOKEN_EXPIRY_MINUTES = 30;
 
 /**
  * POST: 비밀번호 재설정 요청

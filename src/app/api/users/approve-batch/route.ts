@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth';
 import { getUserRepository } from '@/infrastructure/supabase';
 import { sendEmail } from '@/lib/email';
 import { invalidateUserCache } from '@/lib/data-cache';
+import { BATCH_EMAIL_DELAY_MS } from '@/constants/defaults';
 
 export const dynamic = 'force-dynamic';
 // 대량 처리를 위한 타임아웃 연장
@@ -92,8 +93,8 @@ export async function POST(request: NextRequest) {
           console.error(`[Batch Approve] Email failed for ${user.email}: ${emailResult.error}`);
         }
 
-        // Rate Limit 방지: 이메일 간 200ms 딜레이
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Rate Limit 방지: 이메일 간 딜레이
+        await new Promise(resolve => setTimeout(resolve, BATCH_EMAIL_DELAY_MS));
       } catch (error) {
         console.error(`[Batch Approve] Email error for ${user.email}:`, error);
         results.emailFailed.push(user.business_number);

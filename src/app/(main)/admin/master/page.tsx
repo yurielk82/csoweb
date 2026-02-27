@@ -42,13 +42,7 @@ import { Loading } from '@/components/shared/loading';
 import { useToast } from '@/hooks/use-toast';
 import type { Settlement, ColumnSetting } from '@/types';
 import { getSettlementValue } from '@/types';
-
-const DEFAULT_NOTICE = `1. 세금계산서 작성일자: {{정산월}} 29일 이내
-2. 세금계산서 취합 마감일: {{정산월}} 29일 (기간내 미발행 할 경우 무통보 이월)
-3. 세금계산서 메일 주소: unioncsosale@ukp.co.kr
-4. 품목명: "마케팅 용역 수수료" 또는 "판매대행 수수료" ('00월'표기 금지)
-5. 대표자: {{대표자명}}
-6. 다음달 EDI 입력 마감일: {{정산월+1}} 11일 (수)까지 (설 연휴 등으로 일자변경 가능)`;
+import { DEFAULT_PAGE_SIZE, DEFAULT_NOTICE_CONTENT } from '@/constants/defaults';
 
 interface SettlementResponse {
   settlements: Settlement[];
@@ -194,7 +188,7 @@ export default function AdminMasterPage() {
       const params = new URLSearchParams({
         settlement_month: selectedMonth,
         page: page.toString(),
-        page_size: '50',
+        page_size: String(DEFAULT_PAGE_SIZE),
       });
       if (searchQuery) params.set('search', searchQuery);
       if (selectedCSO) {
@@ -327,7 +321,7 @@ export default function AdminMasterPage() {
 
   // Notice 편집
   const openNoticeDialog = () => {
-    setNoticeEditContent(noticeSettings?.notice_content || DEFAULT_NOTICE);
+    setNoticeEditContent(noticeSettings?.notice_content || DEFAULT_NOTICE_CONTENT);
     setNoticeDialogOpen(true);
   };
 
@@ -663,7 +657,7 @@ export default function AdminMasterPage() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setNoticeEditContent(DEFAULT_NOTICE)}
+              onClick={() => setNoticeEditContent(DEFAULT_NOTICE_CONTENT)}
               className="mr-auto"
             >
               <RotateCcw className="h-3.5 w-3.5 mr-1" />

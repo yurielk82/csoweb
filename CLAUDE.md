@@ -28,6 +28,7 @@ npm run test:e2e     # Playwright E2E
 
 ```
 src/
+├── constants/        # 공유 상수 (defaults.ts: 매직 넘버/기본값, auth.ts: 쿠키명)
 ├── domain/           # 순수 타입 + 비즈니스 규칙 (프레임워크 무의존)
 ├── application/      # 유스케이스 (domain 조합)
 ├── infrastructure/   # Supabase Repository 구현체

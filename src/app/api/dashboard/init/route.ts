@@ -9,15 +9,9 @@ import {
   getCachedTotals,
   getCachedCSOList,
 } from '@/lib/data-cache';
+import { DEFAULT_PAGE_SIZE, ALWAYS_NEEDED_COLUMNS } from '@/constants/defaults';
 
 export const dynamic = 'force-dynamic';
-
-// 합계·검색·그룹핑에 항상 필요한 컬럼
-const ALWAYS_NEEDED_COLUMNS = [
-  'id', 'business_number', '정산월', 'CSO관리업체',
-  '제품명', '거래처명', '영업사원',
-  '수량', '금액', '제약수수료_합계', '담당수수료_합계',
-];
 
 /**
  * 대시보드/마스터 초기화 통합 API
@@ -40,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     const sp = request.nextUrl.searchParams;
     const page = parseInt(sp.get('page') || '1');
-    const pageSize = parseInt(sp.get('page_size') || '50');
+    const pageSize = parseInt(sp.get('page_size') || String(DEFAULT_PAGE_SIZE));
     const search = sp.get('search') || undefined;
     const filterBusinessNumber = sp.get('business_number') || undefined;
     const includeSettlements = sp.get('include_settlements') !== 'false';

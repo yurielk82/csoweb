@@ -6,15 +6,9 @@ import {
   getCachedMatchedNames,
   getCachedTotals,
 } from '@/lib/data-cache';
+import { DEFAULT_PAGE_SIZE, ALWAYS_NEEDED_COLUMNS } from '@/constants/defaults';
 
 export const dynamic = 'force-dynamic';
-
-// 합계 계산, 검색 필터, 그룹핑에 항상 필요한 컬럼
-const ALWAYS_NEEDED_COLUMNS = [
-  'id', 'business_number', '정산월', 'CSO관리업체',
-  '제품명', '거래처명', '영업사원',
-  '수량', '금액', '제약수수료_합계', '담당수수료_합계',
-];
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,7 +24,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const settlementMonth = searchParams.get('settlement_month') || searchParams.get('year_month') || undefined;
     const page = parseInt(searchParams.get('page') || '1');
-    const pageSize = parseInt(searchParams.get('page_size') || '50');
+    const pageSize = parseInt(searchParams.get('page_size') || String(DEFAULT_PAGE_SIZE));
     const search = searchParams.get('search') || undefined;
     const filterBusinessNumber = searchParams.get('business_number') || undefined;
 

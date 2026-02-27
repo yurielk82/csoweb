@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
 import { getSession } from '@/lib/auth';
+import { SUPABASE_PAGE_SIZE } from '@/constants/defaults';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
     };
 
     const allSettlementData: SettlementRow[] = [];
-    const pageSize = 1000;
+    const pageSize = SUPABASE_PAGE_SIZE;
     let page = 0;
 
     while (true) {

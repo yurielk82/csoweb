@@ -5,9 +5,7 @@
 import { getUserRepository, getPasswordResetTokenRepository } from '@/infrastructure/supabase';
 import { verifyPassword, formatBusinessNumber } from '@/lib/auth';
 import { sendEmail } from '@/lib/email';
-
-const MAX_FAILED_ATTEMPTS = 15;
-const TOKEN_EXPIRY_MINUTES = 30;
+import { MAX_FAILED_LOGIN_ATTEMPTS, TOKEN_EXPIRY_MINUTES } from '@/constants/defaults';
 
 type LoginResult =
   | { type: 'success'; user: { id: string; business_number: string; company_name: string; email: string; is_admin: boolean; is_approved: boolean; must_change_password: boolean; profile_complete: boolean }; redirect: string }
@@ -42,7 +40,7 @@ export async function authenticateUser(
   if (!isValid) {
     const failedCount = await userRepo.incrementFailedLogin(businessNumber);
 
-    if (failedCount >= MAX_FAILED_ATTEMPTS) {
+    if (failedCount >= MAX_FAILED_LOGIN_ATTEMPTS) {
       await userRepo.lockAccount(businessNumber);
 
       // 비밀번호 변경 이메일 발송
@@ -58,10 +56,10 @@ export async function authenticateUser(
         console.error('[Login] Account lock email failed:', emailError);
       }
 
-      return { type: 'locked_now', maxAttempts: MAX_FAILED_ATTEMPTS };
+      return { type: 'locked_now', maxAttempts: MAX_FAILED_LOGIN_ATTEMPTS };
     }
 
-    return { type: 'failed', failedCount, maxAttempts: MAX_FAILED_ATTEMPTS };
+    return { type: 'failed', failedCount, maxAttempts: MAX_FAILED_LOGIN_ATTEMPTS };
   }
 
   // 로그인 성공 — 실패 횟수 리셋

@@ -8,6 +8,11 @@ import { getEmailLogRepository, getCompanyRepository } from '@/infrastructure/su
 import type { EmailTemplateType } from '@/types';
 import type { EmailProvider, EmailNotifications } from '@/domain/company/types';
 import { DEFAULT_EMAIL_NOTIFICATIONS } from '@/domain/company/types';
+import {
+  DEFAULT_SMTP_PORT,
+  DEFAULT_EMAIL_SEND_DELAY_MS,
+  EMAIL_CACHE_TTL_MS,
+} from '@/constants/defaults';
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -38,7 +43,7 @@ interface EmailSettings {
 
 let _cachedSettings: EmailSettings | null = null;
 let _cacheTimestamp = 0;
-const CACHE_TTL_MS = 30_000;
+const CACHE_TTL_MS = EMAIL_CACHE_TTL_MS;
 
 async function getEmailSettings(): Promise<EmailSettings> {
   const now = Date.now();
@@ -50,7 +55,7 @@ async function getEmailSettings(): Promise<EmailSettings> {
   _cachedSettings = {
     provider: info.email_provider || 'resend',
     smtp_host: info.smtp_host || '',
-    smtp_port: info.smtp_port ?? 465,
+    smtp_port: info.smtp_port ?? DEFAULT_SMTP_PORT,
     smtp_secure: info.smtp_secure ?? true,
     smtp_user: info.smtp_user || '',
     smtp_password: info.smtp_password || '',
@@ -58,7 +63,7 @@ async function getEmailSettings(): Promise<EmailSettings> {
     smtp_from_email: info.smtp_from_email || '',
     resend_from_email: info.resend_from_email || '',
     test_recipient_email: info.test_recipient_email || '',
-    email_send_delay_ms: info.email_send_delay_ms ?? 6000,
+    email_send_delay_ms: info.email_send_delay_ms ?? DEFAULT_EMAIL_SEND_DELAY_MS,
     email_notifications: info.email_notifications ?? { ...DEFAULT_EMAIL_NOTIFICATIONS },
   };
   _cacheTimestamp = now;
@@ -841,7 +846,7 @@ export async function sendEmail(
     emailSettings = {
       provider: 'resend',
       smtp_host: '',
-      smtp_port: 465,
+      smtp_port: DEFAULT_SMTP_PORT,
       smtp_secure: true,
       smtp_user: '',
       smtp_password: '',
@@ -849,7 +854,7 @@ export async function sendEmail(
       smtp_from_email: '',
       resend_from_email: '',
       test_recipient_email: '',
-      email_send_delay_ms: 6000,
+      email_send_delay_ms: DEFAULT_EMAIL_SEND_DELAY_MS,
       email_notifications: { ...DEFAULT_EMAIL_NOTIFICATIONS },
     };
   }

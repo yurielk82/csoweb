@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { COOKIE_NAME } from '@/constants/auth';
 
 // Routes that don't require authentication
 const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/change-password', '/complete-profile'];
@@ -115,7 +116,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Check for session cookie (JWT token)
-  const sessionCookie = request.cookies.get('cso_session');
+  const sessionCookie = request.cookies.get(COOKIE_NAME);
 
   // Redirect to login if no session
   if (!sessionCookie || !sessionCookie.value) {

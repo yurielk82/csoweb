@@ -7,6 +7,7 @@ import {
   getColumnSettingRepository,
   getCompanyRepository,
 } from '@/infrastructure/supabase';
+import { getCachedAvailableMonths } from '@/lib/data-cache';
 import {
   sendEmail,
   getEmailSendDelay,
@@ -107,6 +108,12 @@ export async function GET(request: NextRequest) {
     const type = url.searchParams.get('type');
     const ym = url.searchParams.get('year_month');
     const includeList = url.searchParams.get('include_list') === 'true';
+
+    // 실제 정산 데이터가 존재하는 월 목록 조회
+    if (type === 'available_months') {
+      const months = await getCachedAvailableMonths('ALL');
+      return NextResponse.json({ success: true, data: { months } });
+    }
 
     let count = 0;
     let companies: { business_number: string; company_name: string }[] = [];

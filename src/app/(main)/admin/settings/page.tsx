@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Loading } from '@/components/shared/loading';
+import { DEFAULT_SMTP_PORT, DEFAULT_EMAIL_SEND_DELAY_MS } from '@/constants/defaults';
 
 interface CompanyInfo {
   company_name: string;
@@ -68,7 +69,7 @@ const defaultCompanyInfo: CompanyInfo = {
   notice_content: '',
   email_provider: 'resend',
   smtp_host: '',
-  smtp_port: 465,
+  smtp_port: DEFAULT_SMTP_PORT,
   smtp_secure: true,
   smtp_user: '',
   smtp_password: '',
@@ -76,7 +77,7 @@ const defaultCompanyInfo: CompanyInfo = {
   smtp_from_email: '',
   resend_from_email: '',
   test_recipient_email: '',
-  email_send_delay_ms: 6000,
+  email_send_delay_ms: DEFAULT_EMAIL_SEND_DELAY_MS,
   email_notifications: {
     registration_request: true,
     approval_complete: true,

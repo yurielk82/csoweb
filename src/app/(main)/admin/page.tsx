@@ -23,6 +23,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loading } from '@/components/shared/loading';
+import { EMAIL_LOG_DEFAULT_LIMIT } from '@/constants/defaults';
 
 interface DashboardStats {
   pendingApprovals: number;
@@ -62,7 +63,7 @@ export default function AdminDashboardPage() {
     resend: false,
     smtp: { configured: false, host: null },
     email_provider: 'resend',
-    version: 'v0.14.0',
+    version: '',
     environment: 'Production',
     nts_api: false,
     hira_hospital_api: false,
@@ -81,7 +82,7 @@ export default function AdminDashboardPage() {
         const allUsersData = await allUsersRes.json();
 
         // Fetch email stats
-        const emailRes = await fetch('/api/email/logs?limit=100');
+        const emailRes = await fetch(`/api/email/logs?limit=${EMAIL_LOG_DEFAULT_LIMIT}`);
         const emailData = await emailRes.json();
 
         // Fetch system status

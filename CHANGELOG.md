@@ -5,6 +5,52 @@
 
 ---
 
+## [0.19.0] - 2026-02-27
+
+### Refactor — 하드코딩 전면 정리 (매직 넘버/중복 상수 통합)
+
+`src/constants/defaults.ts` 신규 생성 — 14개 공유 상수 중앙화, 20개 파일에서 하드코딩 제거.
+
+#### 통합된 상수 (Phase 1)
+| 상수 | 값 | 이전 분산 수 |
+|------|------|------------|
+| `DEFAULT_PAGE_SIZE` | 50 | 5곳 |
+| `DEFAULT_EMAIL_SEND_DELAY_MS` | 6000 | 7곳 |
+| `DEFAULT_SMTP_PORT` | 465 | 3곳 |
+| `TOKEN_EXPIRY_MINUTES` | 30 | 3곳 |
+| `SESSION_EXPIRY_HOURS` | 24 | 2곳 |
+| `BCRYPT_SALT_ROUNDS` | 12 | 1곳 |
+| `SUPABASE_PAGE_SIZE` | 1000 | 2곳 |
+| `SUPABASE_BATCH_SIZE` | 500 | 1곳 |
+| `EMAIL_LOG_DEFAULT_LIMIT` | 100 | 2곳 |
+| `EMAIL_CACHE_TTL_MS` | 30000 | 1곳 |
+| `BATCH_EMAIL_DELAY_MS` | 200 | 1곳 |
+| `MAX_FAILED_LOGIN_ATTEMPTS` | 15 | 1곳 |
+
+#### 중복 상수 제거 (Phase 2)
+| 상수 | 이전 | 이후 |
+|------|------|------|
+| `ALWAYS_NEEDED_COLUMNS` | `dashboard/init/route.ts` + `settlements/route.ts` | `constants/defaults.ts` 1곳 |
+| `DEFAULT_NOTICE_CONTENT` | `SupabaseCompanyRepository.ts` + `master/page.tsx` | `constants/defaults.ts` 1곳 |
+| `DEFAULT_COMPANY_INFO` | `SupabaseCompanyRepository.ts` + `email.ts` + `settings/page.tsx` | `constants/defaults.ts` 1곳 |
+| `COOKIE_NAME` | `lib/auth.ts` + `middleware.ts` (문자열) | `constants/auth.ts` 1곳 |
+
+#### 기타
+- `admin/page.tsx` 시스템 버전 초기값 `v0.14.0` → 빈 문자열 (API 응답 전까지 거짓 버전 표시 방지)
+
+---
+
+## [0.18.12] - 2026-02-27
+
+### Fix — 메일머지 정산월 드롭다운 실제 데이터 기반으로 변경
+
+- **버그**: "특정 정산월 데이터가 있는 업체" 선택 시, 드롭다운에 현재 날짜 기준 최근 12개월이 표시되어 데이터가 없는 월도 선택 가능했음
+- **수정**: `generateYearMonthOptions()` (하드코딩 12개월) 제거 → `getCachedAvailableMonths('ALL')` RPC 기반 실제 정산 데이터 존재 월만 표시
+- `mailmerge/route.ts` GET에 `type=available_months` 분기 추가
+- `useMailMerge.ts`에서 mount 시 API fetch로 정산월 목록 로드
+
+---
+
 ## [0.18.11] - 2026-02-27
 
 ### Fix — Vercel Speed Insights 복원 + CSP connect-src 허용

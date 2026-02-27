@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getEmailLogRepository } from '@/infrastructure/supabase';
 import type { EmailTemplateType, EmailStatus } from '@/types';
+import { EMAIL_LOG_DEFAULT_LIMIT } from '@/constants/defaults';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const templateType = searchParams.get('template_type') as EmailTemplateType | null;
     const status = searchParams.get('status') as EmailStatus | null;
-    const limit = parseInt(searchParams.get('limit') || '100');
+    const limit = parseInt(searchParams.get('limit') || String(EMAIL_LOG_DEFAULT_LIMIT));
     
     const logs = await getEmailLogRepository().findAll({
       template_type: templateType || undefined,
