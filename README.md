@@ -15,7 +15,7 @@
 <br />
 <div align="center">
   <h1>CSO 정산 포털</h1>
-  <p><code>v0.20.10</code></p>
+  <p><code>v0.20.11</code></p>
   <p>
     CSO(위탁영업) 업체가 제약사 정산 수수료를 조회하는 B2B 포털
   </p>

@@ -94,7 +94,7 @@ const USER_NAV: NavEntry[] = [
   { href: '/monthly-summary', label: '월별 합계', icon: Calculator },
 ];
 
-/* ─── 그룹 드롭다운 (데스크톱 — hover로 열림) ─── */
+/* ─── 그룹 드롭다운 (데스크톱 — hover로 열림, Portal 없는 순수 구현) ─── */
 function NavGroupDropdown({ group, pathname }: { group: MenuGroup; pathname: string }) {
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -111,46 +111,41 @@ function NavGroupDropdown({ group, pathname }: { group: MenuGroup; pathname: str
   }, []);
 
   return (
-    <div className="flex items-center" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
-      <DropdownMenu open={open} onOpenChange={setOpen}>
-        <DropdownMenuTrigger asChild>
-          <Link href={firstHref}>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'gap-1.5',
-                isActive && 'bg-accent text-accent-foreground'
-              )}
-            >
-              <group.icon className="h-4 w-4" />
-              {group.label}
-              <ChevronDown className={cn("h-3 w-3 opacity-50 transition-transform", open && "rotate-180")} />
-            </Button>
-          </Link>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="start"
-          className="w-48"
-          onMouseEnter={handleEnter}
-          onMouseLeave={handleLeave}
+    <div className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
+      <Link href={firstHref}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn(
+            'gap-1.5',
+            isActive && 'bg-accent text-accent-foreground'
+          )}
         >
-          {group.items.map((item) => (
-            <DropdownMenuItem key={item.href} asChild onSelect={() => setOpen(false)}>
+          <group.icon className="h-4 w-4" />
+          {group.label}
+          <ChevronDown className={cn("h-3 w-3 opacity-50 transition-transform", open && "rotate-180")} />
+        </Button>
+      </Link>
+      {open && (
+        <div className="absolute top-full left-0 pt-1 z-50">
+          <div className="w-48 rounded-md border bg-popover p-1 shadow-md animate-in fade-in-0 zoom-in-95 slide-in-from-top-2">
+            {group.items.map((item) => (
               <Link
+                key={item.href}
                 href={item.href}
+                onClick={() => setOpen(false)}
                 className={cn(
-                  'cursor-pointer gap-2',
+                  'flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer',
                   pathname === item.href && 'bg-accent'
                 )}
               >
                 <item.icon className="h-4 w-4" />
                 {item.label}
               </Link>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
