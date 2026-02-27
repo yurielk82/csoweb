@@ -25,6 +25,10 @@ vi.mock('@/lib/email', () => ({
   notifyAdmin: vi.fn(),
 }));
 
+vi.mock('@/lib/data-cache', () => ({
+  invalidateUserCache: vi.fn(),
+}));
+
 const { POST } = await import('./route');
 
 const validBody = {

@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
 import { getSession } from '@/lib/auth';
-import { invalidateCSOMatchingCache } from '@/lib/data-cache';
+import { getCachedCSOMatchingList, invalidateCSOMatchingCache } from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -136,20 +136,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabase();
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
 
-    let query = supabase
-      .from('cso_matching')
-      .select('*')
-      .order('cso_company_name', { ascending: true });
-
-    if (search) {
-      query = query.or(`cso_company_name.ilike.%${search}%,business_number.ilike.%${search}%`);
+    // 검색어 없으면 캐시 사용, 있으면 DB 직접 조회
+    if (!search) {
+      const data = await getCachedCSOMatchingList();
+      return NextResponse.json({ success: true, data });
     }
 
-    const { data, error } = await query;
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('cso_matching')
+      .select('*')
+      .order('cso_company_name', { ascending: true })
+      .or(`cso_company_name.ilike.%${search}%,business_number.ilike.%${search}%`);
 
     if (error) {
       console.error('Fetch matching data error:', error);

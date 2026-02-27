@@ -103,6 +103,52 @@ export const getCachedCSOList = unstable_cache(
   { tags: ['user-data'] }
 );
 
+// ── Users (관리자용 전체/대기 회원 목록) ──
+// 태그: user-data
+// 무효화 시점: POST /api/users/approve, /reject, /approve-batch
+export const getCachedUsers = unstable_cache(
+  async () => {
+    const users = await getUserRepository().findAll();
+    // password_hash 제거
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    return users.map(({ password_hash, ...user }) => user);
+  },
+  ['users-all-data'],
+  { tags: ['user-data'] }
+);
+
+export const getCachedPendingUsers = unstable_cache(
+  async () => {
+    const users = await getUserRepository().findPending();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    return users.map(({ password_hash, ...user }) => user);
+  },
+  ['users-pending-data'],
+  { tags: ['user-data'] }
+);
+
+// ── CSO Matching List (관리자용 매칭 테이블 전체) ──
+// 태그: cso-matching
+// 무효화 시점: POST/DELETE /api/admin/cso-matching/upsert
+export const getCachedCSOMatchingList = unstable_cache(
+  async () => {
+    const { getSupabase } = await import('@/lib/supabase');
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('cso_matching')
+      .select('*')
+      .order('cso_company_name', { ascending: true });
+
+    if (error) {
+      console.error('getCachedCSOMatchingList error:', error);
+      return [];
+    }
+    return data || [];
+  },
+  ['cso-matching-list-data'],
+  { tags: ['cso-matching'] }
+);
+
 // ── Cache Invalidation Functions ──
 // 각 쓰기 API에서 호출
 

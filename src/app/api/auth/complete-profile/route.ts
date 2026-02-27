@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, setSession, isValidEmail } from '@/lib/auth';
 import { getUserRepository } from '@/infrastructure/supabase';
+import { invalidateUserCache } from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -115,6 +116,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    invalidateUserCache();
 
     // 세션 갱신 (profile_complete, email, company_name 반영)
     const updatedSession = {

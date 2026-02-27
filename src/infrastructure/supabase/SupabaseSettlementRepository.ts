@@ -332,38 +332,50 @@ export class SupabaseSettlementRepository implements SettlementRepository {
     businessNumber: string,
     summaryColumnKeys: string[]
   ): Promise<Map<string, { summaries: Record<string, number>; count: number }>> {
-    const selectColumns = ['정산월', ...summaryColumnKeys].join(', ');
-
-    const allRows = await fetchAllPaginated<Record<string, unknown>>(async (page, pageSize) => {
-      const result = await supabase
-        .from('settlements')
-        .select(selectColumns)
-        .eq('business_number', businessNumber)
-        .range(page * pageSize, (page + 1) * pageSize - 1);
-
-      return result as { data: Record<string, unknown>[] | null; error: { message: string } | null };
-    });
-
-    return this.aggregateMonthlyData(allRows, summaryColumnKeys);
+    return this.getMonthlySummaryViaRPC(businessNumber, null, summaryColumnKeys);
   }
 
   async getMonthlySummaryByCSOMatching(
     matchedNames: string[],
     summaryColumnKeys: string[]
   ): Promise<Map<string, { summaries: Record<string, number>; count: number }>> {
-    const selectColumns = ['정산월', ...summaryColumnKeys].join(', ');
+    return this.getMonthlySummaryViaRPC(null, matchedNames, summaryColumnKeys);
+  }
 
-    const allRows = await fetchAllPaginated<Record<string, unknown>>(async (page, pageSize) => {
-      const result = await supabase
-        .from('settlements')
-        .select(selectColumns)
-        .in('CSO관리업체', matchedNames)
-        .range(page * pageSize, (page + 1) * pageSize - 1);
-
-      return result as { data: Record<string, unknown>[] | null; error: { message: string } | null };
+  private async getMonthlySummaryViaRPC(
+    businessNumber: string | null,
+    matchedNames: string[] | null,
+    summaryColumnKeys: string[]
+  ): Promise<Map<string, { summaries: Record<string, number>; count: number }>> {
+    const { data, error } = await supabase.rpc('get_monthly_summary', {
+      p_business_number: businessNumber,
+      p_matched_names: matchedNames,
     });
 
-    return this.aggregateMonthlyData(allRows, summaryColumnKeys);
+    if (error) {
+      console.error('get_monthly_summary RPC error:', error);
+      return new Map();
+    }
+
+    const rows = (data || []) as Array<Record<string, unknown>>;
+    const monthlyData = new Map<string, { summaries: Record<string, number>; count: number }>();
+
+    for (const row of rows) {
+      const month = row.settlement_month as string;
+      if (!month) continue;
+
+      const summaries: Record<string, number> = {};
+      for (const key of summaryColumnKeys) {
+        summaries[key] = Number(row[key]) || 0;
+      }
+
+      monthlyData.set(month, {
+        summaries,
+        count: Number(row.row_count) || 0,
+      });
+    }
+
+    return monthlyData;
   }
 
   // ============================================
@@ -446,32 +458,4 @@ export class SupabaseSettlementRepository implements SettlementRepository {
     };
   }
 
-  private aggregateMonthlyData(
-    allRows: Record<string, unknown>[],
-    summaryColumnKeys: string[]
-  ): Map<string, { summaries: Record<string, number>; count: number }> {
-    const monthlyData = new Map<string, { summaries: Record<string, number>; count: number }>();
-
-    for (const row of allRows) {
-      const month = row.정산월 as string;
-      if (!month) continue;
-
-      if (!monthlyData.has(month)) {
-        monthlyData.set(month, {
-          summaries: Object.fromEntries(summaryColumnKeys.map(k => [k, 0])),
-          count: 0,
-        });
-      }
-
-      const data = monthlyData.get(month)!;
-      data.count++;
-
-      for (const key of summaryColumnKeys) {
-        const value = Number(row[key]) || 0;
-        data.summaries[key] += value;
-      }
-    }
-
-    return monthlyData;
-  }
 }

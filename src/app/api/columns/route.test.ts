@@ -22,7 +22,10 @@ vi.mock('@/types', () => ({
   ],
 }));
 
+const mockGetCachedColumns = vi.fn();
+
 vi.mock('@/lib/data-cache', () => ({
+  getCachedColumns: (...args: unknown[]) => mockGetCachedColumns(...args),
   invalidateColumnCache: vi.fn(),
 }));
 
@@ -45,7 +48,7 @@ describe('GET /api/columns', () => {
 
   it('인증된 사용자는 컬럼 설정을 반환한다', async () => {
     mockGetSession.mockResolvedValue(mockRegularSession);
-    mockColumnSettingRepo.findAll.mockResolvedValue(mockColumnSettings);
+    mockGetCachedColumns.mockResolvedValue(mockColumnSettings);
 
     const res = await GET();
     const json = await res.json();

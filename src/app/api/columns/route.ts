@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getColumnSettingRepository } from '@/infrastructure/supabase';
 import { DEFAULT_COLUMN_SETTINGS } from '@/types';
-import { invalidateColumnCache } from '@/lib/data-cache';
+import { getCachedColumns, invalidateColumnCache } from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +17,7 @@ export async function GET() {
       );
     }
     
-    const columns = await getColumnSettingRepository().findAll();
+    const columns = await getCachedColumns();
     
     return NextResponse.json({
       success: true,

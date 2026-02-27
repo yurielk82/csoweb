@@ -5,6 +5,35 @@
 
 ---
 
+## [0.18.8] - 2026-02-27
+
+### Performance — 전체 메뉴 성능 전수 검사 & 캐시 확대 적용
+
+#### 월별 합계 RPC 전환 (가장 큰 개선)
+- **`get_monthly_summary()` PostgreSQL 함수 사용**: `fetchAllPaginated` (7,000행+ 로드 후 JS 집계) → **1회 RPC** (DB GROUP BY)
+- `getMonthlySummaryByBusinessNumber`, `getMonthlySummaryByCSOMatching` 모두 RPC 전환
+- 사용하지 않는 `aggregateMonthlyData` private 메서드 제거
+
+#### 회원 관리 캐시 적용
+- **`getCachedUsers()`**: 전체 회원 목록 캐시 (태그: `user-data`)
+- **`getCachedPendingUsers()`**: 승인 대기 회원 목록 캐시 (태그: `user-data`)
+- `/api/users` GET → 캐시 사용으로 전환
+- 사용자 변경 전체 라우트 (register, complete-profile, profile PUT, admin PUT/DELETE, reset-password)에 `invalidateUserCache()` 추가
+
+#### 거래처 매핑 캐시 적용
+- **`getCachedCSOMatchingList()`**: CSO 매칭 전체 목록 캐시 (태그: `cso-matching`)
+- `/api/admin/cso-matching/upsert` GET → 검색어 없으면 캐시, 있으면 DB 직접 조회
+
+#### 컬럼 설정 GET 캐시 전환
+- `/api/columns` GET → 기존 `getCachedColumns()` 사용으로 전환 (1줄 변경)
+
+#### 캐시 무효화 완전성 보강
+- `invalidateUserCache()` 호출이 누락된 6개 라우트에 추가:
+  - `auth/register`, `auth/complete-profile`, `users/profile` PUT
+  - `users/[businessNumber]` PUT/DELETE, `users/reset-password`
+
+---
+
 ## [0.18.7] - 2026-02-27
 
 ### Performance — 데이터 관리 페이지 속도 개선

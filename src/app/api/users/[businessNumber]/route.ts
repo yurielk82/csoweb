@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getUserRepository } from '@/infrastructure/supabase';
+import { invalidateUserCache } from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,6 +59,7 @@ export async function PUT(
     });
     
     if (success) {
+      invalidateUserCache();
       return NextResponse.json({
         success: true,
         message: '회원 정보가 수정되었습니다.',
@@ -105,6 +107,7 @@ export async function DELETE(
     const success = await getUserRepository().delete(businessNumber);
     
     if (success) {
+      invalidateUserCache();
       return NextResponse.json({
         success: true,
         message: '회원이 삭제되었습니다.',

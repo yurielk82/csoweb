@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, hashPassword, verifyPassword } from '@/lib/auth';
 import { getUserRepository } from '@/infrastructure/supabase';
+import { invalidateUserCache } from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -120,6 +121,7 @@ export async function PUT(request: NextRequest) {
     if (Object.keys(updateData).length > 0) {
       const success = await userRepo.update(session.business_number, updateData);
       if (success) {
+        invalidateUserCache();
         return NextResponse.json({
           success: true,
           message: '정보가 변경되었습니다.',

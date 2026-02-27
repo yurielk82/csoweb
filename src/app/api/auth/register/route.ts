@@ -8,6 +8,7 @@ import {
   isValidPassword 
 } from '@/lib/auth';
 import { notifyAdmin } from '@/lib/email';
+import { invalidateUserCache } from '@/lib/data-cache';
 
 export async function POST(request: NextRequest) {
   try {
@@ -92,6 +93,8 @@ export async function POST(request: NextRequest) {
       password_hash: passwordHash,
     });
     
+    invalidateUserCache();
+
     // Notify admin about new registration
     const fullAddress = address2 ? `${address1} ${address2}` : address1;
     await notifyAdmin('registration_request', {
