@@ -303,81 +303,14 @@ export class SupabaseSettlementRepository implements SettlementRepository {
   }
 
   async getStatsByMonth(): Promise<SettlementStatsByMonth> {
-    const { count: totalCount } = await supabase
-      .from('settlements')
-      .select('*', { count: 'exact', head: true });
+    const { data, error } = await supabase.rpc('get_settlement_stats_by_month');
 
-    type MonthRow = {
-      정산월: string | null;
-      처방월: string | null;
-      business_number: string;
-      CSO관리업체: string | null;
-      수량: number | null;
-      금액: number | null;
-      제약수수료_합계: number | null;
-    };
-
-    const allRows = await fetchAllPaginated<MonthRow>(async (page, pageSize) => {
-      const result = await supabase
-        .from('settlements')
-        .select('정산월, 처방월, business_number, CSO관리업체, 수량, 금액, 제약수수료_합계')
-        .range(page * pageSize, (page + 1) * pageSize - 1);
-
-      return result as { data: MonthRow[] | null; error: { message: string } | null };
-    });
-
-    const monthData = new Map<string, {
-      prescriptionMonth: string;
-      count: number;
-      csoSet: Set<string>;
-      quantity: number;
-      amount: number;
-      commission: number;
-    }>();
-    const allBusinesses = new Set<string>();
-
-    for (const s of allRows) {
-      if (s.정산월) {
-        const existing = monthData.get(s.정산월) || {
-          prescriptionMonth: s.처방월 || '',
-          count: 0,
-          csoSet: new Set<string>(),
-          quantity: 0,
-          amount: 0,
-          commission: 0,
-        };
-        existing.count++;
-        if (s.CSO관리업체) {
-          existing.csoSet.add(s.CSO관리업체);
-        }
-        existing.quantity += Number(s.수량) || 0;
-        existing.amount += Number(s.금액) || 0;
-        existing.commission += Number(s.제약수수료_합계) || 0;
-        if (!existing.prescriptionMonth && s.처방월) {
-          existing.prescriptionMonth = s.처방월;
-        }
-        monthData.set(s.정산월, existing);
-      }
-      allBusinesses.add(s.business_number);
+    if (error) {
+      console.error('get_settlement_stats_by_month RPC error:', error);
+      throw new Error(error.message);
     }
 
-    const months = Array.from(monthData.entries())
-      .map(([month, d]) => ({
-        month,
-        prescriptionMonth: d.prescriptionMonth,
-        count: d.count,
-        csoCount: d.csoSet.size,
-        totalQuantity: d.quantity,
-        totalAmount: d.amount,
-        totalCommission: d.commission,
-      }))
-      .sort((a, b) => b.month.localeCompare(a.month));
-
-    return {
-      totalRows: totalCount || allRows.length,
-      totalBusinesses: allBusinesses.size,
-      months,
-    };
+    return data as SettlementStatsByMonth;
   }
 
   async deleteByMonth(month: string): Promise<number> {

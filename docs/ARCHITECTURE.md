@@ -128,6 +128,7 @@ domain/ (인터페이스 정의) ← infrastructure/ (구현체)
 | `getCachedMatchedNames()` | `cso-matching` | POST/DELETE `/api/admin/cso-matching/upsert` |
 | `getCachedAvailableMonths()` | `settlement-data` | POST `/api/upload`, DELETE `/api/settlements/month/[month]` |
 | `getCachedTotals()` | `settlement-data` | (위와 동일) |
+| `getCachedSettlementStats()` | `settlement-data` | POST `/api/upload`, DELETE `/api/settlements/month/[month]` |
 | `getCachedCSOList()` | `user-data` | POST `/api/users/approve`, `/reject`, `/approve-batch` |
 
 ### 통합 init API (`GET /api/dashboard/init`)

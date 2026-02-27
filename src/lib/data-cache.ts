@@ -80,6 +80,15 @@ export const getCachedTotals = unstable_cache(
   { tags: ['settlement-data'] }
 );
 
+// ── Settlement Stats (정산월별 통계 — 데이터 관리 페이지) ──
+// 태그: settlement-data
+// 무효화 시점: POST /api/upload, DELETE /api/settlements/month/[month]
+export const getCachedSettlementStats = unstable_cache(
+  async () => getSettlementRepository().getStatsByMonth(),
+  ['settlement-stats-data'],
+  { tags: ['settlement-data'] }
+);
+
 // ── CSO List (승인된 일반 회원 목록 — 마스터 조회 거래처 드롭다운) ──
 // 태그: user-data
 // 무효화 시점: POST /api/users/approve, POST /api/users/approve-batch, POST /api/users/reject

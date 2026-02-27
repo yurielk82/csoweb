@@ -1,22 +1,22 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getSettlementRepository } from '@/infrastructure/supabase';
+import { getCachedSettlementStats } from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
     const session = await getSession();
-    
+
     if (!session || !session.is_admin) {
       return NextResponse.json(
         { success: false, error: '관리자 권한이 필요합니다.' },
         { status: 403 }
       );
     }
-    
-    const stats = await getSettlementRepository().getStatsByMonth();
-    
+
+    const stats = await getCachedSettlementStats();
+
     return NextResponse.json({
       success: true,
       data: stats,

@@ -5,12 +5,10 @@ vi.mock('@/lib/auth', () => ({
   getSession: vi.fn(),
 }));
 
-const mockSettlementRepo = {
-  getStatsByMonth: vi.fn(),
-};
+const mockGetCachedSettlementStats = vi.fn();
 
-vi.mock('@/infrastructure/supabase', () => ({
-  getSettlementRepository: vi.fn(() => mockSettlementRepo),
+vi.mock('@/lib/data-cache', () => ({
+  getCachedSettlementStats: (...args: unknown[]) => mockGetCachedSettlementStats(...args),
 }));
 
 const { getSession } = await import('@/lib/auth');
@@ -43,7 +41,7 @@ describe('GET /api/settlements/stats', () => {
   it('관리자는 통계를 반환한다', async () => {
     const stats = { totalRows: 500, totalBusinesses: 10, months: [] };
     mockGetSession.mockResolvedValue(mockAdminSession);
-    mockSettlementRepo.getStatsByMonth.mockResolvedValue(stats);
+    mockGetCachedSettlementStats.mockResolvedValue(stats);
 
     const res = await GET();
     const json = await res.json();

@@ -5,6 +5,22 @@
 
 ---
 
+## [0.18.7] - 2026-02-27
+
+### Performance — 데이터 관리 페이지 속도 개선
+
+- **`get_settlement_stats_by_month()` PostgreSQL 함수 생성**: 전체 행 로드 후 JS 집계 → DB에서 GROUP BY로 즉시 집계
+- **`getCachedSettlementStats()` 캐시 추가**: RPC 결과를 `unstable_cache`로 저장 (태그: `settlement-data`)
+- 업로드/삭제 시 자동 무효화 (기존 `invalidateSettlementCache()` 재활용)
+
+#### 변경 전후 비교 (7,122행 기준)
+
+| 항목 | v0.18.6 | v0.18.7 |
+|------|---------|---------|
+| stats 조회 | `fetchAllPaginated` (8회 API 왕복 → JS 집계) | **1회 RPC** (DB GROUP BY) + **캐시** |
+
+---
+
 ## [0.18.6] - 2026-02-27
 
 ### Changed — 관리자 대시보드 & 설정 페이지 개선
