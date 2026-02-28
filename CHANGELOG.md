@@ -5,6 +5,51 @@
 
 ---
 
+## [0.25.4] - 2026-02-28
+
+### 수정 — 회원-매핑 동기화 + 새 매핑 추가 UX 개선
+
+#### 변경
+- 회원 삭제 시 `cso_matching` 테이블에서 해당 사업자번호 매핑 자동 삭제
+- 새 매핑 추가 다이얼로그를 드롭다운 방식으로 변경 — 가입 완료 + CSO 미매핑 회원만 목록에 표시, 사업자번호 수동 입력/검증 단계 제거
+
+#### 수정 파일
+- `src/app/api/users/[businessNumber]/route.ts`
+- `src/components/admin/SettlementIntegrityManager.tsx`
+
+---
+
+## [0.25.3] - 2026-02-28
+
+### 수정 — 거래처 매핑 통계 스코프 연동
+
+처리완료·미가입·CSO미매핑·미가입+미매핑 통계가 항상 정산대상 기준으로만 계산되던 문제 수정.
+
+#### 변경
+- scope 상태 분리: "전체" 클릭 시 전체 데이터 기준, "정산대상" 클릭 시 정산 데이터 기준으로 통계와 필터 모두 전환
+- Admin 대시보드 unmapped 카운트를 서버 집계값(`stats.noCsoMappingCount`)으로 전환
+
+#### 수정 파일
+- `src/app/(main)/admin/page.tsx`
+- `src/components/admin/SettlementIntegrityManager.tsx`
+
+---
+
+## [0.25.2] - 2026-02-28
+
+### 수정 — 회원 승인 시 CSO 매핑 자동 등록 누락
+
+회원가입 시 `cso_matching` upsert가 실패해도 가입이 진행되어, 승인 후에도 매핑이 없는 상태가 발생할 수 있었음.
+
+#### 변경
+- 단일/일괄 승인 API에 매핑 upsert 로직 추가 — 승인 시점에 회사명→사업자번호 매핑 보장
+
+#### 수정 파일
+- `src/app/api/users/approve/route.ts`
+- `src/app/api/users/approve-batch/route.ts`
+
+---
+
 ## [0.25.1] - 2026-02-28
 
 ### 수정 — Auth 폼 6개 디자인 표준 일괄 검수 및 수정
