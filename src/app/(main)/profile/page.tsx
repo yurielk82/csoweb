@@ -313,16 +313,6 @@ export default function ProfilePage() {
     }
   };
 
-  // 주소 포맷팅 함수
-  const formatAddress = () => {
-    if (!profile?.zipcode && !profile?.address1) return '-';
-    const parts = [];
-    if (profile?.zipcode) parts.push(`(${profile.zipcode})`);
-    if (profile?.address1) parts.push(profile.address1);
-    if (profile?.address2) parts.push(profile.address2);
-    return parts.join(' ');
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -340,61 +330,14 @@ export default function ProfilePage() {
           내 정보
         </h1>
         <p className="text-muted-foreground">계정 정보를 확인하고 수정하세요.</p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-muted-foreground">
+          <span>사업자번호: <span className="font-medium text-foreground">{profile?.business_number}</span></span>
+          <span className="text-muted-foreground/40">|</span>
+          <span>{profile?.is_admin ? '관리자' : '일반 업체'}</span>
+          <span className="text-muted-foreground/40">|</span>
+          <span>가입일: {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('ko-KR') : '-'}</span>
+        </div>
       </div>
-
-      {/* Profile Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">기본 정보</CardTitle>
-          <CardDescription>회원 가입 시 등록된 정보입니다.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="text-muted-foreground">사업자번호</Label>
-              <p className="font-medium">{profile?.business_number}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">회원 유형</Label>
-              <p className="font-medium">{profile?.is_admin ? '관리자' : '일반 업체'}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">업체명</Label>
-              <p className="font-medium">{profile?.company_name || '-'}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">대표자명</Label>
-              <p className="font-medium">{profile?.ceo_name || '-'}</p>
-            </div>
-            <div className="col-span-2">
-              <Label className="text-muted-foreground">주소</Label>
-              <p className="font-medium">{formatAddress()}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">연락처1</Label>
-              <p className="font-medium">{profile?.phone1 || '-'}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">연락처2</Label>
-              <p className="font-medium">{profile?.phone2 || '-'}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">이메일</Label>
-              <p className="font-medium">{profile?.email || '-'}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">이메일2</Label>
-              <p className="font-medium">{profile?.email2 || '-'}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">가입일</Label>
-              <p className="font-medium">
-                {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('ko-KR') : '-'}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Company & CEO Info Change */}
       <Card>
