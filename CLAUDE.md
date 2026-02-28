@@ -38,9 +38,18 @@ src/
 ├── lib/              # 유틸리티 (auth, email, excel, supabase)
 └── app/              # Next.js App Router (API + 페이지)
     ├── (auth)/       # 로그인/회원가입 (error.tsx)
-    ├── (main)/       # 메인 레이아웃 (error.tsx, loading.tsx)
-    │   ├── dashboard/  # 정산 조회 (loading.tsx)
-    │   └── admin/      # 관리자 페이지 (loading.tsx)
+    ├── (main)/       # 메인 레이아웃 max-w-screen-xl (error.tsx, loading.tsx)
+    │   ├── dashboard/         # 정산 조회 — wide (loading.tsx)
+    │   ├── monthly-summary/   # 월별 합계 — wide
+    │   ├── (narrow)/          # max-w-3xl 라우트 그룹 (URL 미포함)
+    │   │   └── profile/       # 내 정보
+    │   └── admin/             # 관리자 페이지 — wide (loading.tsx)
+    │       └── (narrow)/      # max-w-3xl 라우트 그룹 (URL 미포함)
+    │           ├── upload/        # 정산서 업로드
+    │           ├── email-settings/ # 이메일 설정
+    │           ├── settings/      # 사이트 설정
+    │           ├── system/        # 시스템 정보
+    │           └── mailmerge/     # 메일머지
     └── api/          # REST API 라우트
 ```
 
@@ -55,11 +64,11 @@ src/
 - `SettlementPagination` — 페이지네이션
 - `SettlementSkeleton` — 스켈레톤 로딩 UI
 
-### 업로드 (admin/upload/page.tsx ~150줄)
+### 업로드 (admin/(narrow)/upload/page.tsx ~150줄)
 - `useFileUpload` — 상태 + 업로드/프리뷰 로직
 - `DropZone` / `MappingDialog` / `UploadResultCard` / `EmailDialog`
 
-### 메일머지 (admin/mailmerge/page.tsx ~143줄)
+### 메일머지 (admin/(narrow)/mailmerge/page.tsx ~143줄)
 - `useMailMerge` — 상태 + SSE 연결 + 발송 로직
 - `MailMergeForm` / `PreviewDialog` / `ProgressPanel` / `SendResult`
 

@@ -5,6 +5,37 @@
 
 ---
 
+## [0.27.5] - 2026-02-28
+
+### 리팩토링 — 레이아웃 max-width 2-Tier 라우트 그룹 표준화
+
+페이지별 개별 max-width 선언을 제거하고, 라우트 그룹 레이아웃으로 자동 적용하는 2-Tier 구조로 전환.
+
+#### 변경
+- `(main)/layout.tsx`: `max-w-screen-2xl` (1536px) → `max-w-screen-xl` (1280px)
+- `(narrow)/layout.tsx` 2개 신규 생성: `max-w-3xl` (768px) 자동 적용
+- 6개 폼/설정 페이지를 `(narrow)` 라우트 그룹으로 이동 + 개별 max-w 선언 제거
+
+| Tier | max-width | 대상 |
+|------|-----------|------|
+| wide | `max-w-screen-xl` (1280px) | dashboard, monthly-summary, admin/* |
+| narrow | `max-w-3xl` (768px) | profile, upload, email-settings, settings, system, mailmerge |
+
+- URL 변경 없음 (라우트 그룹은 URL 세그먼트에 미포함)
+
+#### 수정 파일
+- `src/app/(main)/layout.tsx`
+- `src/app/(main)/(narrow)/layout.tsx` (신규)
+- `src/app/(main)/admin/(narrow)/layout.tsx` (신규)
+- `src/app/(main)/(narrow)/profile/page.tsx` (이동)
+- `src/app/(main)/admin/(narrow)/upload/page.tsx` (이동)
+- `src/app/(main)/admin/(narrow)/email-settings/page.tsx` (이동)
+- `src/app/(main)/admin/(narrow)/system/page.tsx` (이동)
+- `src/app/(main)/admin/(narrow)/settings/page.tsx` (이동)
+- `src/app/(main)/admin/(narrow)/mailmerge/page.tsx` (이동)
+
+---
+
 ## [0.26.2] - 2026-02-28
 
 ### 개선 — 로그인 페이지 브랜드 색상 적용

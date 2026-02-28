@@ -82,9 +82,18 @@ src/
     ├── robots.ts        크롤링 차단
     ├── sitemap.ts       사이트맵 (로그인만)
     ├── (auth)/          로그인, 회원가입 등 인증 페이지 + error.tsx
-    ├── (main)/          메인 레이아웃 + error.tsx + loading.tsx
-    │   ├── dashboard/   정산 조회 + loading.tsx (SettlementSkeleton)
-    │   └── admin/       관리자 페이지 + loading.tsx (AdminSkeleton)
+    ├── (main)/          메인 레이아웃 (max-w-screen-xl) + error.tsx + loading.tsx
+    │   ├── dashboard/          정산 조회 — wide + loading.tsx (SettlementSkeleton)
+    │   ├── monthly-summary/    월별 합계 — wide
+    │   ├── (narrow)/           max-w-3xl 라우트 그룹 (URL 미포함)
+    │   │   └── profile/        내 정보
+    │   └── admin/              관리자 페이지 — wide + loading.tsx (AdminSkeleton)
+    │       └── (narrow)/       max-w-3xl 라우트 그룹 (URL 미포함)
+    │           ├── upload/         정산서 업로드
+    │           ├── email-settings/ 이메일 설정
+    │           ├── settings/       사이트 설정
+    │           ├── system/         시스템 정보
+    │           └── mailmerge/      메일머지
     └── api/             API 라우트 핸들러
 ```
 
@@ -214,6 +223,19 @@ const user = await userRepo.findByBusinessNumber('1234567890')
 import { authenticateUser } from '@/application/auth'
 const result = await authenticateUser(businessNumber, password)
 ```
+
+---
+
+## 2-Tier 레이아웃 (max-width 표준화)
+
+페이지별 max-width를 개별 선언하지 않고, 라우트 그룹 레이아웃으로 자동 적용합니다.
+
+| Tier | max-width | 대상 | 근거 |
+|------|-----------|------|------|
+| **wide** | `max-w-screen-xl` (1280px) | 테이블, 대시보드, 데이터 그리드 | `(main)/layout.tsx` 기본값 |
+| **narrow** | `max-w-3xl` (768px) | 폼, 설정, 업로드 | `(narrow)/layout.tsx` 중첩 적용 |
+
+라우트 그룹 `(narrow)`는 URL 세그먼트에 포함되지 않으므로, `/profile`, `/admin/upload` 등 기존 URL이 그대로 유지됩니다.
 
 ---
 
