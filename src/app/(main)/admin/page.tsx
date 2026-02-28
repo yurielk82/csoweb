@@ -223,8 +223,12 @@ export default function AdminDashboardPage() {
           setPendingCount(pendingData.data.length);
         }
 
-        if (integrityData.success && integrityData.data?.stats) {
-          setUnmappedCount(integrityData.data.stats.noCsoMappingCount ?? 0);
+        if (integrityData.success && Array.isArray(integrityData.data?.results)) {
+          const noCso = integrityData.data.results.filter(
+            (r: { last_settlement_month: string | null; cso_company_names: string[] }) =>
+              r.last_settlement_month !== null && r.cso_company_names.length === 0
+          ).length;
+          setUnmappedCount(noCso);
         }
       } catch (error) {
         console.error('Fetch stats error:', error);
