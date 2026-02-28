@@ -17,9 +17,9 @@ export async function GET(request: NextRequest) {
 
     const month = request.nextUrl.searchParams.get('month');
 
-    if (!month || !/^\d{6}$/.test(month)) {
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
       return NextResponse.json(
-        { success: false, error: '정산월(YYYYMM) 형식이 올바르지 않습니다.' },
+        { success: false, error: '정산월(YYYY-MM) 형식이 올바르지 않습니다.' },
         { status: 400 }
       );
     }

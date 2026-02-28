@@ -59,20 +59,21 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
+/** monthKey: "YYYY-MM" 형식 (DB 정산월 포맷) */
 function monthKeyToLabel(monthKey: string): string {
-  const year = monthKey.slice(0, 4);
-  const month = parseInt(monthKey.slice(4, 6), 10);
+  const [year, mm] = monthKey.split('-');
+  const month = parseInt(mm, 10);
   return `${year}년 ${month}월`;
 }
 
 function getMonthDateRange(monthKey: string): { startDate: string; endDate: string } {
-  const year = parseInt(monthKey.slice(0, 4), 10);
-  const month = parseInt(monthKey.slice(4, 6), 10);
+  const [yearStr, mm] = monthKey.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(mm, 10);
   const lastDay = new Date(year, month, 0).getDate();
-  const mm = String(month).padStart(2, '0');
   return {
-    startDate: `${year}-${mm}-01`,
-    endDate: `${year}-${mm}-${String(lastDay).padStart(2, '0')}`,
+    startDate: `${yearStr}-${mm}-01`,
+    endDate: `${yearStr}-${mm}-${String(lastDay).padStart(2, '0')}`,
   };
 }
 
@@ -93,7 +94,7 @@ const quickActions = [
 export default function AdminDashboardPage() {
   const now = new Date();
   const currentMonthNum = now.getMonth() + 1;
-  const currentMonthKey = `${now.getFullYear()}${String(currentMonthNum).padStart(2, '0')}`;
+  const currentMonthKey = `${now.getFullYear()}-${String(currentMonthNum).padStart(2, '0')}`;
 
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
