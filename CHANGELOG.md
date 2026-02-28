@@ -5,6 +5,39 @@
 
 ---
 
+## [0.25.1] - 2026-02-28
+
+### 수정 — Auth 폼 6개 디자인 표준 일괄 검수 및 수정
+
+프로필 페이지 검수(v0.24.2) 이후 (auth) 그룹 폼 페이지 6개를 동일 기준으로 감사. 하드코딩 색상 대량 위반, arbitrary values, autoComplete/type 누락 전체 수정.
+
+#### 추가
+- `success`/`warning` CSS 변수 + Tailwind 색상 매핑 (light/dark)
+- `docs/DESIGN_SYSTEM.md` — 색상 토큰 및 사용 규칙 문서화
+- 전 Input 필드에 `autoComplete` 속성 추가
+- 전화번호 Input `type="text"` → `type="tel"` 전환
+
+#### 변경
+- Auth 페이지 배경: `bg-gradient-to-br from-blue-50 to-indigo-100` → `bg-muted` 통일
+- 하드코딩 색상 전량 시맨틱 토큰 교체 (green-*, red-*, blue-*, yellow-*, orange-*, amber-*, gray-*)
+- `text-[10px]` → `text-xs`, `shadow-[0_0_15px_rgba(...)]` → `shadow-lg shadow-success/40` — arbitrary value 제거
+- `register/page.tsx` BIZ_STATUS_CONFIG 색상 시맨틱화
+- `reset-password/page.tsx` 비밀번호 강도 바/텍스트 색상 시맨틱화
+- Admin 대시보드 unmapped 카운트: 클라이언트 필터 → `stats.noCsoMappingCount` 서버 집계값 사용
+
+#### 수정 파일 (9개)
+- `src/app/globals.css` — CSS 변수 추가
+- `tailwind.config.ts` — 색상 매핑 추가
+- `src/app/(auth)/login/page.tsx`
+- `src/app/(auth)/register/page.tsx`
+- `src/app/(auth)/complete-profile/page.tsx`
+- `src/app/(auth)/forgot-password/page.tsx`
+- `src/app/(auth)/reset-password/page.tsx`
+- `src/app/(auth)/change-password/page.tsx`
+- `src/app/(main)/admin/page.tsx`
+
+---
+
 ## [0.25.0] - 2026-02-28
 
 ### 추가 — 빠른 작업 카드에 "해야 할 일" 배지 표시
