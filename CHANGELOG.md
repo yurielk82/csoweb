@@ -5,76 +5,26 @@
 
 ---
 
-## [0.28.4] - 2026-02-28
+## [0.27.0~0.28.4] - 2026-02-28
 
-### 개선 — 관리자 대시보드 빠른작업 그리드 통합
+### 개선 — 관리자 대시보드 UI 리디자인
 
-#### 변경
-- 빠른작업 그룹 분리 제거, 단일 4열 그리드로 통합 (동일 크기 카드)
-
-#### 수정 파일
-- `src/app/(main)/admin/page.tsx`
-
----
-
-## [0.28.3] - 2026-02-28
-
-### 수정 — 헤더 메뉴 반응형 정렬 수정
+Liquid Glass 시도/철회 후 Glass-like 카드 + 단일 4열 그리드 확정.
 
 #### 변경
-- `container` → `max-w-screen-xl` 통일, 대시보드와 헤더 너비 일치
-
-#### 수정 파일
-- `src/components/shared/header.tsx`
-
----
-
-## [0.28.2] - 2026-02-28
-
-### 개선 — 관리자 대시보드 빠른작업 그룹 분리 + 이메일 카드 개선
-
-#### 변경
-- 빠른작업을 "업무 프로세스" / "도구" 2개 그룹으로 분리
-- 이메일 관련 카드 UI 개선
-
-#### 수정 파일
-- `src/app/(main)/admin/page.tsx`
-
----
-
-## [0.28.1] - 2026-02-28
-
-### 개선 — 관리자 대시보드 Glass-like 디자인
-
-v0.28.0 Bento Grid revert 후, 기존 레이아웃 유지하면서 카드/버튼만 Glass 스타일 적용.
-
-#### 변경
-- 멀티레이어 소프트 쉐도우 + 인셋 하이라이트 + oklch 7색 아이콘 + hover lift/scale
-
-#### 수정 파일
-- `src/app/(main)/admin/page.tsx`
-
----
-
-## [0.28.0] - 2026-02-28 (reverted)
-
-### 추가 — 관리자 대시보드 Bento Grid + Liquid Glass 리디자인
-
-- 관리자 대시보드 Bento Grid + Liquid Glass 리디자인 → 즉시 revert
-
----
-
-## [0.27.6] - 2026-02-28
-
-### 리팩토링 — 관리자 대시보드 Liquid Glass 제거
-
-#### 변경
-- dashboard-glass-bg + Orb 배경 제거, shadcn Card + Tailwind 표준으로 전환
-- `globals.css` 대시보드 전용 Liquid Glass CSS 186줄 제거
+- v0.27.0: Liquid Glass 전면 재구성 (KPI glass-kpi-card + Quick Action glass-action-card + 배경 orbs)
+- v0.27.1~v0.27.4: 수수료 단위·배지 톤 다운, 점진적 로딩, full-bleed 배경, 푸터 div 중첩 제거
+- v0.27.6: Liquid Glass 제거 — shadcn Card + Tailwind 표준으로 전환
+- v0.28.0: Bento Grid + Liquid Glass 재시도 → 즉시 revert
+- v0.28.1~v0.28.2: Glass-like 디자인 적용 + 빠른작업 그룹 분리 + 이메일 카드 개선
+- v0.28.3: 헤더 메뉴 반응형 정렬 수정 (`container` → `max-w-screen-xl` 통일)
+- v0.28.4: 빠른작업 그룹 분리 제거, 단일 4열 그리드로 통합 (동일 크기 카드)
 
 #### 수정 파일
 - `src/app/(main)/admin/page.tsx`
 - `src/app/globals.css`
+- `src/components/shared/header.tsx`
+- `docs/DESIGN_SYSTEM.md`
 
 ---
 
@@ -109,134 +59,21 @@ v0.28.0 Bento Grid revert 후, 기존 레이아웃 유지하면서 카드/버튼
 
 ---
 
-## [0.27.4] - 2026-02-28
+## [0.26.0~0.26.4] - 2026-02-28
 
-### 리팩토링 — 대시보드 푸터 div 중첩 제거
-
-#### 변경
-- wrapper div → dashboard-glass-footer 병합, Fragment 통합
-
-#### 수정 파일
-- `src/app/(main)/admin/page.tsx`
-
----
-
-## [0.27.3] - 2026-02-28
-
-### 개선 — 관리자 대시보드 full-bleed 배경
+### 개선 — 로그인 페이지 Liquid Glass 리디자인 + 쿨톤 색상 확정 / 내정보 페이지 구조 개선
 
 #### 변경
-- dashboard-glass-bg에 `calc(-50vw + 50%)` 적용, 뷰포트 전체 확장
-- layout에 `overflow-x-hidden` 추가
-
-#### 수정 파일
-- `src/app/(main)/admin/page.tsx`
-- `src/app/(main)/layout.tsx`
-
----
-
-## [0.27.2] - 2026-02-28
-
-### 개선 — 관리자 대시보드 점진적 로딩
-
-#### 변경
-- Promise.all 전체 블로킹 → KPI/배지/시스템 3그룹 독립 병렬 페칭 + 인라인 스켈레톤
-
-#### 수정 파일
-- `src/app/(main)/admin/page.tsx`
-
----
-
-## [0.27.1] - 2026-02-28
-
-### 개선 — 대시보드 수수료 단위·배지 톤 다운
-
-#### 변경
-- 총수수료 ₩ 통화 기호 제거, 배지 destructive → secondary, 아이콘 채도 감소
-
-#### 수정 파일
-- `src/app/(main)/admin/page.tsx`
-
----
-
-## [0.27.0] - 2026-02-28
-
-### 추가 — 관리자 대시보드 Liquid Glass 전면 재구성
-
-#### 변경
-- KPI 카드 5개 → glass-kpi-card, Quick Action 7개 → glass-action-card
-- 배경 glass 그래디언트 + floating orbs
-- `DESIGN_SYSTEM.md` 토큰 문서화
-
-#### 수정 파일
-- `src/app/(main)/admin/page.tsx`
-- `src/app/globals.css`
-- `docs/DESIGN_SYSTEM.md`
-
----
-
-## [0.26.4] - 2026-02-28
-
-### 개선 — Liquid Glass 쿨톤 복원
-
-#### 변경
-- 오렌지+화이트 팔레트 폐기, 시안/바이올렛/틸 원본 Hue 복원
-- 라이트 모드 유지: 화이트 배경 + 패스텔 쿨톤 오브
+- v0.26.0: 로그인 페이지 Liquid Glass 리디자인
+- v0.26.1: 내정보 페이지 구조 개선 (CardHeader 추가, 읽기 전용 영역 분리) + 관리자 대시보드 텍스트 간소화
+- v0.26.2: 한국유니온제약 브랜드 컬러(오렌지+남색) 적용
+- v0.26.3: 다크 네이비 → 웜 화이트 그래디언트 라이트 테마 전환
+- v0.26.4: 오렌지+화이트 폐기, 시안/바이올렛/틸 쿨톤 복원
 
 #### 수정 파일
 - `src/app/globals.css`
-
----
-
-## [0.26.3] - 2026-02-28
-
-### 변경 — 로그인 페이지 라이트 테마 전환
-
-#### 변경
-- 다크 네이비 배경 → 웜 화이트 그래디언트
-- 텍스트·카드·입력·버튼·링크·푸터 명암 반전
-
-#### 수정 파일
-- `src/app/globals.css`
-
----
-
-## [0.26.2] - 2026-02-28
-
-### 개선 — 로그인 페이지 브랜드 색상 적용
-
-#### 변경
-- 한국유니온제약 브랜드 컬러(오렌지+남색)에 맞춰 Liquid Glass 로그인 화면 색상 전환
-- 배경 그래디언트: 바이올렛(Hue 220-280) → 딥 네이비(Hue 245-255)
-- 떠다니는 오브: 시안/바이올렛/청초록 → 오렌지/딥앰버/웜골드(Hue 55, 40, 75)
-- 아이콘 글로우·버튼·입력 포커스·링크: 시안(Hue 190) → 오렌지(Hue 55)
-- 유지: 카드/입력 배경(흰색), 텍스트 색상, 에러 알림(빨강), 애니메이션 타이밍
-
-#### 수정 파일
-- `src/app/globals.css`
-
----
-
-## [0.26.1] - 2026-02-28
-
-### 개선 — 내정보 페이지 구조 개선 + 관리자 대시보드 텍스트 간소화
-
-#### 변경
-- 프로필 카드에 CardHeader 추가 — "내정보 수정" 제목 + 설명으로 비밀번호 변경 카드와 시각적 일관성 확보
-- 사업자번호·권한·가입일을 카드 내 disabled Input으로 이동 (헤더 인라인 텍스트 제거)
-- 읽기 전용 영역과 편집 영역을 border-t 구분선으로 분리
-- 관리자 대시보드 배지 텍스트 간소화 ("미업로드" → "업로드 필요", "N건 대기" → "N" 등)
-- 관리자 대시보드 통계 카드 단위 텍스트("개월", "건") 제거
-
-#### 수정 파일
 - `src/app/(main)/profile/page.tsx`
 - `src/app/(main)/admin/page.tsx`
-
----
-
-## [0.26.0] - 2026-02-28
-
-### 추가 — 로그인 페이지 Liquid Glass 리디자인
 
 ---
 
@@ -548,138 +385,53 @@ v0.23.0 대시보드 피드백 반영.
 
 ---
 
-## [0.20.11] - 2026-02-28
+## [0.20.5, 0.20.10~0.20.11] - 2026-02-27~28
 
-### 수정 — 네비게이션 hover 메뉴 Radix Portal 제거
+### 개선 — 네비게이션 그룹 메뉴 hover 전환
 
 #### 변경
-- Radix DropdownMenu Portal 제거, 순수 hover 구현으로 전환
-- hover 열림/닫힘 타이머 기반 안정적 UX
+- v0.20.5: 그룹 제목 클릭 시 첫 번째 메뉴로 이동 (스플릿 버튼)
+- v0.20.10: 데스크톱 그룹 드롭다운을 클릭 → hover 트리거로 전환
+- v0.20.11: Radix Portal 제거, 순수 hover 구현 (타이머 기반 안정적 UX)
 
 #### 수정 파일
 - `src/components/shared/header.tsx`
 
 ---
 
-## [0.20.10] - 2026-02-28
+## [0.20.1~0.20.4, 0.20.8~0.20.9] - 2026-02-27
 
-### 추가 — 네비게이션 그룹 메뉴 hover로 열림
+### 개선 — 이메일 이력 UX 강화
 
-#### 변경
-- 데스크톱 그룹 드롭다운을 클릭 → hover 트리거로 전환
-
-#### 수정 파일
-- `src/components/shared/header.tsx`
-
----
-
-## [0.20.9] - 2026-02-28
-
-### 수정 — 이메일 이력 상태 컬럼 맨 앞 이동
+Progressive Rendering, 날짜 프리셋, 오류 내용 열, 컬럼 재배치.
 
 #### 변경
-- 상태 컬럼을 테이블 첫 번째 열로 이동
-- Tooltip `asChild` 제거
+- v0.20.1: Progressive Rendering (스켈레톤) + 날짜 프리셋 필터 (7/30/90일/전체)
+- v0.20.2: 실패 행 빨간 배경 + 에러 메시지 인라인 표시
+- v0.20.3: "오류 내용" 독립 열 추가 (12개 에러 패턴 매핑)
+- v0.20.4: 열 너비 최적화 + 오류 설명 구체화 (14패턴)
+- v0.20.8: 컬럼 너비 auto + 오류 내용 Tooltip 전환
+- v0.20.9: 상태 컬럼 맨 앞 이동
 
 #### 수정 파일
 - `src/app/(main)/admin/emails/page.tsx`
+- `src/domain/email/types.ts`
+- `src/domain/email/EmailLogRepository.ts`
+- `src/infrastructure/supabase/SupabaseEmailLogRepository.ts`
+- `src/app/api/email/logs/route.ts`
 
 ---
 
-## [0.20.8] - 2026-02-27
+## [0.20.6~0.20.7] - 2026-02-27
 
-### 수정 — 이메일 이력 테이블 컬럼 너비 + 오류 내용 툴팁
+### 개선 — 대시보드 시스템정보 디자인 재정비
 
 #### 변경
-- 컬럼 너비 `auto` 적용
-- 오류 내용 표시를 인라인에서 Tooltip으로 전환
+- v0.20.6: Card 래퍼 제거, 독립 카드 가로 나열 (`flex flex-wrap`)
+- v0.20.7: shadcn Card 패턴 통일, 7열 반응형 그리드, Badge variant 표준 사용
 
 #### 수정 파일
-- `src/app/(main)/admin/emails/page.tsx`
-
----
-
-## [0.20.7] - 2026-02-27
-
-### 개선 — 대시보드 시스템 정보 디자인 재정비
-
-- Stats Cards와 동일한 shadcn `Card` + `CardHeader` + `CardContent` 패턴 적용
-- 7열 반응형 그리드 (`2col → 3col → 4col → 7col`)
-- 커스텀 색상 제거, shadcn Badge `variant` 표준 사용
-- 아이콘 `text-muted-foreground`로 Stats Cards 패턴 통일
-
----
-
-## [0.20.6] - 2026-02-27
-
-### 개선 — 대시보드 시스템 정보 레이아웃
-
-- Card 래퍼("시스템 정보" 테두리) 제거
-- 각 항목을 독립 카드로 가로 나열 (`flex flex-wrap`)
-- 내용에 맞게 카드 크기 자동 조절, 모바일에서 자연스럽게 줄바꿈
-
----
-
-## [0.20.5] - 2026-02-27
-
-### 개선 — 네비게이션 그룹 제목 클릭 시 첫 번째 메뉴로 이동
-
-- 데스크톱: 그룹 라벨 클릭 → 첫 번째 하위 메뉴로 이동, ▾ 클릭 → 드롭다운 열기 (스플릿 버튼)
-- 모바일: 그룹 라벨 클릭 → 첫 번째 하위 메뉴로 이동 + 호버 시 색상 변경
-
----
-
-## [0.20.4] - 2026-02-27
-
-### 개선 — 이메일 이력 테이블 열 너비 + 오류 설명 구체화
-
-- `table-fixed` 적용, 오류 내용 열을 남은 공간 전체(`auto`)로 확보
-- 발송일시/수신자/유형/상태 열 너비 축소하여 오류 내용에 공간 할당
-- 에러 설명을 관리자가 원인 파악 + 조치할 수 있는 수준으로 구체화 (12→14패턴)
-- 패턴 미매칭 시 원문 에러 메시지를 폴백으로 직접 표시
-
----
-
-## [0.20.3] - 2026-02-27
-
-### 개선 — 이메일 이력 오류 내용 열
-
-- "오류 내용" 독립 열 추가 — 실패 행에 한글 요약 표시
-- 12개 에러 패턴 매핑: SMTP 설정, 인증 실패, 연결 실패, 주소 오류, 시간 초과, 한도 초과, 반송 등
-- 매칭되지 않는 에러는 "발송 중 오류 발생"으로 폴백
-- 원문 에러 메시지는 `title` 속성으로 호버 시 확인 가능
-- 이전 인라인/Tooltip 방식 제거, 단일 열로 정리
-
----
-
-## [0.20.2] - 2026-02-27
-
-### 개선 — 이메일 이력 실패 사유 표시
-
-- 발송 실패 행: 빨간 배경 하이라이트 + 제목 아래에 에러 메시지 인라인 표시
-- 실패 Badge 호버 시 Tooltip으로 전체 에러 메시지 확인 가능
-- `AlertCircle` 아이콘으로 실패 사유 시각적 강조
-
----
-
-## [0.20.1] - 2026-02-27
-
-### 개선 — 이메일 이력 페이지 UX 강화
-
-#### Progressive Rendering
-- 전체 화면 블로킹 로더 제거, 스켈레톤(Stats/Table) 표시 후 데이터 도착 시 교체
-- 헤더에 Loader2 스피너로 백그라운드 로딩 상태 표시
-
-#### 날짜 프리셋 필터
-- 기간 선택: 최근 7일 / 30일 / 90일 / 전체 (기본값: 30일)
-- Stats 카드도 선택 기간에 맞춰 집계 (전체 기간 고정이 아닌 동적 필터링)
-- Repository `findAll` + `getStats` 모두 `start_date` / `end_date` 지원
-
-#### 기타
-- 테이블 하단 건수 표시 (200건 제한 안내 포함)
-- 빈 상태 메시지가 선택된 기간에 따라 동적 변경
-
-**변경 파일**: `domain/email/types.ts`, `domain/email/EmailLogRepository.ts`, `infrastructure/supabase/SupabaseEmailLogRepository.ts`, `api/email/logs/route.ts`, `admin/emails/page.tsx`
+- `src/app/(main)/admin/page.tsx`
 
 ---
 
@@ -841,48 +593,21 @@ v0.23.0 대시보드 피드백 반영.
 
 ---
 
-## [0.18.8] - 2026-02-27
+## [0.18.3~0.18.5, 0.18.7~0.18.8] - 2026-02-27
 
-### Performance — 전체 메뉴 성능 전수 검사 & 캐시 확대 적용
+### Performance — 서버사이드 데이터 캐시 + 통합 init API
 
-#### 월별 합계 RPC 전환 (가장 큰 개선)
-- **`get_monthly_summary()` PostgreSQL 함수 사용**: `fetchAllPaginated` (7,000행+ 로드 후 JS 집계) → **1회 RPC** (DB GROUP BY)
-- `getMonthlySummaryByBusinessNumber`, `getMonthlySummaryByCSOMatching` 모두 RPC 전환
-- 사용하지 않는 `aggregateMonthlyData` private 메서드 제거
+#### 변경
+- v0.18.3: 통합 init API (`GET /api/dashboard/init`) — 대시보드 초기 API 4회 → 1회, React.memo 적용
+- v0.18.4: `unstable_cache` + `revalidateTag` 캐시 레이어 도입 (컬럼/회사/CSO매칭/정산월)
+- v0.18.5: 마스터 조회 초기 API 2회 → 1회, `getCachedCSOList()` 캐시 추가
+- v0.18.7: 데이터 관리 `get_settlement_stats_by_month()` RPC + 캐시
+- v0.18.8: 전체 메뉴 캐시 확대 (회원/거래처매핑/컬럼), 월별 합계 RPC 전환, 캐시 무효화 보강
 
-#### 회원 관리 캐시 적용
-- **`getCachedUsers()`**: 전체 회원 목록 캐시 (태그: `user-data`)
-- **`getCachedPendingUsers()`**: 승인 대기 회원 목록 캐시 (태그: `user-data`)
-- `/api/users` GET → 캐시 사용으로 전환
-- 사용자 변경 전체 라우트 (register, complete-profile, profile PUT, admin PUT/DELETE, reset-password)에 `invalidateUserCache()` 추가
-
-#### 거래처 매핑 캐시 적용
-- **`getCachedCSOMatchingList()`**: CSO 매칭 전체 목록 캐시 (태그: `cso-matching`)
-- `/api/admin/cso-matching/upsert` GET → 검색어 없으면 캐시, 있으면 DB 직접 조회
-
-#### 컬럼 설정 GET 캐시 전환
-- `/api/columns` GET → 기존 `getCachedColumns()` 사용으로 전환 (1줄 변경)
-
-#### 캐시 무효화 완전성 보강
-- `invalidateUserCache()` 호출이 누락된 6개 라우트에 추가:
-  - `auth/register`, `auth/complete-profile`, `users/profile` PUT
-  - `users/[businessNumber]` PUT/DELETE, `users/reset-password`
-
----
-
-## [0.18.7] - 2026-02-27
-
-### Performance — 데이터 관리 페이지 속도 개선
-
-- **`get_settlement_stats_by_month()` PostgreSQL 함수 생성**: 전체 행 로드 후 JS 집계 → DB에서 GROUP BY로 즉시 집계
-- **`getCachedSettlementStats()` 캐시 추가**: RPC 결과를 `unstable_cache`로 저장 (태그: `settlement-data`)
-- 업로드/삭제 시 자동 무효화 (기존 `invalidateSettlementCache()` 재활용)
-
-#### 변경 전후 비교 (7,122행 기준)
-
-| 항목 | v0.18.6 | v0.18.7 |
-|------|---------|---------|
-| stats 조회 | `fetchAllPaginated` (8회 API 왕복 → JS 집계) | **1회 RPC** (DB GROUP BY) + **캐시** |
+#### 수정 파일
+- `src/lib/data-cache.ts` (신규)
+- `src/app/api/dashboard/init/route.ts` (신규)
+- 다수 API 라우트 캐시 적용/무효화 추가
 
 ---
 
@@ -903,111 +628,18 @@ v0.23.0 대시보드 피드백 반영.
 
 ---
 
-## [0.18.5] - 2026-02-27
+## [0.18.1~0.18.2] - 2026-02-27
 
-### Performance — 마스터 조회 초기 로드 최적화
+### Performance — 정산 API DB 페이지네이션 + RPC 전환 + 인덱스
 
-#### API 호출 통합
-- 마스터 조회 초기화: **2개 API (init + users) → 1개 API** (`include_cso_list=true`)
-- 별도 `/api/users` cold start 제거 — 가장 큰 체감 개선
+#### 변경
+- v0.18.1: DB 레벨 페이지네이션 (`Supabase .range()` + `count: 'exact'`), 합계 별도 경량 쿼리, 클라이언트 초기화 병렬화, 마스터조회 지연 로딩
+- v0.18.2: 합계 계산 RPC (`get_settlement_totals()`), 정산월 목록 RPC (`get_distinct_settlement_months()`), CSO관리업체 인덱스 추가
 
-#### CSO 목록 캐시
-- **신규 `getCachedCSOList()`**: 승인된 일반 회원 목록을 `unstable_cache`로 캐시 (태그: `user-data`)
-- 무효화 시점: 회원 승인(`approve`), 거부(`reject`), 일괄 승인(`approve-batch`)
-
-#### 변경 전후 비교
-
-| 항목 | v0.18.4 | v0.18.5 |
-|------|---------|---------|
-| 마스터 조회 초기 API | 2회 (init + users) | **1회** (init) |
-| Lambda cold start | 2회 | **1회** |
-| CSO 목록 조회 | 매번 DB (전체 유저 로드) | **캐시** (승인 시만 무효화) |
-
----
-
-## [0.18.4] - 2026-02-27
-
-### Performance — 서버사이드 데이터 캐시 (`unstable_cache` + `revalidateTag`)
-
-#### 캐시 레이어 도입
-- **신규 `src/lib/data-cache.ts`**: `unstable_cache`로 데이터를 Vercel Data Cache에 저장, `revalidateTag`로 변경 시점에만 무효화
-- 캐시 대상: 컬럼 설정(`column-settings`), 회사 정보(`footer-data`), CSO 매칭(`cso-matching`), 정산월 목록/합계(`settlement-data`)
-- 변경 빈도: 정산/CSO 매칭(월 1회), 컬럼/회사(거의 없음) → 매 요청 DB 조회 불필요
-
-#### 캐시 무효화 포인트
-- `POST /api/upload`, `DELETE /api/settlements/month/[month]` → `invalidateSettlementCache()`
-- `PUT /api/columns`, `DELETE /api/columns` → `invalidateColumnCache()`
-- `POST /api/admin/cso-matching/upsert`, `DELETE /api/admin/cso-matching/upsert` → `invalidateCSOMatchingCache()`
-
-#### 변경 전후 비교
-
-| 항목 | v0.18.3 | v0.18.4 |
-|------|---------|---------|
-| 컬럼 설정 조회 | 매 요청 DB | **캐시** (변경 시만 무효화) |
-| CSO 매칭 조회 | 매 요청 DB | **캐시** (변경 시만 무효화) |
-| 정산월 목록/합계 | 매 요청 DB (RPC) | **캐시** (업로드/삭제 시만 무효화) |
-| 회사 정보 | `cache: 'no-store'` 매번 DB | **캐시** (설정 변경 시만 무효화) |
-
----
-
-## [0.18.3] - 2026-02-27
-
-### Performance — 사이트 전체 성능 리뷰 반영
-
-#### 통합 init API (가장 큰 개선)
-- **신규 `GET /api/dashboard/init`**: columns + yearMonths + notice + settlements를 1회 API 호출로 반환
-- 대시보드 초기 로드: **4개 API (getSession × 4, cold start × 4) → 1개 API (getSession × 1, cold start × 1)**
-- 마스터 조회 초기 로드: **4개 API → 2개 API** (init + users)
-
-#### 기타 최적화
-- `/api/columns` route에서 `initialize()` 제거 — 매 요청마다 불필요한 DB 조회 1회 제거
-- `SettlementTable`, `SummaryCards`에 `React.memo` 적용 — 부모 리렌더 시 불필요한 grouping 재계산 방지
-- `useSettlementData` 훅 리팩토링 — init에서 첫 페이지 데이터까지 받아 이중 fetch 방지
-
-#### 변경 전후 비교
-
-| 항목 | v0.18.2 | v0.18.3 |
-|------|---------|---------|
-| 대시보드 초기 API 호출 | 4회 (columns + year-months + company + settlements) | **1회** (dashboard/init) |
-| getSession() 호출 | 5회 (layout + API × 4) | **2회** (layout + init) |
-| Vercel cold start 노출 | 4회 (각 API 별도 Lambda) | **1회** |
-| SettlementTable 리렌더 | 매번 grouping 재계산 | React.memo로 변경 시에만 |
-
----
-
-## [0.18.2] - 2026-02-27
-
-### Performance
-
-- **합계 계산 RPC 전환**: `fetchAllPaginated` → PostgreSQL `get_settlement_totals()` 함수 (SUM을 DB에서 직접 처리, 전체 행 로드 완전 제거)
-- **정산월 목록 RPC 전환**: `fetchAllPaginated` → PostgreSQL `get_distinct_settlement_months()` 함수 (DISTINCT를 DB에서 직접 처리)
-- **DB 인덱스 추가**: `CSO관리업체` 단일 인덱스 + `(정산월, CSO관리업체)` 복합 인덱스 — IN/EQ 필터 성능 개선
-- **Supabase `.rpc()` 지원 추가**: supabase 래퍼에 `.rpc()` 메서드 노출
-
-### 변경 전후 비교 (7,122행 기준)
-
-| 작업 | v0.18.1 | v0.18.2 |
-|------|---------|---------|
-| 합계 계산 | 8회 API 왕복 (1000행씩 전체 로드) | **1회 RPC** (DB SUM) |
-| 정산월 목록 | 8회 API 왕복 (전체 로드 후 JS Set) | **1회 RPC** (DB DISTINCT) |
-| CSO 필터 | 인덱스 없음 (Full Scan) | **B-tree 인덱스** |
-
----
-
-## [0.18.1] - 2026-02-27
-
-### Performance
-
-- **정산서 API — DB 레벨 페이지네이션**: 전건 로드 후 JS slice → Supabase `.range()` + `count: 'exact'` + `ilike` 검색으로 전환. 5만건 기준 응답 시간 수초 → ~100ms
-- **합계(totals) 별도 경량 쿼리**: 정산 데이터 페이지네이션과 합계 계산을 `Promise.all`로 병렬 실행. 합계는 4개 숫자 컬럼만 조회
-- **클라이언트 초기화 병렬화**: `useSettlementData` 훅의 columns/year-months/notice 3개 API를 `Promise.all`로 병렬 호출
-- **마스터조회 지연 로딩**: 페이지 진입 시 정산 데이터 자동 로드 제거 → 거래처 선택 또는 "전체 거래처 조회" 클릭 후 50건만 DB에서 로드
-
-### Changed
-
-- **Repository 인터페이스 확장**: `findAllPaginated`, `findByCSOMatchingPaginated`, `getTotals`, `getTotalsByCSOMatching` 4개 메서드 추가
-- **마스터조회 검색 UX**: 입력 즉시 JS 필터 → Enter/검색 버튼으로 서버 `ilike` 검색 전환
-- **마스터조회 초기 화면**: 빈 테이블 대신 "거래처를 선택하여 조회를 시작하세요" 안내 카드 표시
+#### 수정 파일
+- Repository 인터페이스 확장 (`findAllPaginated`, `getTotals` 등 4개 메서드)
+- Supabase `.rpc()` 지원 추가
+- DB 인덱스: `CSO관리업체` 단일 + `(정산월, CSO관리업체)` 복합
 
 ---
 
