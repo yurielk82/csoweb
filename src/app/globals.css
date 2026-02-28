@@ -557,7 +557,7 @@
   background: var(--glass-bg-hover);
 }
 
-/* Icon Container — 원형 + 반투명 배경 + 글로우 */
+/* Icon Container — 원형 + 반투명 배경 + 은은한 글로우 */
 .glass-icon {
   --icon-hue: 255;
   display: flex;
@@ -566,13 +566,13 @@
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
-  background: oklch(0.65 0.18 var(--icon-hue) / 15%);
-  box-shadow: 0 0 20px oklch(0.65 0.18 var(--icon-hue) / 20%);
+  background: oklch(0.7 0.08 var(--icon-hue) / 12%);
+  box-shadow: 0 0 16px oklch(0.7 0.08 var(--icon-hue) / 10%);
   transition: box-shadow var(--glass-duration) var(--glass-easing);
 }
 
 .glass-icon svg {
-  color: oklch(0.55 0.2 var(--icon-hue));
+  color: oklch(0.55 0.1 var(--icon-hue));
   width: 1.25rem;
   height: 1.25rem;
 }

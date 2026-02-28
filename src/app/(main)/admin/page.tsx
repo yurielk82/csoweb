@@ -51,10 +51,8 @@ interface EmailStats {
 
 // ── Helpers ──
 
-function formatCurrency(value: number): string {
+function formatNumber(value: number): string {
   return new Intl.NumberFormat('ko-KR', {
-    style: 'currency',
-    currency: 'KRW',
     maximumFractionDigits: 0,
   }).format(value);
 }
@@ -260,19 +258,19 @@ export default function AdminDashboardPage() {
 
   // 빠른 작업 배지 맵
   const currentMonthUploaded = months.some(m => m.month === currentMonthKey);
-  const badgeMap: Record<string, { label: string; variant: 'destructive' | 'secondary' }> = {};
+  const badgeMap: Record<string, { label: string; variant: 'secondary' | 'outline' }> = {};
 
   if (!currentMonthUploaded) {
-    badgeMap['/admin/upload'] = { label: '업로드 필요', variant: 'destructive' };
+    badgeMap['/admin/upload'] = { label: '업로드 필요', variant: 'secondary' };
   }
   if (pendingCount > 0) {
-    badgeMap['/admin/members?filter=pending'] = { label: `${pendingCount}`, variant: 'destructive' };
+    badgeMap['/admin/members?filter=pending'] = { label: `${pendingCount}`, variant: 'secondary' };
   }
   if (unmappedCount > 0) {
-    badgeMap['/admin/integrity'] = { label: `${unmappedCount}`, variant: 'destructive' };
+    badgeMap['/admin/integrity'] = { label: `${unmappedCount}`, variant: 'secondary' };
   }
   if (csoBusinessNumbers.length > 0 && (!emailStats || emailStats.total === 0)) {
-    badgeMap['/admin/mailmerge'] = { label: '발송 필요', variant: 'secondary' };
+    badgeMap['/admin/mailmerge'] = { label: '발송 필요', variant: 'outline' };
   }
 
   // ── Loading ──
@@ -399,7 +397,7 @@ export default function AdminDashboardPage() {
               <span className="text-sm font-medium">총수수료</span>
               <Banknote className="h-4 w-4 text-muted-foreground" />
             </div>
-            <div className="text-2xl font-bold">{formatCurrency(totalCommission)}</div>
+            <div className="text-2xl font-bold">{formatNumber(totalCommission)}</div>
             <p className="text-xs text-muted-foreground">{selectedMonthLabel} 정산 수수료</p>
           </div>
 
