@@ -33,6 +33,15 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+
+    /* Dashboard Glass tokens */
+    --glass-border: oklch(0 0 0 / 8%);
+    --glass-radius: 1.25rem;
+    --glass-shadow: 0 1px 3px oklch(0 0 0 / 6%), 0 8px 24px oklch(0 0 0 / 6%);
+    --glass-shadow-hover: 0 4px 12px oklch(0 0 0 / 8%), 0 16px 40px oklch(0 0 0 / 8%);
+    --glass-shadow-inset: inset 0 1px 0 oklch(1 0 0 / 70%);
+    --glass-easing: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --glass-duration: 200ms;
   }
 
   .dark {
@@ -441,5 +450,129 @@
 
 .login-footer-copyright {
   border-top: 1px solid oklch(0 0 0 / 8%);
+}
+
+/* ===== Dashboard Glass ===== */
+
+/* KPI Card */
+.glass-kpi-card {
+  border-radius: var(--glass-radius);
+  border: 1px solid var(--glass-border);
+  background: hsl(var(--card));
+  padding: 1.25rem;
+  box-shadow: var(--glass-shadow), var(--glass-shadow-inset);
+  transition:
+    transform var(--glass-duration) var(--glass-easing),
+    box-shadow var(--glass-duration) var(--glass-easing);
+}
+
+.glass-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--glass-shadow-hover), var(--glass-shadow-inset);
+}
+
+/* Quick Action Card */
+.glass-action-card {
+  border-radius: var(--glass-radius);
+  border: 1px solid var(--glass-border);
+  background: hsl(var(--card));
+  padding: 1.25rem;
+  box-shadow: var(--glass-shadow), var(--glass-shadow-inset);
+  cursor: pointer;
+  height: 100%;
+  transition:
+    transform var(--glass-duration) var(--glass-easing),
+    box-shadow var(--glass-duration) var(--glass-easing);
+}
+
+.glass-action-card:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: var(--glass-shadow-hover), var(--glass-shadow-inset);
+}
+
+.glass-action-card:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Icon Container (Quick Action — circle with glow) */
+.glass-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+}
+
+/* Icon Hue Colors — 7 variants */
+.glass-icon-blue { color: oklch(0.55 0.15 250); }
+.glass-icon-blue.glass-icon {
+  background: oklch(0.55 0.15 250 / 12%);
+  box-shadow: 0 0 20px oklch(0.55 0.15 250 / 15%);
+}
+
+.glass-icon-green { color: oklch(0.55 0.15 150); }
+.glass-icon-green.glass-icon {
+  background: oklch(0.55 0.15 150 / 12%);
+  box-shadow: 0 0 20px oklch(0.55 0.15 150 / 15%);
+}
+
+.glass-icon-cyan { color: oklch(0.55 0.15 200); }
+.glass-icon-cyan.glass-icon {
+  background: oklch(0.55 0.15 200 / 12%);
+  box-shadow: 0 0 20px oklch(0.55 0.15 200 / 15%);
+}
+
+.glass-icon-purple { color: oklch(0.55 0.15 290); }
+.glass-icon-purple.glass-icon {
+  background: oklch(0.55 0.15 290 / 12%);
+  box-shadow: 0 0 20px oklch(0.55 0.15 290 / 15%);
+}
+
+.glass-icon-orange { color: oklch(0.60 0.15 60); }
+.glass-icon-orange.glass-icon {
+  background: oklch(0.60 0.15 60 / 12%);
+  box-shadow: 0 0 20px oklch(0.60 0.15 60 / 15%);
+}
+
+.glass-icon-pink { color: oklch(0.55 0.15 340); }
+.glass-icon-pink.glass-icon {
+  background: oklch(0.55 0.15 340 / 12%);
+  box-shadow: 0 0 20px oklch(0.55 0.15 340 / 15%);
+}
+
+.glass-icon-teal { color: oklch(0.55 0.12 180); }
+.glass-icon-teal.glass-icon {
+  background: oklch(0.55 0.12 180 / 12%);
+  box-shadow: 0 0 20px oklch(0.55 0.12 180 / 15%);
+}
+
+/* Status Dots */
+.dashboard-status-dot-ok {
+  display: inline-block;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: oklch(0.65 0.2 150);
+  box-shadow: 0 0 6px oklch(0.65 0.2 150 / 50%);
+}
+
+.dashboard-status-dot-fail {
+  display: inline-block;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: oklch(0.60 0.2 25);
+  box-shadow: 0 0 6px oklch(0.60 0.2 25 / 50%);
+}
+
+/* Dashboard Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .glass-kpi-card:hover,
+  .glass-action-card:hover,
+  .glass-action-card:active {
+    transform: none;
+  }
 }
 

@@ -78,13 +78,13 @@ function getMonthDateRange(monthKey: string): { startDate: string; endDate: stri
 // ── Quick Actions ──
 
 const quickActions = [
-  { href: '/admin/upload', icon: Upload, title: '정산서 업로드', description: '정산서 데이터 업로드' },
-  { href: '/admin/members?filter=pending', icon: Users, title: '회원 승인', description: '대기 중인 회원 승인' },
-  { href: '/admin/integrity', icon: Link2, title: '거래처 매핑', description: 'CSO 관리업체 매칭 상태 검수' },
-  { href: '/admin/data', icon: Database, title: '데이터 관리', description: '정산 데이터 관리' },
-  { href: '/admin/columns', icon: Columns, title: '컬럼 설정', description: '표시 컬럼 관리' },
-  { href: '/admin/mailmerge', icon: MailPlus, title: '메일머지', description: '일괄 이메일 발송' },
-  { href: '/admin/emails', icon: Mail, title: '이메일 이력', description: '발송 내역 조회' },
+  { href: '/admin/upload', icon: Upload, title: '정산서 업로드', description: '정산서 데이터 업로드', iconColor: 'glass-icon-blue' },
+  { href: '/admin/members?filter=pending', icon: Users, title: '회원 승인', description: '대기 중인 회원 승인', iconColor: 'glass-icon-green' },
+  { href: '/admin/integrity', icon: Link2, title: '거래처 매핑', description: 'CSO 관리업체 매칭 상태 검수', iconColor: 'glass-icon-cyan' },
+  { href: '/admin/data', icon: Database, title: '데이터 관리', description: '정산 데이터 관리', iconColor: 'glass-icon-purple' },
+  { href: '/admin/columns', icon: Columns, title: '컬럼 설정', description: '표시 컬럼 관리', iconColor: 'glass-icon-orange' },
+  { href: '/admin/mailmerge', icon: MailPlus, title: '메일머지', description: '일괄 이메일 발송', iconColor: 'glass-icon-pink' },
+  { href: '/admin/emails', icon: Mail, title: '이메일 이력', description: '발송 내역 조회', iconColor: 'glass-icon-purple' },
 ];
 
 // ── Component ──
@@ -313,10 +313,10 @@ export default function AdminDashboardPage() {
         {/* KPI 카드 (5개) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {/* CSO 업체 */}
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
+          <div className="glass-kpi-card">
             <div className="flex items-center justify-between pb-2">
               <span className="text-sm font-medium">CSO 업체</span>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <TrendingUp className="h-4 w-4 glass-icon-teal" />
             </div>
             {kpiLoaded ? (
               <>
@@ -332,10 +332,10 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* 접속 업체 */}
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
+          <div className="glass-kpi-card">
             <div className="flex items-center justify-between pb-2">
               <span className="text-sm font-medium">접속 업체</span>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <Users className="h-4 w-4 glass-icon-green" />
             </div>
             {!kpiLoaded ? (
               <>
@@ -363,10 +363,10 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* 총수수료 */}
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
+          <div className="glass-kpi-card">
             <div className="flex items-center justify-between pb-2">
               <span className="text-sm font-medium">총수수료</span>
-              <Banknote className="h-4 w-4 text-muted-foreground" />
+              <Banknote className="h-4 w-4 glass-icon-orange" />
             </div>
             {kpiLoaded ? (
               <>
@@ -382,10 +382,10 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* 총 정산월 */}
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
+          <div className="glass-kpi-card">
             <div className="flex items-center justify-between pb-2">
               <span className="text-sm font-medium">총 정산월</span>
-              <Database className="h-4 w-4 text-muted-foreground" />
+              <Database className="h-4 w-4 glass-icon-purple" />
             </div>
             {kpiLoaded ? (
               <>
@@ -401,10 +401,10 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* 이메일 발송 */}
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
+          <div className="glass-kpi-card">
             <div className="flex items-center justify-between pb-2">
               <span className="text-sm font-medium">이메일 발송</span>
-              <Mail className="h-4 w-4 text-muted-foreground" />
+              <Mail className="h-4 w-4 glass-icon-pink" />
             </div>
             {emailLoading ? (
               <>
@@ -435,10 +435,10 @@ export default function AdminDashboardPage() {
               const badge = badgeMap[action.href];
               return (
                 <Link key={action.href} href={action.href}>
-                  <div className="rounded-xl border bg-card p-5 shadow-sm cursor-pointer h-full transition-colors hover:bg-muted/50">
+                  <div className="glass-action-card">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted">
-                        <action.icon />
+                      <div className={`glass-icon ${action.iconColor}`}>
+                        <action.icon className="h-5 w-5" />
                       </div>
                       {badge && (
                         <Badge variant={badge.variant} className="text-xs">
@@ -486,9 +486,7 @@ export default function AdminDashboardPage() {
                 return [...connected, ...disconnected].map(({ label, ok }) => (
                   <span key={label} className="flex items-center gap-1">
                     <span
-                      className={`inline-block w-1.5 h-1.5 rounded-full ${
-                        ok ? 'bg-success' : 'bg-destructive'
-                      }`}
+                      className={ok ? 'dashboard-status-dot-ok' : 'dashboard-status-dot-fail'}
                     />
                     <span className={ok ? '' : 'text-destructive'}>{label}</span>
                   </span>

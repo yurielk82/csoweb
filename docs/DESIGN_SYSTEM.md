@@ -81,21 +81,37 @@ CSO 정산 포털 디자인 토큰 및 색상 시스템 정의.
 | `.login-icon-glow` | 아이콘 네온 글로우 + pulse 애니메이션 |
 | `.login-glass-footer` | 반투명 유리 푸터 |
 
-#### 대시보드 전용
+#### 대시보드 전용 (v0.28.1 — Glass-like 카드/버튼)
+
+배경은 흰색(`bg-background`) 유지. `backdrop-filter` 대신 멀티레이어 소프트 쉐도우 + 인셋 하이라이트 + oklch 컬러 아이콘으로 Glass-like 시각 품질 확보.
+
+**CSS 변수** (`:root`)
+
+| 변수 | 값 | 용도 |
+|------|-----|------|
+| `--glass-border` | `oklch(0 0 0 / 8%)` | 카드 테두리 |
+| `--glass-radius` | `1.25rem` | 카드 border-radius |
+| `--glass-shadow` | 멀티레이어 소프트 쉐도우 | 카드 기본 그림자 |
+| `--glass-shadow-hover` | 확대 소프트 쉐도우 | 호버 시 그림자 |
+| `--glass-shadow-inset` | `inset 0 1px 0 oklch(1 0 0 / 70%)` | 상단 인셋 하이라이트 |
+| `--glass-easing` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Spring easing |
+| `--glass-duration` | `200ms` | 트랜지션 시간 |
+
+**클래스**
 
 | 클래스 | 용도 |
 |--------|------|
-| `.dashboard-glass-bg` | 대시보드 그래디언트 배경 |
-| `.dashboard-orb-{1,2}` | 배경 오브 (로그인보다 작고 연함) |
-| `.glass-kpi-card` | KPI 카드 (frosted glass) |
-| `.glass-action-card` | Quick Action 카드 (hover lift + scale) |
-| `.glass-icon` | 아이콘 글로우 컨테이너 (원형, `--icon-hue` 기반) |
-| `.glass-icon-{color}` | 아이콘 hue modifier (blue/green/red/cyan/purple/orange/pink) |
-| `.glass-select` | Select 트리거 glass 스타일 |
-| `.dashboard-glass-footer` | 시스템 상태 footer (반투명) |
-| `.dashboard-status-dot` | 상태 표시 dot (ok: green glow, fail: red glow) |
+| `.glass-kpi-card` | KPI 카드 — 소프트 쉐도우 + 인셋 하이라이트 + hover translateY(-2px) |
+| `.glass-action-card` | Quick Action 카드 — hover translateY(-3px) scale(1.02) + active press |
+| `.glass-icon` | 아이콘 글로우 컨테이너 (2.5rem 원형, Quick Action 전용) |
+| `.glass-icon-{color}` | 아이콘 hue 7색 — blue/green/cyan/purple/orange/pink/teal (oklch) |
+| `.dashboard-status-dot-ok` | 상태 dot 정상 — oklch green + box-shadow glow |
+| `.dashboard-status-dot-fail` | 상태 dot 실패 — oklch red + box-shadow glow |
 
-`prefers-reduced-motion: reduce` 시 모든 애니메이션 정지.
+**KPI 아이콘**: `.glass-icon` 래핑 없이 `h-4 w-4 glass-icon-{color}` 색상만 적용.
+**Quick Action 아이콘**: `.glass-icon glass-icon-{color}` 원형 배경 + 글로우 + `h-5 w-5` 아이콘.
+
+`prefers-reduced-motion: reduce` 시 hover lift/scale 비활성화.
 
 ## 파일 위치
 
