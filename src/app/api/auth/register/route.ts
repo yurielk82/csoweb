@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     // CSO 매핑 자동 생성: 회사명 → 사업자번호 (실패해도 가입에 영향 없음)
     try {
       const supabase = getSupabase();
-      await supabase
+      const { error: matchError } = await supabase
         .from('cso_matching')
         .upsert(
           {
@@ -109,8 +109,12 @@ export async function POST(request: NextRequest) {
           },
           { onConflict: 'cso_company_name', ignoreDuplicates: true }
         );
-      invalidateCSOMatchingCache();
-      console.log(`CSO 매핑 자동 생성 (회원가입): ${company_name} → ${normalizedBN}`);
+      if (matchError) {
+        console.error('CSO 매핑 자동 생성 DB 에러:', matchError.message, matchError.details);
+      } else {
+        invalidateCSOMatchingCache();
+        console.log(`CSO 매핑 자동 생성 (회원가입): ${company_name} → ${normalizedBN}`);
+      }
     } catch (error) {
       console.error('CSO 매핑 자동 생성 실패 (회원가입은 정상 처리됨):', error);
     }
