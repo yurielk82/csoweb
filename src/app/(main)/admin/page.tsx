@@ -78,13 +78,13 @@ function getMonthDateRange(monthKey: string): { startDate: string; endDate: stri
 // ── Quick Actions ──
 
 const quickActions = [
-  { href: '/admin/upload', icon: Upload, title: '정산서 업로드', description: '정산서 데이터 업로드', color: 'glass-icon-blue' },
-  { href: '/admin/members?filter=pending', icon: Users, title: '회원 승인', description: '대기 중인 회원 승인', color: 'glass-icon-green' },
-  { href: '/admin/integrity', icon: Link2, title: '거래처 매핑', description: 'CSO 관리업체 매칭 상태 검수', color: 'glass-icon-red' },
-  { href: '/admin/data', icon: Database, title: '데이터 관리', description: '정산 데이터 관리', color: 'glass-icon-cyan' },
-  { href: '/admin/columns', icon: Columns, title: '컬럼 설정', description: '표시 컬럼 관리', color: 'glass-icon-purple' },
-  { href: '/admin/mailmerge', icon: MailPlus, title: '메일머지', description: '일괄 이메일 발송', color: 'glass-icon-orange' },
-  { href: '/admin/emails', icon: Mail, title: '이메일 이력', description: '발송 내역 조회', color: 'glass-icon-pink' },
+  { href: '/admin/upload', icon: Upload, title: '정산서 업로드', description: '정산서 데이터 업로드' },
+  { href: '/admin/members?filter=pending', icon: Users, title: '회원 승인', description: '대기 중인 회원 승인' },
+  { href: '/admin/integrity', icon: Link2, title: '거래처 매핑', description: 'CSO 관리업체 매칭 상태 검수' },
+  { href: '/admin/data', icon: Database, title: '데이터 관리', description: '정산 데이터 관리' },
+  { href: '/admin/columns', icon: Columns, title: '컬럼 설정', description: '표시 컬럼 관리' },
+  { href: '/admin/mailmerge', icon: MailPlus, title: '메일머지', description: '일괄 이메일 발송' },
+  { href: '/admin/emails', icon: Mail, title: '이메일 이력', description: '발송 내역 조회' },
 ];
 
 // ── Component ──
@@ -284,12 +284,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="dashboard-glass-bg flex flex-col flex-1 -my-6 px-4 sm:px-6 lg:px-8 py-6">
-      {/* Floating Orbs */}
-      <div className="dashboard-orb dashboard-orb-1" />
-      <div className="dashboard-orb dashboard-orb-2" />
-
-      <div className="relative z-10 space-y-6">
+    <div className="flex flex-col flex-1 space-y-6">
         {/* Header + Month Select */}
         <div className="flex items-end justify-between gap-4">
           <div>
@@ -298,7 +293,7 @@ export default function AdminDashboardPage() {
           </div>
           {kpiLoaded ? (
             <Select value={selectedMonth} onValueChange={handleMonthChange}>
-              <SelectTrigger className="w-36 glass-select">
+              <SelectTrigger className="w-36">
                 <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
                 <SelectValue />
               </SelectTrigger>
@@ -318,7 +313,7 @@ export default function AdminDashboardPage() {
         {/* KPI 카드 (5개) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {/* CSO 업체 */}
-          <div className="glass-kpi-card p-5">
+          <div className="rounded-xl border bg-card p-5 shadow-sm">
             <div className="flex items-center justify-between pb-2">
               <span className="text-sm font-medium">CSO 업체</span>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -337,7 +332,7 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* 접속 업체 */}
-          <div className="glass-kpi-card p-5">
+          <div className="rounded-xl border bg-card p-5 shadow-sm">
             <div className="flex items-center justify-between pb-2">
               <span className="text-sm font-medium">접속 업체</span>
               <Users className="h-4 w-4 text-muted-foreground" />
@@ -368,7 +363,7 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* 총수수료 */}
-          <div className="glass-kpi-card p-5">
+          <div className="rounded-xl border bg-card p-5 shadow-sm">
             <div className="flex items-center justify-between pb-2">
               <span className="text-sm font-medium">총수수료</span>
               <Banknote className="h-4 w-4 text-muted-foreground" />
@@ -387,7 +382,7 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* 총 정산월 */}
-          <div className="glass-kpi-card p-5">
+          <div className="rounded-xl border bg-card p-5 shadow-sm">
             <div className="flex items-center justify-between pb-2">
               <span className="text-sm font-medium">총 정산월</span>
               <Database className="h-4 w-4 text-muted-foreground" />
@@ -406,7 +401,7 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* 이메일 발송 */}
-          <div className="glass-kpi-card p-5">
+          <div className="rounded-xl border bg-card p-5 shadow-sm">
             <div className="flex items-center justify-between pb-2">
               <span className="text-sm font-medium">이메일 발송</span>
               <Mail className="h-4 w-4 text-muted-foreground" />
@@ -440,9 +435,9 @@ export default function AdminDashboardPage() {
               const badge = badgeMap[action.href];
               return (
                 <Link key={action.href} href={action.href}>
-                  <div className="glass-action-card p-5 cursor-pointer h-full">
+                  <div className="rounded-xl border bg-card p-5 shadow-sm cursor-pointer h-full transition-colors hover:bg-muted/50">
                     <div className="flex items-center justify-between">
-                      <div className={`glass-icon ${action.color}`}>
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted">
                         <action.icon />
                       </div>
                       {badge && (
@@ -459,10 +454,9 @@ export default function AdminDashboardPage() {
             })}
           </div>
         </div>
-      </div>
 
       {/* System Footer */}
-      <div className="dashboard-glass-footer relative z-10 mt-auto pt-8 text-xs text-muted-foreground">
+      <div className="mt-auto pt-6 border-t text-xs text-muted-foreground">
         <div className="flex items-center gap-3 flex-wrap">
           {systemLoaded ? (
             <>
@@ -492,8 +486,8 @@ export default function AdminDashboardPage() {
                 return [...connected, ...disconnected].map(({ label, ok }) => (
                   <span key={label} className="flex items-center gap-1">
                     <span
-                      className={`dashboard-status-dot ${
-                        ok ? 'dashboard-status-dot-ok' : 'dashboard-status-dot-fail'
+                      className={`inline-block w-1.5 h-1.5 rounded-full ${
+                        ok ? 'bg-success' : 'bg-destructive'
                       }`}
                     />
                     <span className={ok ? '' : 'text-destructive'}>{label}</span>
