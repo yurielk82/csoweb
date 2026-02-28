@@ -108,7 +108,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen flex flex-col bg-muted">
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
@@ -139,6 +139,7 @@ export default function LoginPage() {
                   maxLength={12}
                   required
                   disabled={loading}
+                  autoComplete="off"
                 />
               </div>
               <div className="space-y-2">
@@ -151,6 +152,7 @@ export default function LoginPage() {
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
                   disabled={loading}
+                  autoComplete="current-password"
                 />
               </div>
             </CardContent>
@@ -236,7 +238,7 @@ export default function LoginPage() {
                 height={16}
                 className="h-4 w-auto"
               />
-              <span className="text-[10px]">공공누리</span>
+              <span className="text-xs">공공누리</span>
             </a>
             <span className="text-muted-foreground/30">|</span>
             {/* CC BY 4.0 */}
@@ -248,7 +250,7 @@ export default function LoginPage() {
             >
               <Image src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="CC" width={14} height={14} className="h-3.5 w-3.5" />
               <Image src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="BY" width={14} height={14} className="h-3.5 w-3.5" />
-              <span className="text-[10px]">CC BY 4.0</span>
+              <span className="text-xs">CC BY 4.0</span>
             </a>
           </div>
         </div>

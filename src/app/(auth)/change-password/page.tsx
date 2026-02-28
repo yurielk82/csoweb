@@ -115,19 +115,19 @@ export default function ChangePasswordPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-muted">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-muted p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-yellow-100 rounded-full">
-              <AlertTriangle className="h-8 w-8 text-yellow-600" />
+            <div className="p-3 bg-warning/10 rounded-full">
+              <AlertTriangle className="h-8 w-8 text-warning" />
             </div>
           </div>
           <CardTitle className="text-2xl">비밀번호 변경 필요</CardTitle>
@@ -141,9 +141,9 @@ export default function ChangePasswordPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            <Alert variant="destructive" className="bg-yellow-50 border-yellow-200">
-              <AlertTriangle className="h-4 w-4 text-yellow-600" />
-              <AlertDescription className="text-yellow-800">
+            <Alert variant="destructive" className="bg-warning/10 border-warning/20">
+              <AlertTriangle className="h-4 w-4 text-warning" />
+              <AlertDescription className="text-warning">
                 임시 비밀번호로 로그인하셨습니다. 새 비밀번호를 설정해주세요.
               </AlertDescription>
             </Alert>
@@ -165,6 +165,7 @@ export default function ChangePasswordPage() {
                 required
                 disabled={saving}
                 minLength={6}
+                autoComplete="new-password"
               />
             </div>
             <div className="space-y-2">
@@ -178,6 +179,7 @@ export default function ChangePasswordPage() {
                 required
                 disabled={saving}
                 minLength={6}
+                autoComplete="new-password"
               />
             </div>
           </CardContent>

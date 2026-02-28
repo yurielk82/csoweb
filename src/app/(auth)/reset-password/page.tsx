@@ -46,10 +46,10 @@ function ResetPasswordContent() {
     if (/[0-9]/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
     
-    if (score <= 2) return { score, label: '약함', color: 'bg-red-500' };
-    if (score <= 3) return { score, label: '보통', color: 'bg-yellow-500' };
-    if (score <= 4) return { score, label: '강함', color: 'bg-green-500' };
-    return { score, label: '매우 강함', color: 'bg-green-600' };
+    if (score <= 2) return { score, label: '약함', color: 'bg-destructive' };
+    if (score <= 3) return { score, label: '보통', color: 'bg-warning' };
+    if (score <= 4) return { score, label: '강함', color: 'bg-success' };
+    return { score, label: '매우 강함', color: 'bg-success' };
   };
 
   const passwordStrength = getPasswordStrength(formData.new_password);
@@ -136,7 +136,7 @@ function ResetPasswordContent() {
   // 로딩 상태
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-muted p-4">
         <Card className="w-full max-w-md">
           <CardContent className="py-12 text-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
@@ -150,22 +150,22 @@ function ResetPasswordContent() {
   // 토큰 에러 상태
   if (tokenError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-muted p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="p-3 bg-red-100 rounded-full">
-                <XCircle className="h-8 w-8 text-red-600" />
+              <div className="p-3 bg-destructive/10 rounded-full">
+                <XCircle className="h-8 w-8 text-destructive" />
               </div>
             </div>
-            <CardTitle className="text-2xl text-red-600">링크 만료</CardTitle>
+            <CardTitle className="text-2xl text-destructive">링크 만료</CardTitle>
             <CardDescription className="mt-2">
               {tokenError}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Alert variant="destructive" className="bg-red-50 border-red-200">
-              <AlertDescription className="text-sm text-red-800">
+            <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
+              <AlertDescription className="text-sm text-destructive">
                 비밀번호 재설정 링크는 30분 동안만 유효하며, 1회만 사용 가능합니다.
               </AlertDescription>
             </Alert>
@@ -191,15 +191,15 @@ function ResetPasswordContent() {
   // 성공 상태
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-muted p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="p-3 bg-green-100 rounded-full">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+              <div className="p-3 bg-success/10 rounded-full">
+                <CheckCircle className="h-8 w-8 text-success" />
               </div>
             </div>
-            <CardTitle className="text-2xl text-green-600">비밀번호 변경 완료!</CardTitle>
+            <CardTitle className="text-2xl text-success">비밀번호 변경 완료!</CardTitle>
             <CardDescription className="mt-2">
               비밀번호가 성공적으로 변경되었습니다.
               <br />
@@ -209,9 +209,9 @@ function ResetPasswordContent() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Alert className="bg-green-50 border-green-200">
-              <Shield className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-sm text-green-800">
+            <Alert className="bg-success/10 border-success/20">
+              <Shield className="h-4 w-4 text-success" />
+              <AlertDescription className="text-sm text-success">
                 새 비밀번호로 로그인해 주세요.
               </AlertDescription>
             </Alert>
@@ -230,7 +230,7 @@ function ResetPasswordContent() {
 
   // 비밀번호 입력 폼
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-muted p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
@@ -270,6 +270,7 @@ function ResetPasswordContent() {
                   disabled={submitting}
                   minLength={6}
                   className="pr-10"
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
@@ -287,14 +288,14 @@ function ResetPasswordContent() {
                       <div
                         key={i}
                         className={`h-1 flex-1 rounded ${
-                          i <= passwordStrength.score ? passwordStrength.color : 'bg-gray-200'
+                          i <= passwordStrength.score ? passwordStrength.color : 'bg-muted'
                         }`}
                       />
                     ))}
                   </div>
                   <p className={`text-xs ${
-                    passwordStrength.score <= 2 ? 'text-red-500' : 
-                    passwordStrength.score <= 3 ? 'text-yellow-600' : 'text-green-600'
+                    passwordStrength.score <= 2 ? 'text-destructive' :
+                    passwordStrength.score <= 3 ? 'text-warning' : 'text-success'
                   }`}>
                     비밀번호 강도: {passwordStrength.label}
                   </p>
@@ -315,6 +316,7 @@ function ResetPasswordContent() {
                   disabled={submitting}
                   minLength={6}
                   className="pr-10"
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
@@ -325,18 +327,18 @@ function ResetPasswordContent() {
                 </button>
               </div>
               {formData.confirm_password && formData.new_password !== formData.confirm_password && (
-                <p className="text-xs text-red-500">비밀번호가 일치하지 않습니다.</p>
+                <p className="text-xs text-destructive">비밀번호가 일치하지 않습니다.</p>
               )}
               {formData.confirm_password && formData.new_password === formData.confirm_password && (
-                <p className="text-xs text-green-600 flex items-center gap-1">
+                <p className="text-xs text-success flex items-center gap-1">
                   <CheckCircle className="h-3 w-3" /> 비밀번호가 일치합니다.
                 </p>
               )}
             </div>
 
-            <Alert className="bg-amber-50 border-amber-200">
-              <Shield className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="text-xs text-amber-800">
+            <Alert className="bg-warning/10 border-warning/20">
+              <Shield className="h-4 w-4 text-warning" />
+              <AlertDescription className="text-xs text-warning">
                 <strong>안전한 비밀번호 팁:</strong>
                 <ul className="list-disc list-inside mt-1 space-y-0.5">
                   <li>8자 이상 권장</li>
@@ -374,7 +376,7 @@ function ResetPasswordContent() {
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-muted">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     }>

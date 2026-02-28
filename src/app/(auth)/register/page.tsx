@@ -57,9 +57,9 @@ const INITIAL_BIZ_VERIFICATION: BizVerification = {
 
 // 사업자 상태 코드별 설정
 const BIZ_STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string; borderColor: string; icon: typeof CheckCircle }> = {
-  '01': { label: '계속사업자', color: 'text-green-700', bgColor: 'bg-green-50', borderColor: 'border-green-200', icon: ShieldCheck },
-  '02': { label: '휴업자', color: 'text-orange-700', bgColor: 'bg-orange-50', borderColor: 'border-orange-200', icon: AlertTriangle },
-  '03': { label: '폐업자', color: 'text-red-700', bgColor: 'bg-red-50', borderColor: 'border-red-200', icon: XCircle },
+  '01': { label: '계속사업자', color: 'text-success', bgColor: 'bg-success/10', borderColor: 'border-success/20', icon: ShieldCheck },
+  '02': { label: '휴업자', color: 'text-warning', bgColor: 'bg-warning/10', borderColor: 'border-warning/20', icon: AlertTriangle },
+  '03': { label: '폐업자', color: 'text-destructive', bgColor: 'bg-destructive/10', borderColor: 'border-destructive/20', icon: XCircle },
 };
 
 export default function RegisterPage() {
@@ -305,12 +305,12 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-muted p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="p-3 bg-green-100 rounded-full">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+              <div className="p-3 bg-success/10 rounded-full">
+                <CheckCircle className="h-8 w-8 text-success" />
               </div>
             </div>
             <CardTitle className="text-2xl">회원가입 신청 완료</CardTitle>
@@ -333,7 +333,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-muted p-4">
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
@@ -364,6 +364,7 @@ export default function RegisterPage() {
                 maxLength={12}
                 required
                 disabled={loading}
+                autoComplete="off"
               />
 
               {/* 국세청 인증 결과 UI */}
@@ -385,6 +386,7 @@ export default function RegisterPage() {
                 onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
                 required
                 disabled={loading}
+                autoComplete="organization"
               />
             </div>
 
@@ -399,6 +401,7 @@ export default function RegisterPage() {
                 onChange={(e) => setFormData({ ...formData, ceo_name: e.target.value })}
                 required
                 disabled={loading}
+                autoComplete="name"
               />
             </div>
 
@@ -415,6 +418,7 @@ export default function RegisterPage() {
                   required
                   disabled={loading}
                   className="w-28"
+                  autoComplete="postal-code"
                 />
                 <Button
                   type="button"
@@ -434,6 +438,7 @@ export default function RegisterPage() {
                 readOnly
                 required
                 disabled={loading}
+                autoComplete="address-line1"
               />
               <Input
                 id="address2"
@@ -442,6 +447,7 @@ export default function RegisterPage() {
                 value={formData.address2}
                 onChange={(e) => setFormData({ ...formData, address2: e.target.value })}
                 disabled={loading}
+                autoComplete="address-line2"
               />
             </div>
 
@@ -451,25 +457,27 @@ export default function RegisterPage() {
                 <Label htmlFor="phone1">연락처1 *</Label>
                 <Input
                   id="phone1"
-                  type="text"
+                  type="tel"
                   placeholder="010-0000-0000"
                   value={formData.phone1}
                   onChange={(e) => handlePhoneChange('phone1', e.target.value)}
                   maxLength={13}
                   required
                   disabled={loading}
+                  autoComplete="tel"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone2">연락처2</Label>
                 <Input
                   id="phone2"
-                  type="text"
+                  type="tel"
                   placeholder="선택사항"
                   value={formData.phone2}
                   onChange={(e) => handlePhoneChange('phone2', e.target.value)}
                   maxLength={13}
                   disabled={loading}
+                  autoComplete="tel"
                 />
               </div>
             </div>
@@ -486,6 +494,7 @@ export default function RegisterPage() {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
                   disabled={loading}
+                  autoComplete="email"
                 />
               </div>
               <div className="space-y-2">
@@ -497,6 +506,7 @@ export default function RegisterPage() {
                   value={formData.email2}
                   onChange={(e) => setFormData({ ...formData, email2: e.target.value })}
                   disabled={loading}
+                  autoComplete="email"
                 />
               </div>
             </div>
@@ -516,6 +526,7 @@ export default function RegisterPage() {
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
                   disabled={loading}
+                  autoComplete="new-password"
                 />
               </div>
               <div className="space-y-2">
@@ -528,6 +539,7 @@ export default function RegisterPage() {
                   onChange={(e) => setFormData({ ...formData, password_confirm: e.target.value })}
                   required
                   disabled={loading}
+                  autoComplete="new-password"
                 />
               </div>
             </div>
@@ -537,7 +549,7 @@ export default function RegisterPage() {
               type="submit"
               className={`w-full transition-shadow duration-300 ${
                 bizVerification.status === 'success'
-                  ? 'shadow-[0_0_15px_rgba(34,197,94,0.4)]'
+                  ? 'shadow-lg shadow-success/40'
                   : ''
               }`}
               disabled={isSubmitDisabled}
@@ -574,21 +586,21 @@ function BizVerificationCard({
   if (status === 'idle') {
     if (digitCount === 0) {
       return (
-        <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-500">
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground">
           <Info className="h-4 w-4 shrink-0" />
           <span>사업자등록번호 10자리를 입력하면 국세청에서 자동 인증합니다</span>
         </div>
       );
     }
     return (
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-500 space-y-2">
+      <div className="rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground space-y-2">
         <div className="flex items-center gap-2">
           <Info className="h-4 w-4 shrink-0" />
           <span>{digitCount}/10자리 입력 — 입력이 완료되면 자동으로 국세청 인증이 시작됩니다</span>
         </div>
-        <div className="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+        <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
           <div
-            className="h-full rounded-full bg-blue-400 transition-all duration-300"
+            className="h-full rounded-full bg-primary transition-all duration-300"
             style={{ width: `${digitCount * 10}%` }}
           />
         </div>
@@ -599,7 +611,7 @@ function BizVerificationCard({
   // 조회 중
   if (status === 'loading') {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
+      <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/10 p-3 text-sm text-primary">
         <Loader2 className="h-4 w-4 animate-spin shrink-0" />
         <span>국세청 공식 데이터 확인 중...</span>
       </div>
@@ -609,8 +621,8 @@ function BizVerificationCard({
   // API 에러 (타임아웃, 네트워크 오류 등)
   if (status === 'error') {
     return (
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
-        <div className="flex items-center gap-2 text-gray-700">
+      <div className="rounded-lg border border-border bg-muted p-3 text-sm">
+        <div className="flex items-center gap-2 text-muted-foreground">
           <Info className="h-4 w-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
@@ -631,8 +643,8 @@ function BizVerificationCard({
   // 미등록 사업자 (data가 없는 fail)
   if (status === 'fail' && !data) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm">
-        <div className="flex items-center gap-2 text-red-700">
+      <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm">
+        <div className="flex items-center gap-2 text-destructive">
           <XCircle className="h-4 w-4 shrink-0" />
           <span>{errorMessage || '국세청에 등록되지 않은 사업자등록번호입니다.'}</span>
         </div>
@@ -646,8 +658,8 @@ function BizVerificationCard({
     if (!config) {
       // 알 수 없는 상태코드 → 미등록/비정상으로 표시
       return (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm">
-          <div className="flex items-center gap-2 text-red-700">
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm">
+          <div className="flex items-center gap-2 text-destructive">
             <XCircle className="h-4 w-4 shrink-0" />
             <span>{data.b_stt || '확인할 수 없는 사업자 상태입니다.'}</span>
           </div>

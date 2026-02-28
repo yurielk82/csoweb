@@ -236,19 +236,19 @@ export default function CompleteProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-muted">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-muted p-4">
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-blue-100 rounded-full">
-              <AlertTriangle className="h-8 w-8 text-blue-600" />
+            <div className="p-3 bg-primary/10 rounded-full">
+              <AlertTriangle className="h-8 w-8 text-primary" />
             </div>
           </div>
           <CardTitle className="text-2xl">회원 정보 설정</CardTitle>
@@ -279,6 +279,7 @@ export default function CompleteProfilePage() {
                 onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
                 required
                 disabled={saving}
+                autoComplete="organization"
               />
             </div>
 
@@ -293,6 +294,7 @@ export default function CompleteProfilePage() {
                 onChange={(e) => setFormData({ ...formData, ceo_name: e.target.value })}
                 required
                 disabled={saving}
+                autoComplete="name"
               />
             </div>
 
@@ -309,6 +311,7 @@ export default function CompleteProfilePage() {
                   required
                   disabled={saving}
                   className="w-28"
+                  autoComplete="postal-code"
                 />
                 <Button
                   type="button"
@@ -328,6 +331,7 @@ export default function CompleteProfilePage() {
                 readOnly
                 required
                 disabled={saving}
+                autoComplete="address-line1"
               />
               <Input
                 id="address2"
@@ -336,6 +340,7 @@ export default function CompleteProfilePage() {
                 value={formData.address2}
                 onChange={(e) => setFormData({ ...formData, address2: e.target.value })}
                 disabled={saving}
+                autoComplete="address-line2"
               />
             </div>
 
@@ -345,25 +350,27 @@ export default function CompleteProfilePage() {
                 <Label htmlFor="phone1">연락처1 *</Label>
                 <Input
                   id="phone1"
-                  type="text"
+                  type="tel"
                   placeholder="010-0000-0000"
                   value={formData.phone1}
                   onChange={(e) => handlePhoneChange('phone1', e.target.value)}
                   maxLength={13}
                   required
                   disabled={saving}
+                  autoComplete="tel"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone2">연락처2</Label>
                 <Input
                   id="phone2"
-                  type="text"
+                  type="tel"
                   placeholder="선택사항"
                   value={formData.phone2}
                   onChange={(e) => handlePhoneChange('phone2', e.target.value)}
                   maxLength={13}
                   disabled={saving}
+                  autoComplete="tel"
                 />
               </div>
             </div>
@@ -380,6 +387,7 @@ export default function CompleteProfilePage() {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
                   disabled={saving}
+                  autoComplete="email"
                 />
               </div>
               <div className="space-y-2">
@@ -391,6 +399,7 @@ export default function CompleteProfilePage() {
                   value={formData.email2}
                   onChange={(e) => setFormData({ ...formData, email2: e.target.value })}
                   disabled={saving}
+                  autoComplete="email"
                 />
               </div>
             </div>

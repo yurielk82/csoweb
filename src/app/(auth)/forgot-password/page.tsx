@@ -63,12 +63,12 @@ export default function ForgotPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-muted p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="p-3 bg-green-100 rounded-full">
-                <Mail className="h-8 w-8 text-green-600" />
+              <div className="p-3 bg-success/10 rounded-full">
+                <Mail className="h-8 w-8 text-success" />
               </div>
             </div>
             <CardTitle className="text-2xl">이메일을 확인해주세요</CardTitle>
@@ -82,7 +82,7 @@ export default function ForgotPasswordPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert>
-              <CheckCircle className="h-4 w-4 text-green-600" />
+              <CheckCircle className="h-4 w-4 text-success" />
               <AlertDescription className="text-sm">
                 <ul className="list-disc list-inside space-y-1 mt-1">
                   <li>이메일의 비밀번호 재설정 버튼을 클릭하세요.</li>
@@ -115,7 +115,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-muted p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
@@ -149,6 +149,7 @@ export default function ForgotPasswordPage() {
                 maxLength={12}
                 required
                 disabled={loading}
+                autoComplete="off"
               />
             </div>
 
@@ -162,15 +163,16 @@ export default function ForgotPasswordPage() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
                 disabled={loading}
+                autoComplete="email"
               />
             </div>
 
-            <Alert className="bg-blue-50 border-blue-200">
-              <Send className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-sm text-blue-800">
+            <Alert className="bg-primary/10 border-primary/20">
+              <Send className="h-4 w-4 text-primary" />
+              <AlertDescription className="text-sm text-primary">
                 입력하신 이메일로 비밀번호 재설정 링크가 발송됩니다.
                 <br />
-                <span className="text-xs text-blue-600">
+                <span className="text-xs text-primary">
                   * 링크는 30분 동안 유효하며, 1회만 사용 가능합니다.
                 </span>
               </AlertDescription>
