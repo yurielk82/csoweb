@@ -98,7 +98,9 @@ function NavGroupDropdown({ group, pathname }: { group: MenuGroup; pathname: str
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isActive = group.items.some((item) => pathname === item.href);
-  const firstHref = group.items[0].href;
+  const firstItem = group.items[0];
+  const restItems = group.items.slice(1);
+  const FirstIcon = firstItem.icon;
 
   const handleEnter = useCallback(() => {
     if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null; }
@@ -111,7 +113,7 @@ function NavGroupDropdown({ group, pathname }: { group: MenuGroup; pathname: str
 
   return (
     <div className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
-      <Link href={firstHref}>
+      <Link href={firstItem.href}>
         <Button
           variant="ghost"
           size="sm"
@@ -120,15 +122,15 @@ function NavGroupDropdown({ group, pathname }: { group: MenuGroup; pathname: str
             isActive && 'bg-accent text-accent-foreground'
           )}
         >
-          <group.icon className="h-4 w-4" />
-          {group.label}
+          <FirstIcon className="h-4 w-4" />
+          {firstItem.label}
           <ChevronDown className={cn("h-3 w-3 opacity-50 transition-transform", open && "rotate-180")} />
         </Button>
       </Link>
       {open && (
         <div className="absolute top-full left-0 pt-1 z-50">
           <div className="w-48 rounded-md border bg-popover p-1 shadow-md animate-in fade-in-0 zoom-in-95 slide-in-from-top-2">
-            {group.items.map((item) => (
+            {restItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -195,13 +197,13 @@ function MobileNav({
         if (isGroup(entry)) {
           return (
             <div key={entry.label}>
-              {/* 그룹 라벨 — 클릭 시 첫 번째 하위 메뉴로 이동 */}
+              {/* 그룹 대표 라벨 — 첫 번째 항목 이름으로 표시, 클릭 시 해당 페이지 이동 */}
               <Link href={entry.items[0].href} onClick={onNavigate}>
                 <p className="px-4 pt-3 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors cursor-pointer">
-                  {entry.label}
+                  {entry.items[0].label}
                 </p>
               </Link>
-              {entry.items.map((item) => (
+              {entry.items.slice(1).map((item) => (
                 <Link key={item.href} href={item.href} onClick={onNavigate}>
                   <Button
                     variant="ghost"
