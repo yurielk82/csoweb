@@ -74,7 +74,7 @@ function setSecurityHeaders(response: NextResponse): NextResponse {
       "img-src 'self' data: https:",
       "font-src 'self' data:",
       "connect-src 'self' https://*.supabase.co https://vitals.vercel-insights.com",
-      "frame-src 'none'",
+      "frame-src https://t1.daumcdn.net https://postcode.map.daum.net",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",

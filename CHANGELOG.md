@@ -5,6 +5,15 @@
 
 ---
 
+## [0.21.3] - 2026-02-28
+
+### 수정 — 회원가입 주소 검색 팝업 CSP 차단 해제
+
+- CSP `frame-src 'none'`이 다음 주소 검색 iframe을 차단하던 문제 수정
+- `frame-src`에 `https://t1.daumcdn.net`, `https://postcode.map.daum.net` 허용
+
+---
+
 ## [0.21.2] - 2026-02-28
 
 ### 개선 — 대시보드 시스템 footer 연결 상태 개별 표시
