@@ -336,6 +336,19 @@ v0.28.0 Bento Grid revert 후, 기존 레이아웃 유지하면서 카드/버튼
 
 ---
 
+## [0.24.3] - 2026-02-28
+
+### 수정 — 대시보드 월 선택 날짜 형식 불일치
+
+#### 변경
+- 정산월 형식 `YYYYMM` → `YYYY-MM` 통일 — CSO 업체 API 호출과 KPI 연동 수정
+
+#### 수정 파일
+- `src/app/(main)/admin/page.tsx`
+- `src/app/api/settlements/cso-companies/route.ts`
+
+---
+
 ## [0.24.2] - 2026-02-28
 
 ### 수정 — 프로필 페이지 디자인 표준 준수 검수
@@ -387,6 +400,30 @@ v0.23.0 대시보드 피드백 반영.
 
 ---
 
+## [0.23.2] - 2026-02-28
+
+### 리팩토링 — 프로필 페이지 레이아웃 압축
+
+#### 변경
+- 5개 카드 → 2개 카드로 통합 (프로필 정보 + 비밀번호 변경)
+
+#### 수정 파일
+- `src/app/(main)/profile/page.tsx`
+
+---
+
+## [0.23.1] - 2026-02-28
+
+### 리팩토링 — 프로필 페이지 기본 정보 읽기 전용 카드 제거
+
+#### 변경
+- 기본 정보 읽기 전용 카드 제거, 편집 가능 카드에 통합
+
+#### 수정 파일
+- `src/app/(main)/profile/page.tsx`
+
+---
+
 ## [0.23.0] - 2026-02-28
 
 ### 추가 — 관리자 대시보드 재설계 (KPI + 파이프라인 + 접속 추적)
@@ -405,6 +442,50 @@ v0.23.0 대시보드 피드백 반영.
 - `src/infrastructure/supabase/SupabaseUserRepository.ts` — `updateLastLogin()` 구현, `mapDbUserToUser` 수정
 - `src/application/auth/LoginUseCase.ts` — 로그인 성공 시 `updateLastLogin()` 호출
 - `src/app/(main)/admin/page.tsx` — 대시보드 전면 재설계
+
+---
+
+## [0.22.0] - 2026-02-28
+
+### 추가 — 대시보드 Shopify식 3단 구조 재구성 + 시스템 정보 페이지 분리
+
+#### 변경
+- 관리자 대시보드를 KPI / Quick Actions / 시스템 정보 3단 구조로 재구성
+- 시스템 정보를 독립 페이지(`/admin/system`)로 분리
+- `GET /api/system/status` API 신규 생성
+- 네비게이션에 시스템 정보 메뉴 추가
+
+#### 수정 파일
+- `src/app/(main)/admin/page.tsx`
+- `src/app/(main)/admin/settings/page.tsx`
+- `src/app/(main)/admin/system/page.tsx` (신규)
+- `src/app/api/system/status/route.ts` (신규)
+- `src/components/shared/header.tsx`
+- `src/types/index.ts`
+
+---
+
+## [0.21.6] - 2026-02-28
+
+### 개선 — 관리자 대시보드 시스템 정보 한줄 레이아웃 통합
+
+#### 변경
+- 시스템 정보 카드를 한줄 요약 레이아웃으로 통합
+
+#### 수정 파일
+- `src/app/(main)/admin/page.tsx`
+
+---
+
+## [0.21.5] - 2026-02-28
+
+### 수정 — 회원가입 CSO 매핑 자동 생성 에러 응답 검사 추가
+
+#### 변경
+- 회원가입 시 CSO 매핑 자동 생성의 upsert 에러 응답 검사 로직 추가
+
+#### 수정 파일
+- `src/app/api/auth/register/route.ts`
 
 ---
 
@@ -429,6 +510,24 @@ v0.23.0 대시보드 피드백 반영.
 
 ---
 
+## [0.21.1] - 2026-02-28
+
+### 리팩토링 — 회원 승인 페이지를 회원 관리에 통합
+
+#### 변경
+- 독립 회원 승인 페이지(`/admin/approvals`) 제거, 회원 관리 페이지에 승인 기능 통합
+- 네비게이션 메뉴에서 "회원 승인" 항목 제거
+- 승인 알림 이메일 발송 로직 정리
+
+#### 수정 파일
+- `src/app/(main)/admin/approvals/page.tsx`
+- `src/app/(main)/admin/members/page.tsx`
+- `src/app/(main)/admin/page.tsx`
+- `src/components/shared/header.tsx`
+- `src/lib/email.ts`
+
+---
+
 ## [0.21.0] - 2026-02-28
 
 ### 기능 — 시스템 정보를 대시보드에서 설정 페이지로 이전
@@ -446,6 +545,57 @@ v0.23.0 대시보드 피드백 반영.
 - 7개 항목을 라벨 + Badge 속성-값 리스트로 표시
 - 이메일 서비스는 듀얼 프로바이더(SMTP/Resend) 상태 동시 표시
 - `/api/system/status`를 회사 정보와 병렬 호출
+
+---
+
+## [0.20.11] - 2026-02-28
+
+### 수정 — 네비게이션 hover 메뉴 Radix Portal 제거
+
+#### 변경
+- Radix DropdownMenu Portal 제거, 순수 hover 구현으로 전환
+- hover 열림/닫힘 타이머 기반 안정적 UX
+
+#### 수정 파일
+- `src/components/shared/header.tsx`
+
+---
+
+## [0.20.10] - 2026-02-28
+
+### 추가 — 네비게이션 그룹 메뉴 hover로 열림
+
+#### 변경
+- 데스크톱 그룹 드롭다운을 클릭 → hover 트리거로 전환
+
+#### 수정 파일
+- `src/components/shared/header.tsx`
+
+---
+
+## [0.20.9] - 2026-02-28
+
+### 수정 — 이메일 이력 상태 컬럼 맨 앞 이동
+
+#### 변경
+- 상태 컬럼을 테이블 첫 번째 열로 이동
+- Tooltip `asChild` 제거
+
+#### 수정 파일
+- `src/app/(main)/admin/emails/page.tsx`
+
+---
+
+## [0.20.8] - 2026-02-27
+
+### 수정 — 이메일 이력 테이블 컬럼 너비 + 오류 내용 툴팁
+
+#### 변경
+- 컬럼 너비 `auto` 적용
+- 오류 내용 표시를 인라인에서 Tooltip으로 전환
+
+#### 수정 파일
+- `src/app/(main)/admin/emails/page.tsx`
 
 ---
 
@@ -924,6 +1074,22 @@ v0.23.0 대시보드 피드백 반영.
 - **Dashboard 합계 요약 개선** — 총 수수료만 2줄 왼쪽 정렬 레이아웃으로 변경
 - **기본 본문 템플릿** — 총 금액/데이터 건수 제거, 총 수수료(세금계산서 발행 금액)만 강조
 - **정산 테이블 셀 줄바꿈 방지** — `th`/`td`에 `whitespace-nowrap` 적용
+
+---
+
+## [0.17.1] - 2026-02-26
+
+### 수정 — 메일머지 변수 치환 보강 및 본문 템플릿 개선
+
+#### 변경
+- `{{정산월}}` 포맷, `{{정산월+1}}`, `{{대표자명}}` 변수 치환 로직 보강
+- 기본 본문 템플릿 개선 — 총 수수료(세금계산서 발행 금액)만 강조
+- CSS globals 스타일 조정
+
+#### 수정 파일
+- `src/app/(main)/admin/mailmerge/page.tsx`
+- `src/app/api/email/mailmerge/route.ts`
+- `src/app/globals.css`
 
 ---
 
