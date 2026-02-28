@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Lock, Mail, Save, Loader2, CheckCircle, Building2, Phone, MapPin, Search } from 'lucide-react';
+import { User, Lock, Save, Loader2, CheckCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -98,151 +98,52 @@ export default function ProfilePage() {
     }
   };
 
-  const handleUpdateCompanyInfo = async () => {
-    if (newCompanyName === profile?.company_name && newCeoName === profile?.ceo_name) return;
-    
-    setSaving(true);
-    try {
-      const res = await fetch('/api/users/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          company_name: newCompanyName,
-          ceo_name: newCeoName,
-        }),
-      });
-      
-      const result = await res.json();
-      
-      if (result.success) {
-        setProfile(prev => prev ? { ...prev, company_name: newCompanyName, ceo_name: newCeoName } : null);
-        toast({
-          title: '업체 정보 변경 완료',
-          description: '업체 정보가 성공적으로 변경되었습니다.',
-        });
-      } else {
-        toast({
-          variant: 'destructive',
-          title: '변경 실패',
-          description: result.error,
-        });
-      }
-    } catch (error) {
-      console.error('프로필 처리 중 오류:', error);
-      toast({
-        variant: 'destructive',
-        title: '오류',
-        description: '업체 정보 변경 중 오류가 발생했습니다.',
-      });
-    } finally {
-      setSaving(false);
-    }
+  const hasProfileChanges = () => {
+    if (!profile) return false;
+    return (
+      newCompanyName !== (profile.company_name || '') ||
+      newCeoName !== (profile.ceo_name || '') ||
+      newZipcode !== (profile.zipcode || '') ||
+      newAddress1 !== (profile.address1 || '') ||
+      newAddress2 !== (profile.address2 || '') ||
+      newPhone1 !== (profile.phone1 || '') ||
+      newPhone2 !== (profile.phone2 || '') ||
+      newEmail !== (profile.email || '') ||
+      newEmail2 !== (profile.email2 || '')
+    );
   };
 
-  const handleUpdateAddress = async () => {
-    if (newZipcode === profile?.zipcode && newAddress1 === profile?.address1 && newAddress2 === (profile?.address2 || '')) return;
-    
-    setSaving(true);
-    try {
-      const res = await fetch('/api/users/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          zipcode: newZipcode,
-          address1: newAddress1,
-          address2: newAddress2,
-        }),
-      });
-      
-      const result = await res.json();
-      
-      if (result.success) {
-        setProfile(prev => prev ? { ...prev, zipcode: newZipcode, address1: newAddress1, address2: newAddress2 } : null);
-        toast({
-          title: '주소 변경 완료',
-          description: '주소가 성공적으로 변경되었습니다.',
-        });
-      } else {
-        toast({
-          variant: 'destructive',
-          title: '변경 실패',
-          description: result.error,
-        });
-      }
-    } catch (error) {
-      console.error('프로필 처리 중 오류:', error);
-      toast({
-        variant: 'destructive',
-        title: '오류',
-        description: '주소 변경 중 오류가 발생했습니다.',
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
+  const handleSave = async () => {
+    if (!profile) return;
 
-  const handleUpdatePhone = async () => {
-    if (newPhone1 === profile?.phone1 && newPhone2 === (profile?.phone2 || '')) return;
-    
-    setSaving(true);
-    try {
-      const res = await fetch('/api/users/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          phone1: newPhone1,
-          phone2: newPhone2,
-        }),
-      });
-      
-      const result = await res.json();
-      
-      if (result.success) {
-        setProfile(prev => prev ? { ...prev, phone1: newPhone1, phone2: newPhone2 } : null);
-        toast({
-          title: '연락처 변경 완료',
-          description: '연락처가 성공적으로 변경되었습니다.',
-        });
-      } else {
-        toast({
-          variant: 'destructive',
-          title: '변경 실패',
-          description: result.error,
-        });
-      }
-    } catch (error) {
-      console.error('프로필 처리 중 오류:', error);
-      toast({
-        variant: 'destructive',
-        title: '오류',
-        description: '연락처 변경 중 오류가 발생했습니다.',
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
+    const changes: Record<string, string> = {};
+    if (newCompanyName !== (profile.company_name || '')) changes.company_name = newCompanyName;
+    if (newCeoName !== (profile.ceo_name || '')) changes.ceo_name = newCeoName;
+    if (newZipcode !== (profile.zipcode || '')) changes.zipcode = newZipcode;
+    if (newAddress1 !== (profile.address1 || '')) changes.address1 = newAddress1;
+    if (newAddress2 !== (profile.address2 || '')) changes.address2 = newAddress2;
+    if (newPhone1 !== (profile.phone1 || '')) changes.phone1 = newPhone1;
+    if (newPhone2 !== (profile.phone2 || '')) changes.phone2 = newPhone2;
+    if (newEmail !== (profile.email || '')) changes.email = newEmail;
+    if (newEmail2 !== (profile.email2 || '')) changes.email2 = newEmail2;
 
-  const handleUpdateEmail = async () => {
-    if (newEmail === profile?.email && newEmail2 === (profile?.email2 || '')) return;
-    
+    if (Object.keys(changes).length === 0) return;
+
     setSaving(true);
     try {
       const res = await fetch('/api/users/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email: newEmail,
-          email2: newEmail2,
-        }),
+        body: JSON.stringify(changes),
       });
-      
+
       const result = await res.json();
-      
+
       if (result.success) {
-        setProfile(prev => prev ? { ...prev, email: newEmail, email2: newEmail2 } : null);
+        setProfile(prev => prev ? { ...prev, ...changes } : null);
         toast({
-          title: '이메일 변경 완료',
-          description: '이메일이 성공적으로 변경되었습니다.',
+          title: '정보 변경 완료',
+          description: '프로필 정보가 성공적으로 변경되었습니다.',
         });
       } else {
         toast({
@@ -256,7 +157,7 @@ export default function ProfilePage() {
       toast({
         variant: 'destructive',
         title: '오류',
-        description: '이메일 변경 중 오류가 발생했습니다.',
+        description: '정보 변경 중 오류가 발생했습니다.',
       });
     } finally {
       setSaving(false);
@@ -339,16 +240,13 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Company & CEO Info Change */}
+      {/* Profile Info — 업체·주소·연락처·이메일 통합 */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            업체 정보 변경
-          </CardTitle>
-          <CardDescription>업체명과 대표자명을 변경합니다.</CardDescription>
+          <CardTitle className="text-base">내 정보</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* 업체 정보 */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="companyName">업체명</Label>
@@ -369,30 +267,10 @@ export default function ProfilePage() {
               />
             </div>
           </div>
-          <Button 
-            onClick={handleUpdateCompanyInfo} 
-            disabled={saving || (newCompanyName === profile?.company_name && newCeoName === profile?.ceo_name)}
-          >
-            {saving ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            업체 정보 변경
-          </Button>
-        </CardContent>
-      </Card>
 
-      {/* Address Change */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
-            주소 변경
-          </CardTitle>
-          <CardDescription>사업장 주소를 변경합니다.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          <Separator />
+
+          {/* 주소 */}
           <div className="space-y-2">
             <Label>주소</Label>
             <div className="flex gap-2">
@@ -402,9 +280,9 @@ export default function ProfilePage() {
                 placeholder="우편번호"
                 className="w-28"
               />
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={openAddressSearch}
               >
                 <Search className="h-4 w-4 mr-2" />
@@ -422,30 +300,10 @@ export default function ProfilePage() {
               placeholder="상세 주소를 입력하세요"
             />
           </div>
-          <Button 
-            onClick={handleUpdateAddress} 
-            disabled={saving || (newZipcode === profile?.zipcode && newAddress1 === profile?.address1 && newAddress2 === (profile?.address2 || ''))}
-          >
-            {saving ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            주소 변경
-          </Button>
-        </CardContent>
-      </Card>
 
-      {/* Phone Change */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Phone className="h-4 w-4" />
-            연락처 변경
-          </CardTitle>
-          <CardDescription>연락처를 변경합니다.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          <Separator />
+
+          {/* 연락처 */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="phone1">연락처1 *</Label>
@@ -466,30 +324,10 @@ export default function ProfilePage() {
               />
             </div>
           </div>
-          <Button 
-            onClick={handleUpdatePhone} 
-            disabled={saving || (newPhone1 === profile?.phone1 && newPhone2 === (profile?.phone2 || ''))}
-          >
-            {saving ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            연락처 변경
-          </Button>
-        </CardContent>
-      </Card>
 
-      {/* Email Change */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Mail className="h-4 w-4" />
-            이메일 변경
-          </CardTitle>
-          <CardDescription>알림을 받을 이메일 주소를 변경합니다.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          <Separator />
+
+          {/* 이메일 */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="email">이메일 *</Label>
@@ -512,17 +350,22 @@ export default function ProfilePage() {
               />
             </div>
           </div>
-          <Button 
-            onClick={handleUpdateEmail} 
-            disabled={saving || (newEmail === profile?.email && newEmail2 === (profile?.email2 || ''))}
-          >
-            {saving ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            이메일 변경
-          </Button>
+
+          {/* 저장 버튼 */}
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={saving || !hasProfileChanges()}
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              저장
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
