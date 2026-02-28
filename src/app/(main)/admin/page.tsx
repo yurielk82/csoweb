@@ -462,10 +462,10 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* System Footer */}
-      <div className="relative z-10 mt-auto pt-8">
-        <div className="dashboard-glass-footer text-xs text-muted-foreground">
+      <div className="dashboard-glass-footer relative z-10 mt-auto pt-8 text-xs text-muted-foreground">
+        <div className="flex items-center gap-3 flex-wrap">
           {systemLoaded ? (
-            <div className="flex items-center gap-3 flex-wrap">
+            <>
               <span className="flex items-center gap-1.5">
                 <span className="font-mono">{systemStatus.version}</span>
                 <span>·</span>
@@ -511,13 +511,13 @@ export default function AdminDashboardPage() {
                   <ArrowRight className="h-3 w-3" />
                 </Link>
               </Button>
-            </div>
+            </>
           ) : (
-            <div className="flex items-center gap-3">
+            <>
               <Skeleton className="h-3 w-24" />
               <Skeleton className="h-3 w-48" />
               <Skeleton className="h-3 w-16 ml-auto" />
-            </div>
+            </>
           )}
         </div>
       </div>
