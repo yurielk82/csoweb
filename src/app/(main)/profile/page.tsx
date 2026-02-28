@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Lock, Save, Loader2, CheckCircle, Search } from 'lucide-react';
+import { User, Lock, Save, Loader2, CheckCircle, Search, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -230,18 +230,53 @@ export default function ProfilePage() {
           내 정보
         </h1>
         <p className="text-muted-foreground">계정 정보를 확인하고 수정하세요.</p>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-muted-foreground">
-          <span>사업자번호: <span className="font-medium text-foreground">{profile?.business_number}</span></span>
-          <span className="text-muted-foreground/40">|</span>
-          <span>{profile?.is_admin ? '관리자' : '일반 업체'}</span>
-          <span className="text-muted-foreground/40">|</span>
-          <span>가입일: {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('ko-KR') : '-'}</span>
-        </div>
       </div>
 
       {/* Profile Info — 업체·주소·연락처·이메일 통합 */}
       <Card>
-        <CardContent className="pt-6 space-y-4">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Pencil className="h-4 w-4" />
+            내정보 수정
+          </CardTitle>
+          <CardDescription>회원 정보를 확인하고 수정할 수 있습니다.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* 읽기 전용 정보 */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="businessNumber">사업자번호</Label>
+              <Input
+                id="businessNumber"
+                value={profile?.business_number ?? ''}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">권한</Label>
+              <Input
+                id="role"
+                value={profile?.is_admin ? '관리자' : '일반 업체'}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="createdAt">가입일</Label>
+              <Input
+                id="createdAt"
+                value={profile?.created_at ? new Date(profile.created_at).toLocaleDateString('ko-KR') : '-'}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+          </div>
+
+          {/* 구분선 */}
+          <div className="border-t pt-4" />
+
+          {/* 편집 가능 필드 */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="companyName">업체명</Label>

@@ -264,16 +264,16 @@ export default function AdminDashboardPage() {
   const badgeMap: Record<string, { label: string; variant: 'destructive' | 'secondary' }> = {};
 
   if (!currentMonthUploaded) {
-    badgeMap['/admin/upload'] = { label: '미업로드', variant: 'destructive' };
+    badgeMap['/admin/upload'] = { label: '업로드 필요', variant: 'destructive' };
   }
   if (pendingCount > 0) {
-    badgeMap['/admin/members?filter=pending'] = { label: `${pendingCount}건 대기`, variant: 'destructive' };
+    badgeMap['/admin/members?filter=pending'] = { label: `${pendingCount}`, variant: 'destructive' };
   }
   if (unmappedCount > 0) {
-    badgeMap['/admin/integrity'] = { label: `${unmappedCount}건 미매핑`, variant: 'destructive' };
+    badgeMap['/admin/integrity'] = { label: `${unmappedCount}`, variant: 'destructive' };
   }
   if (csoBusinessNumbers.length > 0 && (!emailStats || emailStats.total === 0)) {
-    badgeMap['/admin/mailmerge'] = { label: '미발송', variant: 'secondary' };
+    badgeMap['/admin/mailmerge'] = { label: '발송 필요', variant: 'secondary' };
   }
 
   // ── Loading ──
@@ -408,7 +408,7 @@ export default function AdminDashboardPage() {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalMonths}개월</div>
+            <div className="text-2xl font-bold">{totalMonths}</div>
             <p className="text-xs text-muted-foreground">업로드된 정산 데이터</p>
           </CardContent>
         </Card>
@@ -427,14 +427,14 @@ export default function AdminDashboardPage() {
               </>
             ) : emailStats ? (
               <>
-                <div className="text-2xl font-bold">{emailStats.total}건</div>
+                <div className="text-2xl font-bold">{emailStats.total}</div>
                 <p className={`text-xs ${emailStats.failed > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                  {emailStats.failed > 0 ? `실패 ${emailStats.failed}건` : '전체 성공'}
+                  {emailStats.failed > 0 ? `${selectedMonthLabel} 실패 ${emailStats.failed}` : `${selectedMonthLabel} 전체 성공`}
                 </p>
               </>
             ) : (
               <>
-                <div className="text-2xl font-bold text-muted-foreground">0건</div>
+                <div className="text-2xl font-bold text-muted-foreground">0</div>
                 <p className="text-xs text-muted-foreground">{selectedMonthLabel} 발송 없음</p>
               </>
             )}
