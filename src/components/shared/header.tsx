@@ -22,7 +22,8 @@ import {
   Calculator,
   Link2,
   Loader2,
-  ChevronDown
+  ChevronDown,
+  Monitor,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -245,12 +246,20 @@ function MobileNav({
           </Button>
         </Link>
         {isAdmin && (
-          <Link href="/admin/settings" onClick={onNavigate}>
-            <Button variant="ghost" className="w-full justify-start gap-2">
-              <Settings className="h-4 w-4" />
-              사이트 설정
-            </Button>
-          </Link>
+          <>
+            <Link href="/admin/settings" onClick={onNavigate}>
+              <Button variant="ghost" className="w-full justify-start gap-2">
+                <Settings className="h-4 w-4" />
+                사이트 설정
+              </Button>
+            </Link>
+            <Link href="/admin/system" onClick={onNavigate}>
+              <Button variant="ghost" className="w-full justify-start gap-2">
+                <Monitor className="h-4 w-4" />
+                시스템 정보
+              </Button>
+            </Link>
+          </>
         )}
       </div>
     </nav>
@@ -333,12 +342,20 @@ export function Header() {
                 </Link>
               </DropdownMenuItem>
               {user.is_admin && (
-                <DropdownMenuItem asChild>
-                  <Link href="/admin/settings" className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    사이트 설정
-                  </Link>
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/settings" className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      사이트 설정
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/system" className="cursor-pointer">
+                      <Monitor className="mr-2 h-4 w-4" />
+                      시스템 정보
+                    </Link>
+                  </DropdownMenuItem>
+                </>
               )}
               <DropdownMenuItem disabled className="text-muted-foreground">
                 <span className="mr-2 h-4 w-4" />

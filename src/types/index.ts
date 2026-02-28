@@ -136,6 +136,24 @@ export interface ApiResponse<T = unknown> {
   message?: string;
 }
 
+// System Status Types
+export interface SystemStatus {
+  supabase: boolean;
+  resend: boolean;
+  smtp: { configured: boolean; host: string | null };
+  email_provider: string;
+  version: string;
+  environment: string;
+  nts_api: boolean;
+  hira_hospital_api: boolean;
+  hira_pharmacy_api: boolean;
+  next_version: string;
+  node_version: string;
+  deploy_platform: string;
+  deploy_url: string | null;
+  jwt_configured: boolean;
+}
+
 // Upload Types
 export interface UploadResult {
   success: boolean;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Save, Loader2, Building2, Phone, Mail, Globe, MapPin, FileText, Plug, Server, BellRing, Check, Database, Tag, Pill } from 'lucide-react';
+import { Settings, Save, Loader2, Building2, Phone, Mail, Globe, MapPin, FileText, Plug, Server, BellRing, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,18 +54,6 @@ const EMAIL_NOTIFICATION_LABELS: Record<string, { label: string; description: st
   password_reset: { label: '비밀번호 재설정', description: '비밀번호 재설정 요청 시 사용자에게 이메일 발송' },
 };
 
-interface SystemStatus {
-  supabase: boolean;
-  resend: boolean;
-  smtp: { configured: boolean; host: string | null };
-  email_provider: string;
-  version: string;
-  environment: string;
-  nts_api: boolean;
-  hira_hospital_api: boolean;
-  hira_pharmacy_api: boolean;
-}
-
 const defaultCompanyInfo: CompanyInfo = {
   company_name: '',
   ceo_name: '',
@@ -107,21 +95,14 @@ export default function SettingsPage() {
   const initialDataRef = useRef<CompanyInfo>(defaultCompanyInfo);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
-  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
-
   useEffect(() => {
-    Promise.all([
-      fetch('/api/settings/company', { cache: 'no-store' }).then(r => r.json()),
-      fetch('/api/system/status').then(r => r.json()),
-    ])
-      .then(([companyResult, statusResult]) => {
+    fetch('/api/settings/company', { cache: 'no-store' })
+      .then(r => r.json())
+      .then((companyResult) => {
         if (companyResult.success && companyResult.data) {
           const merged = { ...defaultCompanyInfo, ...companyResult.data };
           setFormData(merged);
           initialDataRef.current = merged;
-        }
-        if (statusResult.success) {
-          setSystemStatus(statusResult.data);
         }
       })
       .catch(console.error)
@@ -478,6 +459,41 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Preview — 푸터 텍스트 바로 아래 배치 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">미리보기</CardTitle>
+          <CardDescription>로그인 화면 푸터에 한 줄로 표시됩니다.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5">
+              {formData.company_name && (
+                <span className="font-medium text-foreground">{formData.company_name}</span>
+              )}
+              {formData.company_name && (formData.ceo_name || formData.business_number) && (
+                <span className="text-muted-foreground/50">|</span>
+              )}
+              {formData.ceo_name && <span>대표: {formData.ceo_name}</span>}
+              {formData.business_number && <span>사업자: {formData.business_number}</span>}
+              {formData.address && <span>{formData.address}</span>}
+              {formData.phone && <span>TEL: {formData.phone}</span>}
+              {formData.fax && <span>FAX: {formData.fax}</span>}
+              {formData.email && <span>{formData.email}</span>}
+              {formData.website && <span className="text-primary">{formData.website}</span>}
+              <span className="text-muted-foreground/50">|</span>
+              <span>© 2026 KDH | Sales Management Team. All rights reserved.</span>
+            </div>
+            {formData.additional_info && (
+              <p className="text-center mt-1 text-muted-foreground/70">{formData.additional_info}</p>
+            )}
+            {!formData.company_name && !formData.copyright && (
+              <p className="text-center italic">표시할 정보가 없습니다.</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Email Provider Settings */}
       <Card>
         <CardHeader>
@@ -745,99 +761,6 @@ export default function SettingsPage() {
           </p>
         </CardContent>
       </Card>
-
-      {/* Preview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">미리보기</CardTitle>
-          <CardDescription>로그인 화면 푸터에 한 줄로 표시됩니다.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground">
-            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5">
-              {formData.company_name && (
-                <span className="font-medium text-foreground">{formData.company_name}</span>
-              )}
-              {formData.company_name && (formData.ceo_name || formData.business_number) && (
-                <span className="text-muted-foreground/50">|</span>
-              )}
-              {formData.ceo_name && <span>대표: {formData.ceo_name}</span>}
-              {formData.business_number && <span>사업자: {formData.business_number}</span>}
-              {formData.address && <span>{formData.address}</span>}
-              {formData.phone && <span>TEL: {formData.phone}</span>}
-              {formData.fax && <span>FAX: {formData.fax}</span>}
-              {formData.email && <span>{formData.email}</span>}
-              {formData.website && <span className="text-primary">{formData.website}</span>}
-              <span className="text-muted-foreground/50">|</span>
-              <span>© 2026 KDH | Sales Management Team. All rights reserved.</span>
-            </div>
-            {formData.additional_info && (
-              <p className="text-center mt-1 text-muted-foreground/70">{formData.additional_info}</p>
-            )}
-            {!formData.company_name && !formData.copyright && (
-              <p className="text-center italic">표시할 정보가 없습니다.</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-      {/* System Info (읽기전용) */}
-      {systemStatus && (
-        <Card id="system-info">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Server className="h-4 w-4" />
-              시스템 정보
-            </CardTitle>
-            <CardDescription>현재 시스템 연결 상태를 표시합니다. (읽기전용)</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-0">
-            {[
-              { icon: Tag, label: '버전', value: systemStatus.version, isText: true },
-              { icon: Globe, label: '환경', value: systemStatus.environment, ok: systemStatus.environment === 'Production' },
-              { icon: Database, label: '데이터베이스', value: systemStatus.supabase ? '연결됨' : '미연결', ok: systemStatus.supabase },
-              { icon: FileText, label: '국세청 API', value: systemStatus.nts_api ? '설정됨' : '미설정', ok: systemStatus.nts_api },
-              { icon: Building2, label: '심평원 병원정보 API', value: systemStatus.hira_hospital_api ? '설정됨' : '미설정', ok: systemStatus.hira_hospital_api },
-              { icon: Pill, label: '심평원 약국정보 API', value: systemStatus.hira_pharmacy_api ? '설정됨' : '미설정', ok: systemStatus.hira_pharmacy_api },
-            ].map(({ icon: Icon, label, value, ok, isText }) => (
-              <div key={label} className="flex items-center justify-between py-2.5 border-b last:border-0">
-                <span className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Icon className="h-4 w-4" />
-                  {label}
-                </span>
-                {isText ? (
-                  <span className="text-sm font-medium font-mono">{value}</span>
-                ) : (
-                  <Badge variant={ok ? 'default' : 'secondary'}>{value}</Badge>
-                )}
-              </div>
-            ))}
-            {/* 이메일 서비스 (듀얼 프로바이더) */}
-            <div className="flex items-center justify-between py-2.5">
-              <span className="text-sm text-muted-foreground flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                이메일 서비스
-              </span>
-              <div className="flex items-center gap-1.5">
-                {systemStatus.email_provider === 'smtp' ? (
-                  <>
-                    <Badge variant={systemStatus.smtp.configured ? 'default' : 'secondary'}>
-                      SMTP {systemStatus.smtp.configured ? '(활성)' : '(미설정)'}
-                    </Badge>
-                    {systemStatus.resend && <Badge variant="outline">Resend</Badge>}
-                  </>
-                ) : (
-                  <>
-                    <Badge variant={systemStatus.resend ? 'default' : 'secondary'}>
-                      Resend {systemStatus.resend ? '(활성)' : '(미설정)'}
-                    </Badge>
-                    {systemStatus.smtp.configured && <Badge variant="outline">SMTP</Badge>}
-                  </>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

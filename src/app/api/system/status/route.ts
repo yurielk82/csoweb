@@ -34,8 +34,14 @@ export async function GET() {
       emailProvider = companyInfo.email_provider || 'resend';
     } catch (error) {
       console.warn('SMTP 상태 확인 실패:', error);
-      // 회사 정보 조회 실패 시 기본값 유지
     }
+
+    // Next.js 버전 추출
+    const nextVersion = (packageJson.dependencies as Record<string, string>)['next'] || 'unknown';
+
+    // 배포 플랫폼 감지
+    const deployPlatform = process.env.NETLIFY ? 'Netlify' : 'Unknown';
+    const deployUrl = process.env.URL || null;
 
     return NextResponse.json({
       success: true,
@@ -52,6 +58,11 @@ export async function GET() {
         nts_api: !!process.env.NTS_API_KEY,
         hira_hospital_api: !!process.env.HIRA_API_KEY,
         hira_pharmacy_api: !!process.env.HIRA_API_KEY,
+        next_version: nextVersion,
+        node_version: process.version,
+        deploy_platform: deployPlatform,
+        deploy_url: deployUrl,
+        jwt_configured: !!process.env.JWT_SECRET,
       },
     });
   } catch (error) {
