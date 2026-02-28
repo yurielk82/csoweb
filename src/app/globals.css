@@ -143,9 +143,9 @@
   overflow: hidden;
   background: linear-gradient(
     135deg,
-    oklch(0.15 0.04 260),
-    oklch(0.12 0.03 220),
-    oklch(0.18 0.04 280)
+    oklch(0.13 0.04 250),
+    oklch(0.10 0.03 245),
+    oklch(0.16 0.05 255)
   );
 }
 
@@ -173,7 +173,7 @@
 .login-orb-1 {
   width: 400px;
   height: 400px;
-  background: oklch(0.6 0.15 190);
+  background: oklch(0.7 0.18 55);
   top: -10%;
   left: -5%;
   animation: login-float-1 20s ease-in-out infinite;
@@ -182,7 +182,7 @@
 .login-orb-2 {
   width: 350px;
   height: 350px;
-  background: oklch(0.55 0.2 290);
+  background: oklch(0.65 0.16 40);
   top: 50%;
   right: -5%;
   animation: login-float-2 25s ease-in-out infinite;
@@ -191,7 +191,7 @@
 .login-orb-3 {
   width: 300px;
   height: 300px;
-  background: oklch(0.65 0.15 160);
+  background: oklch(0.75 0.14 75);
   bottom: -10%;
   left: 30%;
   animation: login-float-3 30s ease-in-out infinite;
@@ -253,8 +253,8 @@
   width: 4rem;
   height: 4rem;
   border-radius: 50%;
-  background: oklch(0.6 0.15 190 / 15%);
-  box-shadow: 0 0 40px oklch(0.7 0.2 310 / 30%);
+  background: oklch(0.7 0.18 55 / 15%);
+  box-shadow: 0 0 40px oklch(0.7 0.2 45 / 30%);
   margin: 0 auto 1.5rem;
   animation: login-icon-pulse 3s ease-in-out infinite;
 }
@@ -262,12 +262,12 @@
 .login-icon-glow svg {
   width: 2rem;
   height: 2rem;
-  color: oklch(0.85 0.1 190);
+  color: oklch(0.85 0.12 55);
 }
 
 @keyframes login-icon-pulse {
-  0%, 100% { box-shadow: 0 0 40px oklch(0.7 0.2 310 / 30%); }
-  50% { box-shadow: 0 0 60px oklch(0.7 0.2 310 / 40%); }
+  0%, 100% { box-shadow: 0 0 40px oklch(0.7 0.2 45 / 30%); }
+  50% { box-shadow: 0 0 60px oklch(0.7 0.2 45 / 40%); }
 }
 
 /* Typography */
@@ -319,8 +319,8 @@
 }
 
 .glass-card input:focus {
-  border-color: oklch(0.7 0.15 190 / 50%);
-  box-shadow: 0 0 0 2px oklch(0.7 0.15 190 / 20%);
+  border-color: oklch(0.7 0.15 55 / 50%);
+  box-shadow: 0 0 0 2px oklch(0.7 0.15 55 / 20%);
 }
 
 .glass-card input:disabled {
@@ -348,8 +348,8 @@
   border-radius: 0.75rem;
   backdrop-filter: blur(12px) saturate(150%);
   -webkit-backdrop-filter: blur(12px) saturate(150%);
-  background: oklch(0.6 0.15 190 / 25%);
-  border: 1px solid oklch(0.7 0.15 190 / 30%);
+  background: oklch(0.7 0.18 55 / 25%);
+  border: 1px solid oklch(0.7 0.15 55 / 30%);
   box-shadow:
     0 4px 16px oklch(0 0 0 / 8%),
     inset 0 1px 0 oklch(1 0 0 / 15%);
@@ -360,7 +360,7 @@
 
 .glass-button:hover:not(:disabled) {
   transform: scale(1.02);
-  background: oklch(0.6 0.15 190 / 35%);
+  background: oklch(0.7 0.18 55 / 35%);
   box-shadow:
     0 8px 24px oklch(0 0 0 / 12%),
     inset 0 1px 0 oklch(1 0 0 / 20%);
@@ -389,13 +389,13 @@
 }
 
 .login-glass-links a {
-  color: oklch(0.75 0.12 190);
+  color: oklch(0.75 0.12 55);
   text-decoration: none;
   transition: color 150ms;
 }
 
 .login-glass-links a:hover {
-  color: oklch(0.85 0.12 190);
+  color: oklch(0.85 0.12 55);
   text-decoration: underline;
 }
 
@@ -422,7 +422,7 @@
 }
 
 .login-glass-footer a {
-  color: oklch(0.7 0.1 190);
+  color: oklch(0.7 0.1 55);
   transition: opacity 150ms;
 }
 
