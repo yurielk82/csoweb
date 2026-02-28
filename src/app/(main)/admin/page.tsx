@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { EMAIL_LOG_DEFAULT_LIMIT } from '@/constants/defaults';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -306,28 +307,25 @@ export default function AdminDashboardPage() {
         const sorted = [...connected, ...disconnected];
 
         return (
-          <div className="mt-auto pt-8 space-y-2 text-xs text-muted-foreground">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
+          <div className="mt-auto pt-8 text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="flex items-center gap-1.5">
                 <span className="font-mono">{systemStatus.version}</span>
                 <span>·</span>
                 <span>{systemStatus.environment}</span>
-              </div>
-              <Link
-                href="/admin/settings#system-info"
-                className="flex items-center gap-1 hover:text-foreground transition-colors"
-              >
-                시스템 정보
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-            <div className="flex items-center gap-3 flex-wrap">
+              </span>
               {sorted.map(({ label, ok }) => (
                 <span key={label} className="flex items-center gap-1">
                   <span className={`inline-block h-1.5 w-1.5 rounded-full ${ok ? 'bg-green-500' : 'bg-red-500'}`} />
                   <span className={ok ? '' : 'text-red-600'}>{label}</span>
                 </span>
               ))}
+              <Button variant="ghost" size="sm" className="ml-auto h-auto px-2 py-1 text-xs text-muted-foreground" asChild>
+                <Link href="/admin/settings#system-info">
+                  시스템 정보
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              </Button>
             </div>
           </div>
         );
