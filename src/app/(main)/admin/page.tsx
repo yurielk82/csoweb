@@ -16,6 +16,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -104,6 +105,8 @@ export default function AdminDashboardPage() {
   const [allUsers, setAllUsers] = useState<UserData[]>([]);
   const [csoBusinessNumbers, setCsoBusinessNumbers] = useState<string[]>([]);
   const [emailStats, setEmailStats] = useState<EmailStats | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [unmappedCount, setUnmappedCount] = useState(0);
   const [emailLoading, setEmailLoading] = useState(false);
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     supabase: false,
@@ -182,18 +185,22 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     async function fetchAll() {
       try {
-        const [allUsersRes, statusRes, statsRes, csoRes] = await Promise.all([
+        const [allUsersRes, statusRes, statsRes, csoRes, pendingRes, integrityRes] = await Promise.all([
           fetch('/api/users'),
           fetch('/api/system/status'),
           fetch('/api/settlements/stats'),
           fetch(`/api/settlements/cso-companies?month=${currentMonthKey}`),
+          fetch('/api/users?pending=true'),
+          fetch('/api/admin/cso-matching/integrity'),
         ]);
 
-        const [allUsersData, statusData, statsData, csoData] = await Promise.all([
+        const [allUsersData, statusData, statsData, csoData, pendingData, integrityData] = await Promise.all([
           allUsersRes.json(),
           statusRes.json(),
           statsRes.json(),
           csoRes.json(),
+          pendingRes.json(),
+          integrityRes.json(),
         ]);
 
         if (allUsersData.success) {
@@ -210,6 +217,14 @@ export default function AdminDashboardPage() {
 
         if (csoData.success) {
           setCsoBusinessNumbers(csoData.data);
+        }
+
+        if (pendingData.success && Array.isArray(pendingData.data)) {
+          setPendingCount(pendingData.data.length);
+        }
+
+        if (integrityData.success && integrityData.data?.stats) {
+          setUnmappedCount(integrityData.data.stats.noCsoMappingCount ?? 0);
         }
       } catch (error) {
         console.error('Fetch stats error:', error);
@@ -243,6 +258,23 @@ export default function AdminDashboardPage() {
   const selectedMonthLabel = monthKeyToLabel(selectedMonth);
 
   const activeProvider = systemStatus.email_provider;
+
+  // 빠른 작업 배지 맵
+  const currentMonthUploaded = months.some(m => m.month === currentMonthKey);
+  const badgeMap: Record<string, { label: string; variant: 'destructive' | 'secondary' }> = {};
+
+  if (!currentMonthUploaded) {
+    badgeMap['/admin/upload'] = { label: '미업로드', variant: 'destructive' };
+  }
+  if (pendingCount > 0) {
+    badgeMap['/admin/members?filter=pending'] = { label: `${pendingCount}건 대기`, variant: 'destructive' };
+  }
+  if (unmappedCount > 0) {
+    badgeMap['/admin/integrity'] = { label: `${unmappedCount}건 미매핑`, variant: 'destructive' };
+  }
+  if (csoBusinessNumbers.length > 0 && (!emailStats || emailStats.total === 0)) {
+    badgeMap['/admin/mailmerge'] = { label: '미발송', variant: 'secondary' };
+  }
 
   // ── Loading ──
   if (loading) {
@@ -413,19 +445,29 @@ export default function AdminDashboardPage() {
       <div>
         <h2 className="text-lg font-semibold mb-4">빠른 작업</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {quickActions.map((action) => (
-            <Link key={action.href} href={action.href}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                <CardHeader className="pb-2">
-                  <div className={`p-2 rounded-lg ${action.color} w-fit`}>
-                    <action.icon className="h-5 w-5 text-white" />
-                  </div>
-                  <CardTitle className="text-base mt-2">{action.title}</CardTitle>
-                  <CardDescription className="text-sm">{action.description}</CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
-          ))}
+          {quickActions.map((action) => {
+            const badge = badgeMap[action.href];
+            return (
+              <Link key={action.href} href={action.href}>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <div className={`p-2 rounded-lg ${action.color} w-fit`}>
+                        <action.icon className="h-5 w-5 text-white" />
+                      </div>
+                      {badge && (
+                        <Badge variant={badge.variant} className="text-xs">
+                          {badge.label}
+                        </Badge>
+                      )}
+                    </div>
+                    <CardTitle className="text-base mt-2">{action.title}</CardTitle>
+                    <CardDescription className="text-sm">{action.description}</CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       </div>
 
