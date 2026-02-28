@@ -15,7 +15,6 @@ import {
   Link2,
   Calendar,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -81,13 +80,13 @@ function getMonthDateRange(monthKey: string): { startDate: string; endDate: stri
 // ── Quick Actions ──
 
 const quickActions = [
-  { href: '/admin/upload', icon: Upload, title: '정산서 업로드', description: '정산서 데이터 업로드', color: 'bg-blue-500' },
-  { href: '/admin/members?filter=pending', icon: Users, title: '회원 승인', description: '대기 중인 회원 승인', color: 'bg-green-500' },
-  { href: '/admin/integrity', icon: Link2, title: '거래처 매핑', description: 'CSO 관리업체 매칭 상태 검수', color: 'bg-red-500' },
-  { href: '/admin/data', icon: Database, title: '데이터 관리', description: '정산 데이터 관리', color: 'bg-cyan-500' },
-  { href: '/admin/columns', icon: Columns, title: '컬럼 설정', description: '표시 컬럼 관리', color: 'bg-purple-500' },
-  { href: '/admin/mailmerge', icon: MailPlus, title: '메일머지', description: '일괄 이메일 발송', color: 'bg-orange-500' },
-  { href: '/admin/emails', icon: Mail, title: '이메일 이력', description: '발송 내역 조회', color: 'bg-pink-500' },
+  { href: '/admin/upload', icon: Upload, title: '정산서 업로드', description: '정산서 데이터 업로드', color: 'glass-icon-blue' },
+  { href: '/admin/members?filter=pending', icon: Users, title: '회원 승인', description: '대기 중인 회원 승인', color: 'glass-icon-green' },
+  { href: '/admin/integrity', icon: Link2, title: '거래처 매핑', description: 'CSO 관리업체 매칭 상태 검수', color: 'glass-icon-red' },
+  { href: '/admin/data', icon: Database, title: '데이터 관리', description: '정산 데이터 관리', color: 'glass-icon-cyan' },
+  { href: '/admin/columns', icon: Columns, title: '컬럼 설정', description: '표시 컬럼 관리', color: 'glass-icon-purple' },
+  { href: '/admin/mailmerge', icon: MailPlus, title: '메일머지', description: '일괄 이메일 발송', color: 'glass-icon-orange' },
+  { href: '/admin/emails', icon: Mail, title: '이메일 이력', description: '발송 내역 조회', color: 'glass-icon-pink' },
 ];
 
 // ── Component ──
@@ -279,95 +278,101 @@ export default function AdminDashboardPage() {
   // ── Loading ──
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-end justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">관리자 대시보드</h1>
-            <p className="text-muted-foreground">CSO 정산서 포털 관리</p>
+      <div className="dashboard-glass-bg flex-1 -mx-4 -mt-6 px-4 pt-6 pb-6">
+        {/* Floating Orbs */}
+        <div className="dashboard-orb dashboard-orb-1" />
+        <div className="dashboard-orb dashboard-orb-2" />
+
+        <div className="relative z-10 space-y-6">
+          <div className="flex items-end justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">관리자 대시보드</h1>
+              <p className="text-muted-foreground">CSO 정산서 포털 관리</p>
+            </div>
+            <Skeleton className="h-9 w-28 rounded-xl" />
           </div>
-          <Skeleton className="h-9 w-28" />
-        </div>
-        {/* KPI 스켈레톤 */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <Skeleton className="h-4 w-20" />
-              </CardHeader>
-              <CardContent>
+
+          {/* KPI 스켈레톤 */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="glass-kpi-card p-5">
+                <div className="flex items-center justify-between pb-2">
+                  <Skeleton className="h-4 w-20" />
+                </div>
                 <Skeleton className="h-8 w-16 mb-2" />
                 <Skeleton className="h-3 w-28" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        {/* 빠른 작업 스켈레톤 */}
-        <div>
-          <Skeleton className="h-5 w-20 mb-4" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {Array.from({ length: 7 }).map((_, i) => (
-              <Card key={i}>
-                <CardHeader className="pb-2">
-                  <Skeleton className="h-9 w-9 rounded-lg" />
-                  <Skeleton className="h-4 w-20 mt-2" />
-                  <Skeleton className="h-3 w-28" />
-                </CardHeader>
-              </Card>
+              </div>
             ))}
           </div>
-        </div>
-        <div className="mt-8">
-          <Skeleton className="h-4 w-48" />
+
+          {/* 빠른 작업 스켈레톤 */}
+          <div>
+            <Skeleton className="h-5 w-20 mb-4" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div key={i} className="glass-action-card p-5">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <Skeleton className="h-4 w-20 mt-3" />
+                  <Skeleton className="h-3 w-28 mt-1" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <Skeleton className="h-4 w-48" />
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col flex-1">
-      <div className="space-y-6">
-      {/* Header + Month Select */}
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">관리자 대시보드</h1>
-          <p className="text-muted-foreground">CSO 정산서 포털 관리</p>
-        </div>
-        <Select value={selectedMonth} onValueChange={handleMonthChange}>
-          <SelectTrigger className="w-[140px]">
-            <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {monthOptions.map((key) => (
-              <SelectItem key={key} value={key}>
-                {monthKeyToLabel(key)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <div className="dashboard-glass-bg flex flex-col flex-1 -mx-4 -mt-6 px-4 pt-6 pb-6">
+      {/* Floating Orbs */}
+      <div className="dashboard-orb dashboard-orb-1" />
+      <div className="dashboard-orb dashboard-orb-2" />
 
-      {/* KPI 카드 (5개) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {/* CSO 업체 */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">CSO 업체</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
+      <div className="relative z-10 space-y-6">
+        {/* Header + Month Select */}
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">관리자 대시보드</h1>
+            <p className="text-muted-foreground">CSO 정산서 포털 관리</p>
+          </div>
+          <Select value={selectedMonth} onValueChange={handleMonthChange}>
+            <SelectTrigger className="w-36 glass-select">
+              <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((key) => (
+                <SelectItem key={key} value={key}>
+                  {monthKeyToLabel(key)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* KPI 카드 (5개) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {/* CSO 업체 */}
+          <div className="glass-kpi-card p-5">
+            <div className="flex items-center justify-between pb-2">
+              <span className="text-sm font-medium">CSO 업체</span>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </div>
             <div className="text-2xl font-bold">{csoCount}</div>
             <p className="text-xs text-muted-foreground">{selectedMonthLabel} 정산 업체</p>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* 접속 업체 */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">접속 업체</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
+          {/* 접속 업체 */}
+          <div className="glass-kpi-card p-5">
+            <div className="flex items-center justify-between pb-2">
+              <span className="text-sm font-medium">접속 업체</span>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </div>
             {isCurrentMonth ? (
               <>
                 <div className="text-2xl font-bold">
@@ -386,40 +391,34 @@ export default function AdminDashboardPage() {
                 <p className="text-xs text-muted-foreground">당월만 조회 가능</p>
               </>
             )}
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* 총수수료 */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">총수수료</CardTitle>
-            <Banknote className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
+          {/* 총수수료 */}
+          <div className="glass-kpi-card p-5">
+            <div className="flex items-center justify-between pb-2">
+              <span className="text-sm font-medium">총수수료</span>
+              <Banknote className="h-4 w-4 text-muted-foreground" />
+            </div>
             <div className="text-2xl font-bold">{formatCurrency(totalCommission)}</div>
             <p className="text-xs text-muted-foreground">{selectedMonthLabel} 정산 수수료</p>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* 총 정산월 */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">총 정산월</CardTitle>
-            <Database className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
+          {/* 총 정산월 */}
+          <div className="glass-kpi-card p-5">
+            <div className="flex items-center justify-between pb-2">
+              <span className="text-sm font-medium">총 정산월</span>
+              <Database className="h-4 w-4 text-muted-foreground" />
+            </div>
             <div className="text-2xl font-bold">{totalMonths}</div>
             <p className="text-xs text-muted-foreground">업로드된 정산 데이터</p>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* 이메일 발송 */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">이메일 발송</CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
+          {/* 이메일 발송 */}
+          <div className="glass-kpi-card p-5">
+            <div className="flex items-center justify-between pb-2">
+              <span className="text-sm font-medium">이메일 발송</span>
+              <Mail className="h-4 w-4 text-muted-foreground" />
+            </div>
             {emailLoading ? (
               <>
                 <Skeleton className="h-8 w-16 mb-1" />
@@ -438,23 +437,21 @@ export default function AdminDashboardPage() {
                 <p className="text-xs text-muted-foreground">{selectedMonthLabel} 발송 없음</p>
               </>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
 
-      {/* 빠른 작업 (v0.22.0 스타일) */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">빠른 작업</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {quickActions.map((action) => {
-            const badge = badgeMap[action.href];
-            return (
-              <Link key={action.href} href={action.href}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                  <CardHeader className="pb-2">
+        {/* 빠른 작업 */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4">빠른 작업</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {quickActions.map((action) => {
+              const badge = badgeMap[action.href];
+              return (
+                <Link key={action.href} href={action.href}>
+                  <div className="glass-action-card p-5 cursor-pointer h-full">
                     <div className="flex items-center justify-between">
-                      <div className={`p-2 rounded-lg ${action.color} w-fit`}>
-                        <action.icon className="h-5 w-5 text-white" />
+                      <div className={`glass-icon ${action.color}`}>
+                        <action.icon />
                       </div>
                       {badge && (
                         <Badge variant={badge.variant} className="text-xs">
@@ -462,15 +459,14 @@ export default function AdminDashboardPage() {
                         </Badge>
                       )}
                     </div>
-                    <CardTitle className="text-base mt-2">{action.title}</CardTitle>
-                    <CardDescription className="text-sm">{action.description}</CardDescription>
-                  </CardHeader>
-                </Card>
-              </Link>
-            );
-          })}
+                    <p className="text-base font-semibold mt-3">{action.title}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">{action.description}</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         </div>
-      </div>
       </div>
 
       {/* System Footer */}
@@ -495,34 +491,36 @@ export default function AdminDashboardPage() {
         const sorted = [...connected, ...disconnected];
 
         return (
-          <div className="mt-auto pt-8 text-xs text-muted-foreground">
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="flex items-center gap-1.5">
-                <span className="font-mono">{systemStatus.version}</span>
-                <span>·</span>
-                <span>{systemStatus.environment}</span>
-              </span>
-              {sorted.map(({ label, ok }) => (
-                <span key={label} className="flex items-center gap-1">
-                  <span
-                    className={`inline-block h-1.5 w-1.5 rounded-full ${
-                      ok ? 'bg-green-500' : 'bg-red-500'
-                    }`}
-                  />
-                  <span className={ok ? '' : 'text-red-600'}>{label}</span>
+          <div className="relative z-10 mt-auto pt-8">
+            <div className="dashboard-glass-footer text-xs text-muted-foreground">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="flex items-center gap-1.5">
+                  <span className="font-mono">{systemStatus.version}</span>
+                  <span>·</span>
+                  <span>{systemStatus.environment}</span>
                 </span>
-              ))}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-auto h-auto px-2 py-1 text-xs text-muted-foreground"
-                asChild
-              >
-                <Link href="/admin/system">
-                  시스템 정보
-                  <ArrowRight className="h-3 w-3" />
-                </Link>
-              </Button>
+                {sorted.map(({ label, ok }) => (
+                  <span key={label} className="flex items-center gap-1">
+                    <span
+                      className={`dashboard-status-dot ${
+                        ok ? 'dashboard-status-dot-ok' : 'dashboard-status-dot-fail'
+                      }`}
+                    />
+                    <span className={ok ? '' : 'text-destructive'}>{label}</span>
+                  </span>
+                ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto h-auto px-2 py-1 text-xs text-muted-foreground"
+                  asChild
+                >
+                  <Link href="/admin/system">
+                    시스템 정보
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         );

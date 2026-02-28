@@ -50,7 +50,27 @@ CSO 정산 포털 디자인 토큰 및 색상 시스템 정의.
 - **로그인**: Liquid Glass — `.login-glass-bg` (animated mesh gradient + frosted glass card). 테마 독립적 다크 그래디언트 배경.
 - **기타 auth 페이지** (회원가입, 비밀번호 찾기): `bg-muted`
 
-### Liquid Glass 토큰 (로그인 전용)
+### Liquid Glass 토큰
+
+#### 공통 CSS 변수
+
+| 변수 | 값 | 용도 |
+|------|-----|------|
+| `--glass-bg` | `oklch(1 0 0 / 75%)` | 글래스 카드 배경 |
+| `--glass-bg-hover` | `oklch(1 0 0 / 80%)` | 호버 시 카드 배경 |
+| `--glass-bg-action` | `oklch(1 0 0 / 70%)` | 액션 카드 배경 (약간 더 투명) |
+| `--glass-border` | `oklch(0 0 0 / 8%)` | 기본 글래스 테두리 |
+| `--glass-border-light` | `oklch(0 0 0 / 6%)` | 연한 글래스 테두리 |
+| `--glass-radius` | `1.25rem` | 글래스 카드 radius |
+| `--glass-blur` | `20px` | Backdrop blur |
+| `--glass-saturate` | `180%` | Backdrop saturate |
+| `--glass-shadow` | `0 8px 32px oklch(0 0 0 / 8%)` | 카드 외부 그림자 |
+| `--glass-shadow-inset` | `inset 0 1px 0 oklch(1 0 0 / 50%)` | 내부 상단 하이라이트 |
+| `--glass-easing` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Spring easing |
+| `--glass-duration` | `200ms` | 트랜지션 시간 |
+| `--glass-gradient` | `linear-gradient(135deg, ...)` | 배경 그래디언트 |
+
+#### 로그인 전용
 
 | 클래스 | 용도 |
 |--------|------|
@@ -60,6 +80,20 @@ CSO 정산 포털 디자인 토큰 및 색상 시스템 정의.
 | `.glass-button` | 3D 유리 버튼 (hover scale + spring easing) |
 | `.login-icon-glow` | 아이콘 네온 글로우 + pulse 애니메이션 |
 | `.login-glass-footer` | 반투명 유리 푸터 |
+
+#### 대시보드 전용
+
+| 클래스 | 용도 |
+|--------|------|
+| `.dashboard-glass-bg` | 대시보드 그래디언트 배경 |
+| `.dashboard-orb-{1,2}` | 배경 오브 (로그인보다 작고 연함) |
+| `.glass-kpi-card` | KPI 카드 (frosted glass) |
+| `.glass-action-card` | Quick Action 카드 (hover lift + scale) |
+| `.glass-icon` | 아이콘 글로우 컨테이너 (원형, `--icon-hue` 기반) |
+| `.glass-icon-{color}` | 아이콘 hue modifier (blue/green/red/cyan/purple/orange/pink) |
+| `.glass-select` | Select 트리거 glass 스타일 |
+| `.dashboard-glass-footer` | 시스템 상태 footer (반투명) |
+| `.dashboard-status-dot` | 상태 표시 dot (ok: green glow, fail: red glow) |
 
 `prefers-reduced-motion: reduce` 시 모든 애니메이션 정지.
 
