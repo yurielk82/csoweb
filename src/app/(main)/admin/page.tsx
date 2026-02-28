@@ -78,13 +78,13 @@ function getMonthDateRange(monthKey: string): { startDate: string; endDate: stri
 // ── Quick Actions ──
 
 const quickActions = [
-  { href: '/admin/upload', icon: Upload, title: '정산서 업로드', description: '정산서 데이터 업로드' },
-  { href: '/admin/members?filter=pending', icon: Users, title: '회원 승인', description: '대기 중인 회원 승인' },
-  { href: '/admin/integrity', icon: Link2, title: '거래처 매핑', description: 'CSO 관리업체 매칭 상태 검수' },
-  { href: '/admin/data', icon: Database, title: '데이터 관리', description: '정산 데이터 관리' },
-  { href: '/admin/columns', icon: Columns, title: '컬럼 설정', description: '표시 컬럼 관리' },
-  { href: '/admin/mailmerge', icon: MailPlus, title: '메일머지', description: '일괄 이메일 발송' },
-  { href: '/admin/emails', icon: Mail, title: '이메일 이력', description: '발송 내역 조회' },
+  { href: '/admin/upload', icon: Upload, title: '정산서 업로드', iconColor: 'glass-icon-blue' },
+  { href: '/admin/members?filter=pending', icon: Users, title: '회원 승인', iconColor: 'glass-icon-green' },
+  { href: '/admin/integrity', icon: Link2, title: '거래처 매핑', iconColor: 'glass-icon-cyan' },
+  { href: '/admin/data', icon: Database, title: '데이터 관리', iconColor: 'glass-icon-purple' },
+  { href: '/admin/columns', icon: Columns, title: '컬럼 설정', iconColor: 'glass-icon-orange' },
+  { href: '/admin/mailmerge', icon: MailPlus, title: '메일머지', iconColor: 'glass-icon-pink' },
+  { href: '/admin/emails', icon: Mail, title: '이메일 이력', iconColor: 'glass-icon-purple' },
 ];
 
 // ── Component ──
@@ -284,7 +284,10 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 space-y-6">
+    <div className="dashboard-glass-bg">
+      <div className="dashboard-orb dashboard-orb-1" aria-hidden="true" />
+      <div className="dashboard-orb dashboard-orb-2" aria-hidden="true" />
+      <div className="relative z-10 flex flex-col flex-1 space-y-6">
         {/* Header + Month Select */}
         <div className="flex items-end justify-between gap-4">
           <div>
@@ -293,7 +296,7 @@ export default function AdminDashboardPage() {
           </div>
           {kpiLoaded ? (
             <Select value={selectedMonth} onValueChange={handleMonthChange}>
-              <SelectTrigger className="w-36">
+              <SelectTrigger className="w-36 glass-select">
                 <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
                 <SelectValue />
               </SelectTrigger>
@@ -310,13 +313,15 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        {/* KPI 카드 (5개) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {/* CSO 업체 */}
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
+        {/* Bento Grid — 5col */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {/* Row 1: CSO 업체 (2col) */}
+          <div className="glass-kpi-card sm:col-span-2">
             <div className="flex items-center justify-between pb-2">
               <span className="text-sm font-medium">CSO 업체</span>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <span className="glass-icon glass-icon-teal">
+                <TrendingUp className="h-4 w-4" />
+              </span>
             </div>
             {kpiLoaded ? (
               <>
@@ -331,11 +336,13 @@ export default function AdminDashboardPage() {
             )}
           </div>
 
-          {/* 접속 업체 */}
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
+          {/* Row 1: 접속 업체 (1col) */}
+          <div className="glass-kpi-card">
             <div className="flex items-center justify-between pb-2">
               <span className="text-sm font-medium">접속 업체</span>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="glass-icon glass-icon-green">
+                <Users className="h-4 w-4" />
+              </span>
             </div>
             {!kpiLoaded ? (
               <>
@@ -362,30 +369,13 @@ export default function AdminDashboardPage() {
             )}
           </div>
 
-          {/* 총수수료 */}
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
-            <div className="flex items-center justify-between pb-2">
-              <span className="text-sm font-medium">총수수료</span>
-              <Banknote className="h-4 w-4 text-muted-foreground" />
-            </div>
-            {kpiLoaded ? (
-              <>
-                <div className="text-2xl font-bold">{formatNumber(totalCommission)}</div>
-                <p className="text-xs text-muted-foreground">{selectedMonthLabel} 정산 수수료</p>
-              </>
-            ) : (
-              <>
-                <Skeleton className="h-8 w-16 mb-1" />
-                <Skeleton className="h-3 w-28" />
-              </>
-            )}
-          </div>
-
-          {/* 총 정산월 */}
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
+          {/* Row 1: 총 정산월 (1col) */}
+          <div className="glass-kpi-card">
             <div className="flex items-center justify-between pb-2">
               <span className="text-sm font-medium">총 정산월</span>
-              <Database className="h-4 w-4 text-muted-foreground" />
+              <span className="glass-icon glass-icon-purple">
+                <Database className="h-4 w-4" />
+              </span>
             </div>
             {kpiLoaded ? (
               <>
@@ -400,11 +390,13 @@ export default function AdminDashboardPage() {
             )}
           </div>
 
-          {/* 이메일 발송 */}
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
+          {/* Row 1: 이메일 발송 (1col) */}
+          <div className="glass-kpi-card">
             <div className="flex items-center justify-between pb-2">
               <span className="text-sm font-medium">이메일 발송</span>
-              <Mail className="h-4 w-4 text-muted-foreground" />
+              <span className="glass-icon glass-icon-pink">
+                <Mail className="h-4 w-4" />
+              </span>
             </div>
             {emailLoading ? (
               <>
@@ -425,94 +417,115 @@ export default function AdminDashboardPage() {
               </>
             )}
           </div>
-        </div>
 
-        {/* 빠른 작업 */}
-        <div>
-          <h2 className="text-lg font-semibold mb-4">빠른 작업</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {quickActions.map((action) => {
-              const badge = badgeMap[action.href];
-              return (
-                <Link key={action.href} href={action.href}>
-                  <div className="rounded-xl border bg-card p-5 shadow-sm cursor-pointer h-full transition-colors hover:bg-muted/50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted">
-                        <action.icon />
-                      </div>
+          {/* Row 2: 총수수료 (2col) */}
+          <div className="glass-kpi-card sm:col-span-2">
+            <div className="flex items-center justify-between pb-2">
+              <span className="text-sm font-medium">총수수료</span>
+              <span className="glass-icon glass-icon-orange">
+                <Banknote className="h-4 w-4" />
+              </span>
+            </div>
+            {kpiLoaded ? (
+              <>
+                <div className="text-2xl font-bold">{formatNumber(totalCommission)}</div>
+                <p className="text-xs text-muted-foreground">{selectedMonthLabel} 정산 수수료</p>
+              </>
+            ) : (
+              <>
+                <Skeleton className="h-8 w-16 mb-1" />
+                <Skeleton className="h-3 w-28" />
+              </>
+            )}
+          </div>
+
+          {/* Row 2: 빠른 작업 (3col) */}
+          <div className="glass-kpi-card sm:col-span-3">
+            <div className="pb-3">
+              <span className="text-sm font-medium">빠른 작업</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {quickActions.map((action) => {
+                const badge = badgeMap[action.href];
+                return (
+                  <Link key={action.href} href={action.href}>
+                    <div className="glass-action-card">
+                      <span className={`glass-icon ${action.iconColor}`}>
+                        <action.icon className="h-4 w-4" />
+                      </span>
+                      <span className="flex-1 text-sm font-medium truncate">
+                        {action.title}
+                      </span>
                       {badge && (
-                        <Badge variant={badge.variant} className="text-xs">
+                        <Badge variant={badge.variant} className="text-xs shrink-0">
                           {badge.label}
                         </Badge>
                       )}
                     </div>
-                    <p className="text-base font-semibold mt-3">{action.title}</p>
-                    <p className="text-sm text-muted-foreground mt-0.5">{action.description}</p>
-                  </div>
-                </Link>
-              );
-            })}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-      {/* System Footer */}
-      <div className="mt-auto pt-6 border-t text-xs text-muted-foreground">
-        <div className="flex items-center gap-3 flex-wrap">
-          {systemLoaded ? (
-            <>
-              <span className="flex items-center gap-1.5">
-                <span className="font-mono">{systemStatus.version}</span>
-                <span>·</span>
-                <span>{systemStatus.environment}</span>
-              </span>
-              {(() => {
-                const emailOk =
-                  activeProvider === 'smtp'
-                    ? systemStatus.smtp.configured
-                    : systemStatus.resend;
-                const emailLabel =
-                  activeProvider === 'smtp'
-                    ? `이메일 SMTP${systemStatus.resend ? '/Resend' : ''}`
-                    : `이메일 Resend${systemStatus.smtp.configured ? '/SMTP' : ''}`;
-                const checks = [
-                  { label: 'DB', ok: systemStatus.supabase },
-                  { label: '국세청 API', ok: systemStatus.nts_api },
-                  { label: '심평원 병원 API', ok: systemStatus.hira_hospital_api },
-                  { label: '심평원 약국 API', ok: systemStatus.hira_pharmacy_api },
-                  { label: emailLabel, ok: emailOk },
-                ];
-                const connected = checks.filter((c) => c.ok);
-                const disconnected = checks.filter((c) => !c.ok);
-                return [...connected, ...disconnected].map(({ label, ok }) => (
-                  <span key={label} className="flex items-center gap-1">
-                    <span
-                      className={`inline-block w-1.5 h-1.5 rounded-full ${
-                        ok ? 'bg-success' : 'bg-destructive'
-                      }`}
-                    />
-                    <span className={ok ? '' : 'text-destructive'}>{label}</span>
-                  </span>
-                ));
-              })()}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-auto h-auto px-2 py-1 text-xs text-muted-foreground"
-                asChild
-              >
-                <Link href="/admin/system">
-                  시스템 정보
-                  <ArrowRight className="h-3 w-3" />
-                </Link>
-              </Button>
-            </>
-          ) : (
-            <>
-              <Skeleton className="h-3 w-24" />
-              <Skeleton className="h-3 w-48" />
-              <Skeleton className="h-3 w-16 ml-auto" />
-            </>
-          )}
+        {/* System Footer */}
+        <div className="dashboard-glass-footer text-xs text-muted-foreground">
+          <div className="flex items-center gap-3 flex-wrap">
+            {systemLoaded ? (
+              <>
+                <span className="flex items-center gap-1.5">
+                  <span className="font-mono">{systemStatus.version}</span>
+                  <span>·</span>
+                  <span>{systemStatus.environment}</span>
+                </span>
+                {(() => {
+                  const emailOk =
+                    activeProvider === 'smtp'
+                      ? systemStatus.smtp.configured
+                      : systemStatus.resend;
+                  const emailLabel =
+                    activeProvider === 'smtp'
+                      ? `이메일 SMTP${systemStatus.resend ? '/Resend' : ''}`
+                      : `이메일 Resend${systemStatus.smtp.configured ? '/SMTP' : ''}`;
+                  const checks = [
+                    { label: 'DB', ok: systemStatus.supabase },
+                    { label: '국세청 API', ok: systemStatus.nts_api },
+                    { label: '심평원 병원 API', ok: systemStatus.hira_hospital_api },
+                    { label: '심평원 약국 API', ok: systemStatus.hira_pharmacy_api },
+                    { label: emailLabel, ok: emailOk },
+                  ];
+                  const connected = checks.filter((c) => c.ok);
+                  const disconnected = checks.filter((c) => !c.ok);
+                  return [...connected, ...disconnected].map(({ label, ok }) => (
+                    <span key={label} className="flex items-center gap-1">
+                      <span
+                        className={ok ? 'dashboard-status-dot-ok' : 'dashboard-status-dot-fail'}
+                      />
+                      <span className={ok ? '' : 'text-destructive'}>{label}</span>
+                    </span>
+                  ));
+                })()}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto h-auto px-2 py-1 text-xs text-muted-foreground"
+                  asChild
+                >
+                  <Link href="/admin/system">
+                    시스템 정보
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-48" />
+                <Skeleton className="h-3 w-16 ml-auto" />
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
