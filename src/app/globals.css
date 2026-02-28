@@ -143,9 +143,9 @@
   overflow: hidden;
   background: linear-gradient(
     135deg,
-    oklch(0.13 0.04 250),
-    oklch(0.10 0.03 245),
-    oklch(0.16 0.05 255)
+    oklch(0.97 0.01 55),
+    oklch(0.95 0.015 70),
+    oklch(0.98 0.005 55)
   );
 }
 
@@ -173,7 +173,7 @@
 .login-orb-1 {
   width: 400px;
   height: 400px;
-  background: oklch(0.7 0.18 55);
+  background: oklch(0.82 0.1 55);
   top: -10%;
   left: -5%;
   animation: login-float-1 20s ease-in-out infinite;
@@ -182,7 +182,7 @@
 .login-orb-2 {
   width: 350px;
   height: 350px;
-  background: oklch(0.65 0.16 40);
+  background: oklch(0.78 0.08 40);
   top: 50%;
   right: -5%;
   animation: login-float-2 25s ease-in-out infinite;
@@ -191,7 +191,7 @@
 .login-orb-3 {
   width: 300px;
   height: 300px;
-  background: oklch(0.75 0.14 75);
+  background: oklch(0.87 0.06 75);
   bottom: -10%;
   left: 30%;
   animation: login-float-3 30s ease-in-out infinite;
@@ -229,12 +229,12 @@
   padding: 2.5rem;
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  background: oklch(1 0 0 / 8%);
-  border: 1px solid oklch(1 0 0 / 15%);
+  background: oklch(1 0 0 / 75%);
+  border: 1px solid oklch(0 0 0 / 8%);
   border-radius: 1.5rem;
   box-shadow:
-    0 8px 32px oklch(0 0 0 / 10%),
-    inset 0 1px 0 oklch(1 0 0 / 10%);
+    0 8px 32px oklch(0 0 0 / 8%),
+    inset 0 1px 0 oklch(1 0 0 / 50%);
 }
 
 @media (max-width: 480px) {
@@ -253,8 +253,8 @@
   width: 4rem;
   height: 4rem;
   border-radius: 50%;
-  background: oklch(0.7 0.18 55 / 15%);
-  box-shadow: 0 0 40px oklch(0.7 0.2 45 / 30%);
+  background: oklch(0.7 0.18 55 / 12%);
+  box-shadow: 0 0 40px oklch(0.7 0.15 55 / 20%);
   margin: 0 auto 1.5rem;
   animation: login-icon-pulse 3s ease-in-out infinite;
 }
@@ -262,12 +262,12 @@
 .login-icon-glow svg {
   width: 2rem;
   height: 2rem;
-  color: oklch(0.85 0.12 55);
+  color: oklch(0.6 0.18 55);
 }
 
 @keyframes login-icon-pulse {
-  0%, 100% { box-shadow: 0 0 40px oklch(0.7 0.2 45 / 30%); }
-  50% { box-shadow: 0 0 60px oklch(0.7 0.2 45 / 40%); }
+  0%, 100% { box-shadow: 0 0 40px oklch(0.7 0.15 55 / 20%); }
+  50% { box-shadow: 0 0 60px oklch(0.7 0.15 55 / 30%); }
 }
 
 /* Typography */
@@ -275,15 +275,15 @@
   font-size: 1.5rem;
   font-weight: 700;
   text-align: center;
-  color: oklch(0.95 0 0);
-  text-shadow: 0 1px 2px oklch(0 0 0 / 20%);
+  color: oklch(0.2 0 0);
+  text-shadow: none;
   margin-bottom: 0.5rem;
 }
 
 .login-glass-subtitle {
   font-size: 0.875rem;
   text-align: center;
-  color: oklch(0.7 0 0);
+  color: oklch(0.45 0 0);
   margin-bottom: 2rem;
 }
 
@@ -304,23 +304,23 @@
 .glass-card label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: oklch(0.85 0 0);
+  color: oklch(0.3 0 0);
 }
 
 /* Input overrides inside glass card */
 .glass-card input {
-  background: oklch(1 0 0 / 6%);
-  border-color: oklch(1 0 0 / 12%);
-  color: oklch(0.95 0 0);
+  background: oklch(0 0 0 / 3%);
+  border-color: oklch(0 0 0 / 12%);
+  color: oklch(0.15 0 0);
 }
 
 .glass-card input::placeholder {
-  color: oklch(1 0 0 / 35%);
+  color: oklch(0 0 0 / 35%);
 }
 
 .glass-card input:focus {
-  border-color: oklch(0.7 0.15 55 / 50%);
-  box-shadow: 0 0 0 2px oklch(0.7 0.15 55 / 20%);
+  border-color: oklch(0.7 0.15 55 / 60%);
+  box-shadow: 0 0 0 2px oklch(0.7 0.15 55 / 25%);
 }
 
 .glass-card input:disabled {
@@ -329,9 +329,9 @@
 
 /* Error alert inside glass card */
 .glass-card [role="alert"] {
-  background: oklch(0.4 0.15 25 / 20%);
-  border-color: oklch(0.65 0.2 25 / 40%);
-  color: oklch(0.9 0.12 25);
+  background: oklch(0.55 0.15 25 / 10%);
+  border-color: oklch(0.55 0.2 25 / 30%);
+  color: oklch(0.45 0.18 25);
 }
 
 /* Glass Button */
@@ -348,29 +348,29 @@
   border-radius: 0.75rem;
   backdrop-filter: blur(12px) saturate(150%);
   -webkit-backdrop-filter: blur(12px) saturate(150%);
-  background: oklch(0.7 0.18 55 / 25%);
-  border: 1px solid oklch(0.7 0.15 55 / 30%);
+  background: oklch(0.7 0.18 55 / 90%);
+  border: 1px solid oklch(0.65 0.18 55 / 50%);
   box-shadow:
-    0 4px 16px oklch(0 0 0 / 8%),
-    inset 0 1px 0 oklch(1 0 0 / 15%);
-  color: oklch(0.95 0 0);
+    0 4px 16px oklch(0.7 0.15 55 / 20%),
+    inset 0 1px 0 oklch(1 0 0 / 20%);
+  color: oklch(1 0 0);
   cursor: pointer;
   transition: all 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .glass-button:hover:not(:disabled) {
   transform: scale(1.02);
-  background: oklch(0.7 0.18 55 / 35%);
+  background: oklch(0.65 0.18 55 / 95%);
   box-shadow:
-    0 8px 24px oklch(0 0 0 / 12%),
-    inset 0 1px 0 oklch(1 0 0 / 20%);
+    0 8px 24px oklch(0.7 0.15 55 / 25%),
+    inset 0 1px 0 oklch(1 0 0 / 25%);
 }
 
 .glass-button:active:not(:disabled) {
   transform: scale(0.97);
   box-shadow:
-    0 2px 8px oklch(0 0 0 / 6%),
-    inset 0 1px 0 oklch(1 0 0 / 10%);
+    0 2px 8px oklch(0.7 0.15 55 / 15%),
+    inset 0 1px 0 oklch(1 0 0 / 15%);
 }
 
 .glass-button:disabled {
@@ -389,18 +389,18 @@
 }
 
 .login-glass-links a {
-  color: oklch(0.75 0.12 55);
+  color: oklch(0.6 0.16 55);
   text-decoration: none;
   transition: color 150ms;
 }
 
 .login-glass-links a:hover {
-  color: oklch(0.85 0.12 55);
+  color: oklch(0.55 0.18 55);
   text-decoration: underline;
 }
 
 .login-glass-links p {
-  color: oklch(0.6 0 0);
+  color: oklch(0.5 0 0);
 }
 
 /* Glass Footer */
@@ -408,21 +408,21 @@
   position: relative;
   z-index: 1;
   padding: 0.75rem 1rem;
-  background: oklch(0 0 0 / 15%);
+  background: oklch(0 0 0 / 3%);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-top: 1px solid oklch(1 0 0 / 8%);
+  border-top: 1px solid oklch(0 0 0 / 8%);
 }
 
 .login-glass-footer,
 .login-glass-footer span,
 .login-glass-footer p {
-  color: oklch(0.6 0 0);
+  color: oklch(0.45 0 0);
   font-size: 0.75rem;
 }
 
 .login-glass-footer a {
-  color: oklch(0.7 0.1 55);
+  color: oklch(0.6 0.14 55);
   transition: opacity 150ms;
 }
 
@@ -431,14 +431,14 @@
 }
 
 .login-footer-divider {
-  color: oklch(0.4 0 0);
+  color: oklch(0.7 0 0);
 }
 
 .login-footer-company {
   font-weight: 500;
-  color: oklch(0.8 0 0);
+  color: oklch(0.3 0 0);
 }
 
 .login-footer-copyright {
-  border-top: 1px solid oklch(1 0 0 / 6%);
+  border-top: 1px solid oklch(0 0 0 / 8%);
 }
