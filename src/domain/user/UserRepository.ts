@@ -24,4 +24,5 @@ export interface UserRepository {
   incrementFailedLogin(businessNumber: string): Promise<number>;
   lockAccount(businessNumber: string): Promise<boolean>;
   resetFailedLogin(businessNumber: string): Promise<boolean>;
+  updateLastLogin(businessNumber: string): Promise<boolean>;
 }

@@ -55,6 +55,7 @@ export interface DbUser {
   password_changed_at: string | null;
   failed_login_attempts: number;
   locked_at: string | null;
+  last_login_at: string | null;
   created_at: string;
   updated_at: string;
 }

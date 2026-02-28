@@ -28,6 +28,7 @@ function mapDbUserToUser(dbUser: DbUser): User {
     password_changed_at: dbUser.password_changed_at || undefined,
     failed_login_attempts: dbUser.failed_login_attempts ?? 0,
     locked_at: dbUser.locked_at || undefined,
+    last_login_at: dbUser.last_login_at ?? undefined,
     created_at: dbUser.created_at,
     updated_at: dbUser.updated_at,
   };
@@ -266,6 +267,18 @@ export class SupabaseUserRepository implements UserRepository {
       .update({
         failed_login_attempts: 0,
         locked_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('business_number', businessNumber);
+
+    return !error;
+  }
+
+  async updateLastLogin(businessNumber: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        last_login_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq('business_number', businessNumber);

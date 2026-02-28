@@ -83,6 +83,7 @@ const ADMIN_NAV: NavEntry[] = [
     items: [
       { href: '/admin/mailmerge', label: '메일머지', icon: MailPlus },
       { href: '/admin/emails', label: '이메일 이력', icon: Mail },
+      { href: '/admin/email-settings', label: '이메일 설정', icon: Settings },
     ],
   },
   { href: '/admin/master', label: '마스터 조회', icon: Search },

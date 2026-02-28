@@ -62,10 +62,11 @@ export async function authenticateUser(
     return { type: 'failed', failedCount, maxAttempts: MAX_FAILED_LOGIN_ATTEMPTS };
   }
 
-  // 로그인 성공 — 실패 횟수 리셋
+  // 로그인 성공 — 실패 횟수 리셋 + 접속 시각 기록
   if (user.failed_login_attempts > 0) {
     await userRepo.resetFailedLogin(businessNumber);
   }
+  await userRepo.updateLastLogin(businessNumber);
 
   if (!user.is_admin && !user.is_approved) {
     return { type: 'pending' };

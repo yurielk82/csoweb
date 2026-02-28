@@ -23,6 +23,7 @@ export interface User {
   password_changed_at?: string;
   failed_login_attempts: number;
   locked_at?: string;
+  last_login_at?: string;
   created_at: string;
   updated_at: string;
 }
