@@ -1,0 +1,40 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getSession } from '@/lib/auth';
+import { getSettlementRepository } from '@/infrastructure/supabase';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getSession();
+
+    if (!session || !session.is_admin) {
+      return NextResponse.json(
+        { success: false, error: '관리자 권한이 필요합니다.' },
+        { status: 403 }
+      );
+    }
+
+    const month = request.nextUrl.searchParams.get('month');
+
+    if (!month || !/^\d{6}$/.test(month)) {
+      return NextResponse.json(
+        { success: false, error: '정산월(YYYYMM) 형식이 올바르지 않습니다.' },
+        { status: 400 }
+      );
+    }
+
+    const businessNumbers = await getSettlementRepository().getBusinessNumbersForMonth(month);
+
+    return NextResponse.json({
+      success: true,
+      data: businessNumbers,
+    });
+  } catch (error) {
+    console.error('Get CSO companies error:', error);
+    return NextResponse.json(
+      { success: false, error: 'CSO 업체 목록 조회 중 오류가 발생했습니다.' },
+      { status: 500 }
+    );
+  }
+}
