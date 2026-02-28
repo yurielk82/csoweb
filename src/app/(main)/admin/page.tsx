@@ -94,7 +94,9 @@ export default function AdminDashboardPage() {
   const currentMonthNum = now.getMonth() + 1;
   const currentMonthKey = `${now.getFullYear()}-${String(currentMonthNum).padStart(2, '0')}`;
 
-  const [loading, setLoading] = useState(true);
+  const [kpiLoaded, setKpiLoaded] = useState(false);
+  const [badgesLoaded, setBadgesLoaded] = useState(false);
+  const [systemLoaded, setSystemLoaded] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
 
   // Data sources
@@ -178,59 +180,65 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
-  // Initial load
+  // Initial load — 독립 그룹별 병렬 페칭
   useEffect(() => {
-    async function fetchAll() {
-      try {
-        const [allUsersRes, statusRes, statsRes, csoRes, pendingRes, integrityRes] = await Promise.all([
-          fetch('/api/users'),
-          fetch('/api/system/status'),
-          fetch('/api/settlements/stats'),
-          fetch(`/api/settlements/cso-companies?month=${currentMonthKey}`),
-          fetch('/api/users?pending=true'),
-          fetch('/api/admin/cso-matching/integrity'),
-        ]);
-
-        const [allUsersData, statusData, statsData, csoData, pendingData, integrityData] = await Promise.all([
-          allUsersRes.json(),
-          statusRes.json(),
+    // 그룹 1: KPI 데이터 (stats + cso-companies + users)
+    Promise.all([
+      fetch('/api/settlements/stats'),
+      fetch(`/api/settlements/cso-companies?month=${currentMonthKey}`),
+      fetch('/api/users'),
+    ])
+      .then(async ([statsRes, csoRes, usersRes]) => {
+        const [statsData, csoData, usersData] = await Promise.all([
           statsRes.json(),
           csoRes.json(),
-          pendingRes.json(),
-          integrityRes.json(),
+          usersRes.json(),
         ]);
-
-        if (allUsersData.success) {
-          setAllUsers(allUsersData.data);
-        }
-
-        if (statusData.success) {
-          setSystemStatus(statusData.data);
-        }
-
         if (statsData.success && statsData.data?.months) {
           setMonths(statsData.data.months);
         }
-
         if (csoData.success) {
           setCsoBusinessNumbers(csoData.data);
         }
+        if (usersData.success) {
+          setAllUsers(usersData.data);
+        }
+      })
+      .catch((error) => console.error('Fetch KPI error:', error))
+      .finally(() => setKpiLoaded(true));
 
+    // 그룹 2: 배지 데이터 (pending + integrity)
+    Promise.all([
+      fetch('/api/users?pending=true'),
+      fetch('/api/admin/cso-matching/integrity'),
+    ])
+      .then(async ([pendingRes, integrityRes]) => {
+        const [pendingData, integrityData] = await Promise.all([
+          pendingRes.json(),
+          integrityRes.json(),
+        ]);
         if (pendingData.success && Array.isArray(pendingData.data)) {
           setPendingCount(pendingData.data.length);
         }
-
         if (integrityData.success && integrityData.data?.stats) {
           setUnmappedCount(integrityData.data.stats.noCsoMappingCount ?? 0);
         }
-      } catch (error) {
-        console.error('Fetch stats error:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
+      })
+      .catch((error) => console.error('Fetch badges error:', error))
+      .finally(() => setBadgesLoaded(true));
 
-    fetchAll();
+    // 그룹 3: 시스템 상태
+    fetch('/api/system/status')
+      .then(async (res) => {
+        const data = await res.json();
+        if (data.success) {
+          setSystemStatus(data.data);
+        }
+      })
+      .catch((error) => console.error('Fetch system status error:', error))
+      .finally(() => setSystemLoaded(true));
+
+    // 그룹 4: 이메일 (기존 로직 유지)
     fetchEmailStats(currentMonthKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -256,73 +264,23 @@ export default function AdminDashboardPage() {
 
   const activeProvider = systemStatus.email_provider;
 
-  // 빠른 작업 배지 맵
-  const currentMonthUploaded = months.some(m => m.month === currentMonthKey);
+  // 빠른 작업 배지 맵 (배지 데이터 로딩 전에는 빈 맵)
   const badgeMap: Record<string, { label: string; variant: 'secondary' | 'outline' }> = {};
 
-  if (!currentMonthUploaded) {
-    badgeMap['/admin/upload'] = { label: '업로드 필요', variant: 'secondary' };
-  }
-  if (pendingCount > 0) {
-    badgeMap['/admin/members?filter=pending'] = { label: `${pendingCount}`, variant: 'secondary' };
-  }
-  if (unmappedCount > 0) {
-    badgeMap['/admin/integrity'] = { label: `${unmappedCount}`, variant: 'secondary' };
-  }
-  if (csoBusinessNumbers.length > 0 && (!emailStats || emailStats.total === 0)) {
-    badgeMap['/admin/mailmerge'] = { label: '발송 필요', variant: 'outline' };
-  }
-
-  // ── Loading ──
-  if (loading) {
-    return (
-      <div className="dashboard-glass-bg flex-1 -mx-4 -mt-6 px-4 pt-6 pb-6">
-        {/* Floating Orbs */}
-        <div className="dashboard-orb dashboard-orb-1" />
-        <div className="dashboard-orb dashboard-orb-2" />
-
-        <div className="relative z-10 space-y-6">
-          <div className="flex items-end justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">관리자 대시보드</h1>
-              <p className="text-muted-foreground">CSO 정산서 포털 관리</p>
-            </div>
-            <Skeleton className="h-9 w-28 rounded-xl" />
-          </div>
-
-          {/* KPI 스켈레톤 */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="glass-kpi-card p-5">
-                <div className="flex items-center justify-between pb-2">
-                  <Skeleton className="h-4 w-20" />
-                </div>
-                <Skeleton className="h-8 w-16 mb-2" />
-                <Skeleton className="h-3 w-28" />
-              </div>
-            ))}
-          </div>
-
-          {/* 빠른 작업 스켈레톤 */}
-          <div>
-            <Skeleton className="h-5 w-20 mb-4" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-              {Array.from({ length: 7 }).map((_, i) => (
-                <div key={i} className="glass-action-card p-5">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <Skeleton className="h-4 w-20 mt-3" />
-                  <Skeleton className="h-3 w-28 mt-1" />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-8">
-            <Skeleton className="h-4 w-48" />
-          </div>
-        </div>
-      </div>
-    );
+  if (kpiLoaded && badgesLoaded) {
+    const currentMonthUploaded = months.some(m => m.month === currentMonthKey);
+    if (!currentMonthUploaded) {
+      badgeMap['/admin/upload'] = { label: '업로드 필요', variant: 'secondary' };
+    }
+    if (pendingCount > 0) {
+      badgeMap['/admin/members?filter=pending'] = { label: `${pendingCount}`, variant: 'secondary' };
+    }
+    if (unmappedCount > 0) {
+      badgeMap['/admin/integrity'] = { label: `${unmappedCount}`, variant: 'secondary' };
+    }
+    if (csoBusinessNumbers.length > 0 && (!emailStats || emailStats.total === 0)) {
+      badgeMap['/admin/mailmerge'] = { label: '발송 필요', variant: 'outline' };
+    }
   }
 
   return (
@@ -338,19 +296,23 @@ export default function AdminDashboardPage() {
             <h1 className="text-2xl font-bold">관리자 대시보드</h1>
             <p className="text-muted-foreground">CSO 정산서 포털 관리</p>
           </div>
-          <Select value={selectedMonth} onValueChange={handleMonthChange}>
-            <SelectTrigger className="w-36 glass-select">
-              <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {monthOptions.map((key) => (
-                <SelectItem key={key} value={key}>
-                  {monthKeyToLabel(key)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {kpiLoaded ? (
+            <Select value={selectedMonth} onValueChange={handleMonthChange}>
+              <SelectTrigger className="w-36 glass-select">
+                <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {monthKeyToLabel(key)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Skeleton className="h-9 w-36 rounded-xl" />
+          )}
         </div>
 
         {/* KPI 카드 (5개) */}
@@ -361,8 +323,17 @@ export default function AdminDashboardPage() {
               <span className="text-sm font-medium">CSO 업체</span>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </div>
-            <div className="text-2xl font-bold">{csoCount}</div>
-            <p className="text-xs text-muted-foreground">{selectedMonthLabel} 정산 업체</p>
+            {kpiLoaded ? (
+              <>
+                <div className="text-2xl font-bold">{csoCount}</div>
+                <p className="text-xs text-muted-foreground">{selectedMonthLabel} 정산 업체</p>
+              </>
+            ) : (
+              <>
+                <Skeleton className="h-8 w-16 mb-1" />
+                <Skeleton className="h-3 w-28" />
+              </>
+            )}
           </div>
 
           {/* 접속 업체 */}
@@ -371,7 +342,12 @@ export default function AdminDashboardPage() {
               <span className="text-sm font-medium">접속 업체</span>
               <Users className="h-4 w-4 text-muted-foreground" />
             </div>
-            {isCurrentMonth ? (
+            {!kpiLoaded ? (
+              <>
+                <Skeleton className="h-8 w-16 mb-1" />
+                <Skeleton className="h-3 w-28" />
+              </>
+            ) : isCurrentMonth ? (
               <>
                 <div className="text-2xl font-bold">
                   {accessedCount}
@@ -397,8 +373,17 @@ export default function AdminDashboardPage() {
               <span className="text-sm font-medium">총수수료</span>
               <Banknote className="h-4 w-4 text-muted-foreground" />
             </div>
-            <div className="text-2xl font-bold">{formatNumber(totalCommission)}</div>
-            <p className="text-xs text-muted-foreground">{selectedMonthLabel} 정산 수수료</p>
+            {kpiLoaded ? (
+              <>
+                <div className="text-2xl font-bold">{formatNumber(totalCommission)}</div>
+                <p className="text-xs text-muted-foreground">{selectedMonthLabel} 정산 수수료</p>
+              </>
+            ) : (
+              <>
+                <Skeleton className="h-8 w-16 mb-1" />
+                <Skeleton className="h-3 w-28" />
+              </>
+            )}
           </div>
 
           {/* 총 정산월 */}
@@ -407,8 +392,17 @@ export default function AdminDashboardPage() {
               <span className="text-sm font-medium">총 정산월</span>
               <Database className="h-4 w-4 text-muted-foreground" />
             </div>
-            <div className="text-2xl font-bold">{totalMonths}</div>
-            <p className="text-xs text-muted-foreground">업로드된 정산 데이터</p>
+            {kpiLoaded ? (
+              <>
+                <div className="text-2xl font-bold">{totalMonths}</div>
+                <p className="text-xs text-muted-foreground">업로드된 정산 데이터</p>
+              </>
+            ) : (
+              <>
+                <Skeleton className="h-8 w-16 mb-1" />
+                <Skeleton className="h-3 w-28" />
+              </>
+            )}
           </div>
 
           {/* 이메일 발송 */}
@@ -468,36 +462,34 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* System Footer */}
-      {(() => {
-        const emailOk =
-          activeProvider === 'smtp'
-            ? systemStatus.smtp.configured
-            : systemStatus.resend;
-        const emailLabel =
-          activeProvider === 'smtp'
-            ? `이메일 SMTP${systemStatus.resend ? '/Resend' : ''}`
-            : `이메일 Resend${systemStatus.smtp.configured ? '/SMTP' : ''}`;
-        const checks = [
-          { label: 'DB', ok: systemStatus.supabase },
-          { label: '국세청 API', ok: systemStatus.nts_api },
-          { label: '심평원 병원 API', ok: systemStatus.hira_hospital_api },
-          { label: '심평원 약국 API', ok: systemStatus.hira_pharmacy_api },
-          { label: emailLabel, ok: emailOk },
-        ];
-        const connected = checks.filter((c) => c.ok);
-        const disconnected = checks.filter((c) => !c.ok);
-        const sorted = [...connected, ...disconnected];
-
-        return (
-          <div className="relative z-10 mt-auto pt-8">
-            <div className="dashboard-glass-footer text-xs text-muted-foreground">
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="flex items-center gap-1.5">
-                  <span className="font-mono">{systemStatus.version}</span>
-                  <span>·</span>
-                  <span>{systemStatus.environment}</span>
-                </span>
-                {sorted.map(({ label, ok }) => (
+      <div className="relative z-10 mt-auto pt-8">
+        <div className="dashboard-glass-footer text-xs text-muted-foreground">
+          {systemLoaded ? (
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="flex items-center gap-1.5">
+                <span className="font-mono">{systemStatus.version}</span>
+                <span>·</span>
+                <span>{systemStatus.environment}</span>
+              </span>
+              {(() => {
+                const emailOk =
+                  activeProvider === 'smtp'
+                    ? systemStatus.smtp.configured
+                    : systemStatus.resend;
+                const emailLabel =
+                  activeProvider === 'smtp'
+                    ? `이메일 SMTP${systemStatus.resend ? '/Resend' : ''}`
+                    : `이메일 Resend${systemStatus.smtp.configured ? '/SMTP' : ''}`;
+                const checks = [
+                  { label: 'DB', ok: systemStatus.supabase },
+                  { label: '국세청 API', ok: systemStatus.nts_api },
+                  { label: '심평원 병원 API', ok: systemStatus.hira_hospital_api },
+                  { label: '심평원 약국 API', ok: systemStatus.hira_pharmacy_api },
+                  { label: emailLabel, ok: emailOk },
+                ];
+                const connected = checks.filter((c) => c.ok);
+                const disconnected = checks.filter((c) => !c.ok);
+                return [...connected, ...disconnected].map(({ label, ok }) => (
                   <span key={label} className="flex items-center gap-1">
                     <span
                       className={`dashboard-status-dot ${
@@ -506,23 +498,29 @@ export default function AdminDashboardPage() {
                     />
                     <span className={ok ? '' : 'text-destructive'}>{label}</span>
                   </span>
-                ))}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="ml-auto h-auto px-2 py-1 text-xs text-muted-foreground"
-                  asChild
-                >
-                  <Link href="/admin/system">
-                    시스템 정보
-                    <ArrowRight className="h-3 w-3" />
-                  </Link>
-                </Button>
-              </div>
+                ));
+              })()}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto h-auto px-2 py-1 text-xs text-muted-foreground"
+                asChild
+              >
+                <Link href="/admin/system">
+                  시스템 정보
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              </Button>
             </div>
-          </div>
-        );
-      })()}
+          ) : (
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-3 w-48" />
+              <Skeleton className="h-3 w-16 ml-auto" />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
