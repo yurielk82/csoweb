@@ -5,9 +5,8 @@ import { User, Lock, Save, Loader2, CheckCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 
 interface DaumPostcodeData {
@@ -242,16 +241,13 @@ export default function ProfilePage() {
 
       {/* Profile Info — 업체·주소·연락처·이메일 통합 */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">내 정보</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* 업체 정보 */}
+        <CardContent className="pt-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="companyName">업체명</Label>
               <Input
                 id="companyName"
+                autoComplete="organization"
                 value={newCompanyName}
                 onChange={(e) => setNewCompanyName(e.target.value)}
                 placeholder="업체명 입력"
@@ -261,6 +257,7 @@ export default function ProfilePage() {
               <Label htmlFor="ceoName">대표자명</Label>
               <Input
                 id="ceoName"
+                autoComplete="name"
                 value={newCeoName}
                 onChange={(e) => setNewCeoName(e.target.value)}
                 placeholder="대표자명 입력"
@@ -268,13 +265,12 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <Separator />
-
-          {/* 주소 */}
           <div className="space-y-2">
-            <Label>주소</Label>
+            <Label htmlFor="zipcode">주소</Label>
             <div className="flex gap-2">
               <Input
+                id="zipcode"
+                autoComplete="postal-code"
                 value={newZipcode}
                 readOnly
                 placeholder="우편번호"
@@ -290,25 +286,28 @@ export default function ProfilePage() {
               </Button>
             </div>
             <Input
+              id="address1"
+              autoComplete="street-address"
               value={newAddress1}
               readOnly
               placeholder="도로명 주소"
             />
             <Input
+              id="address2"
+              autoComplete="address-line2"
               value={newAddress2}
               onChange={(e) => setNewAddress2(e.target.value)}
               placeholder="상세 주소를 입력하세요"
             />
           </div>
 
-          <Separator />
-
-          {/* 연락처 */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="phone1">연락처1 *</Label>
               <Input
                 id="phone1"
+                type="tel"
+                autoComplete="tel"
                 value={newPhone1}
                 onChange={(e) => setNewPhone1(e.target.value)}
                 placeholder="연락처 입력"
@@ -318,6 +317,8 @@ export default function ProfilePage() {
               <Label htmlFor="phone2">연락처2 (선택)</Label>
               <Input
                 id="phone2"
+                type="tel"
+                autoComplete="tel"
                 value={newPhone2}
                 onChange={(e) => setNewPhone2(e.target.value)}
                 placeholder="연락처 입력"
@@ -325,15 +326,13 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <Separator />
-
-          {/* 이메일 */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="email">이메일 *</Label>
               <Input
                 id="email"
                 type="email"
+                autoComplete="email"
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
                 placeholder="email@example.com"
@@ -344,29 +343,28 @@ export default function ProfilePage() {
               <Input
                 id="email2"
                 type="email"
+                autoComplete="email"
                 value={newEmail2}
                 onChange={(e) => setNewEmail2(e.target.value)}
                 placeholder="email@example.com"
               />
             </div>
           </div>
-
-          {/* 저장 버튼 */}
-          <div className="flex justify-end">
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={saving || !hasProfileChanges()}
-            >
-              {saving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              저장
-            </Button>
-          </div>
         </CardContent>
+        <CardFooter className="justify-end">
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={saving || !hasProfileChanges()}
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            저장
+          </Button>
+        </CardFooter>
       </Card>
 
       {/* Password Change */}
@@ -384,44 +382,46 @@ export default function ProfilePage() {
               <AlertDescription>{passwordError}</AlertDescription>
             </Alert>
           )}
-          
+
           <div className="space-y-2">
             <Label htmlFor="currentPassword">현재 비밀번호</Label>
             <Input
               id="currentPassword"
               type="password"
+              autoComplete="current-password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               placeholder="현재 비밀번호 입력"
             />
           </div>
-          
-          <Separator />
-          
+
           <div className="space-y-2">
             <Label htmlFor="newPassword">새 비밀번호</Label>
             <Input
               id="newPassword"
               type="password"
+              autoComplete="new-password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="새 비밀번호 입력 (6자 이상)"
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">새 비밀번호 확인</Label>
             <Input
               id="confirmPassword"
               type="password"
+              autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="새 비밀번호 다시 입력"
             />
           </div>
-          
-          <Button 
-            onClick={handleUpdatePassword} 
+        </CardContent>
+        <CardFooter>
+          <Button
+            onClick={handleUpdatePassword}
             disabled={saving || !currentPassword || !newPassword || !confirmPassword}
           >
             {saving ? (
@@ -431,7 +431,7 @@ export default function ProfilePage() {
             )}
             비밀번호 변경
           </Button>
-        </CardContent>
+        </CardFooter>
       </Card>
     </div>
   );
