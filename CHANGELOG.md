@@ -5,6 +5,27 @@
 
 ---
 
+## [0.23.0] - 2026-02-28
+
+### 추가 — 관리자 대시보드 재설계 (KPI + 파이프라인 + 접속 추적)
+
+- **last_login_at 접속 추적**: `users` 테이블에 `last_login_at` 컬럼 추가, 로그인 성공 시 자동 기록
+- **KPI 카드 (당월 중심 4개)**: 당월 CSO 업체 / 당월 접속 업체(X/Y) / 당월 총수수료 / 총 정산월
+- **업무 파이프라인 (4단계)**: 업로드→승인→매핑→조회 단계별 상태를 완료(초록)/경고(앰버)로 시각화, 클릭 시 해당 페이지 이동
+- **기타 작업 축소**: 핵심 프로세스에 포함되지 않는 보조 도구 4개만 남김 (데이터관리, 컬럼설정, 메일머지, 이메일이력)
+- **API 호출 최적화**: `recentEmailRes` 제거, 5개 병렬 호출로 축소
+
+#### 수정 파일
+- `supabase/migrations/20260228_add_last_login_at.sql` (신규)
+- `src/lib/supabase.ts` — DbUser에 `last_login_at` 필드 추가
+- `src/domain/user/types.ts` — User에 `last_login_at` 필드 추가
+- `src/domain/user/UserRepository.ts` — `updateLastLogin()` 메서드 추가
+- `src/infrastructure/supabase/SupabaseUserRepository.ts` — `updateLastLogin()` 구현, `mapDbUserToUser` 수정
+- `src/application/auth/LoginUseCase.ts` — 로그인 성공 시 `updateLastLogin()` 호출
+- `src/app/(main)/admin/page.tsx` — 대시보드 전면 재설계
+
+---
+
 ## [0.21.3] - 2026-02-28
 
 ### 수정 — 회원가입 주소 검색 팝업 CSP 차단 해제
