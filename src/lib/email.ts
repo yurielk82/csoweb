@@ -278,7 +278,7 @@ function getRegistrationRequestEmail(data: {
               </div>
 
               <div style="text-align: center;">
-                <a href="${BASE_URL}/admin/approvals"
+                <a href="${BASE_URL}/admin/members?filter=pending"
                    style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
                           color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px;
                           font-size: 15px; font-weight: 600; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);">

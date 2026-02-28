@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, Search, Edit, Trash2, Shield, ShieldOff, Loader2, UserCheck, UserX, Download, KeyRound } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Users, Search, Edit, Trash2, Shield, ShieldOff, Loader2, UserCheck, UserX, Download, KeyRound, CheckCircle, XCircle, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Table,
   TableBody,
@@ -49,12 +52,20 @@ interface User {
   created_at: string;
 }
 
+type FilterType = 'all' | 'admin' | 'approved' | 'pending';
+
 export default function MembersPage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'admin' | 'approved' | 'pending'>('all');
+  const [filter, setFilter] = useState<FilterType>(() => {
+    const param = searchParams.get('filter');
+    if (param === 'pending' || param === 'admin' || param === 'approved') return param;
+    return 'all';
+  });
   
   // Edit dialog
   const [editUser, setEditUser] = useState<User | null>(null);
@@ -93,6 +104,13 @@ export default function MembersPage() {
   const [resetUser, setResetUser] = useState<User | null>(null);
   const [resetting, setResetting] = useState(false);
 
+  // Approval states
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [processing, setProcessing] = useState<string | null>(null);
+  const [batchProcessing, setBatchProcessing] = useState(false);
+  const [rejectDialog, setRejectDialog] = useState<{ open: boolean; user: User | null }>({ open: false, user: null });
+  const [rejectReason, setRejectReason] = useState('');
+
   // 전화번호 포맷 함수 (00-0000-0000, 000-0000-0000 모두 지원)
   const formatPhoneNumber = (phone: string) => {
     if (!phone) return '-';
@@ -114,6 +132,141 @@ export default function MembersPage() {
       return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
     }
     return phone; // 원본 반환
+  };
+
+  // Filter 변경 시 URL 동기화
+  const handleFilterChange = (newFilter: FilterType) => {
+    setFilter(newFilter);
+    if (newFilter !== 'pending') {
+      setSelectedUsers(new Set());
+    }
+    const params = new URLSearchParams(searchParams.toString());
+    if (newFilter === 'all') {
+      params.delete('filter');
+    } else {
+      params.set('filter', newFilter);
+    }
+    const query = params.toString();
+    router.replace(`/admin/members${query ? `?${query}` : ''}`, { scroll: false });
+  };
+
+  // 체크박스 토글
+  const toggleSelect = (businessNumber: string) => {
+    setSelectedUsers(prev => {
+      const next = new Set(prev);
+      if (next.has(businessNumber)) {
+        next.delete(businessNumber);
+      } else {
+        next.add(businessNumber);
+      }
+      return next;
+    });
+  };
+
+  // 전체 선택/해제 (pending 유저만 대상)
+  const toggleSelectAll = () => {
+    const pendingUsers = users.filter(u => !u.is_approved && !u.is_admin);
+    if (selectedUsers.size === pendingUsers.length && pendingUsers.length > 0) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(pendingUsers.map(u => u.business_number)));
+    }
+  };
+
+  // 단일 승인
+  const handleApprove = async (user: User) => {
+    setProcessing(user.business_number);
+    try {
+      const response = await fetch('/api/users/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_number: user.business_number }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast({
+          title: '승인 완료',
+          description: `${user.company_name}의 회원가입이 승인되었습니다.`,
+        });
+        setSelectedUsers(prev => {
+          const next = new Set(prev);
+          next.delete(user.business_number);
+          return next;
+        });
+        fetchUsers();
+      } else {
+        toast({ variant: 'destructive', title: '승인 실패', description: result.error });
+      }
+    } catch (error) {
+      console.error('승인 처리 오류:', error);
+      toast({ variant: 'destructive', title: '오류', description: '승인 처리 중 오류가 발생했습니다.' });
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  // 일괄 승인
+  const handleBatchApprove = async () => {
+    if (selectedUsers.size === 0) {
+      toast({ variant: 'destructive', title: '선택 필요', description: '승인할 회원을 선택해주세요.' });
+      return;
+    }
+    setBatchProcessing(true);
+    try {
+      const response = await fetch('/api/users/approve-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_numbers: Array.from(selectedUsers) }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        const { approved, failed, emailFailed } = result.data;
+        setSelectedUsers(new Set());
+        let description = `${approved}건 승인 완료`;
+        if (failed > 0) description += `, ${failed}건 실패`;
+        if (emailFailed > 0) description += ` (이메일 ${emailFailed}건 발송 실패)`;
+        toast({ title: '일괄 승인 완료', description });
+        fetchUsers();
+      } else {
+        toast({ variant: 'destructive', title: '일괄 승인 실패', description: result.error || '처리 중 오류가 발생했습니다.' });
+      }
+    } catch (error) {
+      console.error('일괄 승인 처리 오류:', error);
+      toast({ variant: 'destructive', title: '오류', description: '일괄 승인 처리 중 오류가 발생했습니다.' });
+    } finally {
+      setBatchProcessing(false);
+    }
+  };
+
+  // 거부
+  const handleReject = async () => {
+    if (!rejectDialog.user) return;
+    const user = rejectDialog.user;
+    setProcessing(user.business_number);
+    try {
+      const response = await fetch('/api/users/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          business_number: user.business_number,
+          reason: rejectReason || undefined,
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast({ title: '거부 완료', description: `${user.company_name}의 회원가입이 거부되었습니다.` });
+        fetchUsers();
+      } else {
+        toast({ variant: 'destructive', title: '거부 실패', description: result.error });
+      }
+    } catch (error) {
+      console.error('거부 처리 오류:', error);
+      toast({ variant: 'destructive', title: '오류', description: '거부 처리 중 오류가 발생했습니다.' });
+    } finally {
+      setProcessing(null);
+      setRejectDialog({ open: false, user: null });
+      setRejectReason('');
+    }
   };
 
   const fetchUsers = async () => {
@@ -372,7 +525,7 @@ export default function MembersPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setFilter('all')}>
+        <Card className="cursor-pointer hover:bg-muted/50" onClick={() => handleFilterChange('all')}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">전체</CardTitle>
           </CardHeader>
@@ -380,7 +533,7 @@ export default function MembersPage() {
             <div className="text-2xl font-bold">{stats.total}</div>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setFilter('admin')}>
+        <Card className="cursor-pointer hover:bg-muted/50" onClick={() => handleFilterChange('admin')}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">관리자</CardTitle>
           </CardHeader>
@@ -388,7 +541,7 @@ export default function MembersPage() {
             <div className="text-2xl font-bold text-purple-600">{stats.admins}</div>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setFilter('approved')}>
+        <Card className="cursor-pointer hover:bg-muted/50" onClick={() => handleFilterChange('approved')}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">승인됨</CardTitle>
           </CardHeader>
@@ -396,7 +549,7 @@ export default function MembersPage() {
             <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setFilter('pending')}>
+        <Card className="cursor-pointer hover:bg-muted/50" onClick={() => handleFilterChange('pending')}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">대기중</CardTitle>
           </CardHeader>
@@ -421,7 +574,7 @@ export default function MembersPage() {
                 />
               </div>
             </div>
-            <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
+            <Select value={filter} onValueChange={(v) => handleFilterChange(v as FilterType)}>
               <SelectTrigger className="w-full sm:w-40">
                 <SelectValue />
               </SelectTrigger>
@@ -432,8 +585,21 @@ export default function MembersPage() {
                 <SelectItem value="pending">대기중</SelectItem>
               </SelectContent>
             </Select>
-            <Button 
-              variant="outline" 
+            {filter === 'pending' && stats.pending > 0 && (
+              <Button
+                onClick={handleBatchApprove}
+                disabled={selectedUsers.size === 0 || batchProcessing}
+              >
+                {batchProcessing ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <CheckSquare className="h-4 w-4 mr-2" />
+                )}
+                일괄 승인 ({selectedUsers.size})
+              </Button>
+            )}
+            <Button
+              variant="outline"
               onClick={handleExportExcel}
               disabled={exporting || filteredUsers.length === 0}
             >
@@ -454,6 +620,15 @@ export default function MembersPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                {filter === 'pending' && (
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={selectedUsers.size > 0 && selectedUsers.size === filteredUsers.length}
+                      onCheckedChange={toggleSelectAll}
+                      disabled={batchProcessing}
+                    />
+                  </TableHead>
+                )}
                 <TableHead>업체명</TableHead>
                 <TableHead>대표자</TableHead>
                 <TableHead>사업자번호</TableHead>
@@ -467,6 +642,15 @@ export default function MembersPage() {
             <TableBody>
               {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
+                  {filter === 'pending' && (
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedUsers.has(user.business_number)}
+                        onCheckedChange={() => toggleSelect(user.business_number)}
+                        disabled={batchProcessing}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell className="font-medium">{user.company_name}</TableCell>
                   <TableCell>{user.ceo_name || '-'}</TableCell>
                   <TableCell>{user.business_number}</TableCell>
@@ -499,6 +683,34 @@ export default function MembersPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
+                      {!user.is_approved && !user.is_admin && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleApprove(user)}
+                            disabled={processing === user.business_number || batchProcessing}
+                            title="승인"
+                            className="text-green-600 hover:text-green-700"
+                          >
+                            {processing === user.business_number ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <CheckCircle className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setRejectDialog({ open: true, user })}
+                            disabled={processing === user.business_number || batchProcessing}
+                            title="거부"
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -531,7 +743,7 @@ export default function MembersPage() {
               ))}
               {filteredUsers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={filter === 'pending' ? 9 : 8} className="text-center py-8 text-muted-foreground">
                     {loading ? (
                       <span className="flex items-center justify-center gap-2">
                         <Loader2 className="h-5 w-5 animate-spin" />
@@ -726,6 +938,56 @@ export default function MembersPage() {
             <Button onClick={handleResetPassword} disabled={resetting} className="bg-yellow-600 hover:bg-yellow-700">
               {resetting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               초기화
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Dialog */}
+      <Dialog
+        open={rejectDialog.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRejectDialog({ open: false, user: null });
+            setRejectReason('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>회원가입 거부</DialogTitle>
+            <DialogDescription>
+              {rejectDialog.user?.company_name}의 회원가입을 거부합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="reject-reason">거부 사유 (선택)</Label>
+            <Textarea
+              id="reject-reason"
+              placeholder="거부 사유를 입력하세요..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRejectDialog({ open: false, user: null })}
+            >
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleReject}
+              disabled={processing !== null}
+            >
+              {processing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <XCircle className="h-4 w-4 mr-2" />
+              )}
+              거부
             </Button>
           </DialogFooter>
         </DialogContent>

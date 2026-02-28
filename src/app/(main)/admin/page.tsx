@@ -117,7 +117,7 @@ export default function AdminDashboardPage() {
       color: 'bg-red-500',
     },
     {
-      href: '/admin/approvals',
+      href: '/admin/members?filter=pending',
       icon: Users,
       title: '회원 승인',
       description: '대기 중인 회원 승인',
@@ -196,8 +196,9 @@ export default function AdminDashboardPage() {
             ))}
           </div>
         </div>
-        <div className="mt-8">
-          <Skeleton className="h-4 w-64" />
+        <div className="mt-8 space-y-2">
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-4 w-72" />
         </div>
       </div>
     );
@@ -289,37 +290,42 @@ export default function AdminDashboardPage() {
 
       {/* System Footer */}
       {(() => {
+        const emailOk = activeProvider === 'smtp' ? systemStatus.smtp.configured : systemStatus.resend;
+        const emailLabel = activeProvider === 'smtp'
+          ? `이메일(SMTP${systemStatus.resend ? '/Resend' : ''})`
+          : `이메일(Resend${systemStatus.smtp.configured ? '/SMTP' : ''})`;
         const checks = [
           { label: 'DB', ok: systemStatus.supabase },
-          { label: '국세청', ok: systemStatus.nts_api },
+          { label: '국세청 API', ok: systemStatus.nts_api },
           { label: '심평원 병원', ok: systemStatus.hira_hospital_api },
           { label: '심평원 약국', ok: systemStatus.hira_pharmacy_api },
-          { label: '이메일', ok: activeProvider === 'smtp' ? systemStatus.smtp.configured : systemStatus.resend },
+          { label: emailLabel, ok: emailOk },
         ];
-        const issues = checks.filter(c => !c.ok);
 
         return (
-          <div className="mt-8 flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <span className="font-mono">{systemStatus.version}</span>
-              <span>·</span>
-              <span>{systemStatus.environment}</span>
-              <span>·</span>
-              {issues.length === 0 ? (
-                <span className="text-green-600">모든 서비스 정상</span>
-              ) : (
-                <span className="text-red-600">
-                  {issues.map(i => i.label).join(', ')} 확인 필요
-                </span>
-              )}
+          <div className="mt-8 space-y-2 text-xs text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono">{systemStatus.version}</span>
+                <span>·</span>
+                <span>{systemStatus.environment}</span>
+              </div>
+              <Link
+                href="/admin/settings#system-info"
+                className="flex items-center gap-1 hover:text-foreground transition-colors"
+              >
+                시스템 정보
+                <ArrowRight className="h-3 w-3" />
+              </Link>
             </div>
-            <Link
-              href="/admin/settings#system-info"
-              className="flex items-center gap-1 hover:text-foreground transition-colors"
-            >
-              시스템 정보
-              <ArrowRight className="h-3 w-3" />
-            </Link>
+            <div className="flex items-center gap-3 flex-wrap">
+              {checks.map(({ label, ok }) => (
+                <span key={label} className="flex items-center gap-1">
+                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${ok ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span className={ok ? '' : 'text-red-600'}>{label}</span>
+                </span>
+              ))}
+            </div>
           </div>
         );
       })()}

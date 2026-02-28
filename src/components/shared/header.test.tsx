@@ -8,6 +8,7 @@ vi.mock('next/navigation', () => ({
     replace: vi.fn(),
     prefetch: vi.fn(),
   }),
+  usePathname: () => '/admin',
 }));
 
 // Mock AuthContext
@@ -69,7 +70,8 @@ describe('Header', () => {
 
     expect(screen.getByText('관리자회사')).toBeInTheDocument();
     expect(screen.getByText('대시보드')).toBeInTheDocument();
-    expect(screen.getByText('정산서 업로드')).toBeInTheDocument();
+    // 그룹 드롭다운 라벨 확인 (하위 메뉴는 hover 시에만 표시)
+    expect(screen.getByText('정산 관리')).toBeInTheDocument();
   });
 
   it('일반 사용자면 일반 메뉴를 표시한다', () => {

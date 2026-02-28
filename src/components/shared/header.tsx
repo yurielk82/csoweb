@@ -73,7 +73,6 @@ const ADMIN_NAV: NavEntry[] = [
     icon: Users,
     items: [
       { href: '/admin/members', label: '회원 관리', icon: UserCog },
-      { href: '/admin/approvals', label: '회원 승인', icon: Users },
       { href: '/admin/integrity', label: '거래처 매핑', icon: Link2 },
     ],
   },
