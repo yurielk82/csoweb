@@ -3,6 +3,11 @@
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 [Semantic Versioning](https://semver.org/) 및 [Keep a Changelog](https://keepachangelog.com/) 형식을 따릅니다.
 
+## [0.28.7] - 2026-03-01
+
+### Removed
+- 로드맵에서 다국어 지원 항목 삭제
+
 ---
 
 ## [0.27.0~0.28.4] - 2026-02-28
