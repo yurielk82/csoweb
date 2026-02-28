@@ -70,8 +70,8 @@ describe('Header', () => {
 
     expect(screen.getByText('관리자회사')).toBeInTheDocument();
     expect(screen.getByText('대시보드')).toBeInTheDocument();
-    // 그룹 드롭다운 라벨 확인 (하위 메뉴는 hover 시에만 표시)
-    expect(screen.getByText('정산 관리')).toBeInTheDocument();
+    // 그룹 드롭다운은 첫 번째 항목 라벨을 버튼으로 표시
+    expect(screen.getByText('정산서 업로드')).toBeInTheDocument();
   });
 
   it('일반 사용자면 일반 메뉴를 표시한다', () => {

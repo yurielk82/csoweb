@@ -30,6 +30,7 @@ export function createMockUserRepository(): {
     incrementFailedLogin: vi.fn(),
     lockAccount: vi.fn(),
     resetFailedLogin: vi.fn(),
+    updateLastLogin: vi.fn(),
   };
 }
 
