@@ -205,7 +205,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col min-h-[calc(100vh-5rem)] space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">관리자 대시보드</h1>
@@ -292,18 +292,21 @@ export default function AdminDashboardPage() {
       {(() => {
         const emailOk = activeProvider === 'smtp' ? systemStatus.smtp.configured : systemStatus.resend;
         const emailLabel = activeProvider === 'smtp'
-          ? `이메일(SMTP${systemStatus.resend ? '/Resend' : ''})`
-          : `이메일(Resend${systemStatus.smtp.configured ? '/SMTP' : ''})`;
+          ? `이메일 SMTP${systemStatus.resend ? '/Resend' : ''}`
+          : `이메일 Resend${systemStatus.smtp.configured ? '/SMTP' : ''}`;
         const checks = [
           { label: 'DB', ok: systemStatus.supabase },
           { label: '국세청 API', ok: systemStatus.nts_api },
-          { label: '심평원 병원', ok: systemStatus.hira_hospital_api },
-          { label: '심평원 약국', ok: systemStatus.hira_pharmacy_api },
+          { label: '심평원 병원 API', ok: systemStatus.hira_hospital_api },
+          { label: '심평원 약국 API', ok: systemStatus.hira_pharmacy_api },
           { label: emailLabel, ok: emailOk },
         ];
+        const connected = checks.filter(c => c.ok);
+        const disconnected = checks.filter(c => !c.ok);
+        const sorted = [...connected, ...disconnected];
 
         return (
-          <div className="mt-8 space-y-2 text-xs text-muted-foreground">
+          <div className="mt-auto pt-8 space-y-2 text-xs text-muted-foreground">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <span className="font-mono">{systemStatus.version}</span>
@@ -319,7 +322,7 @@ export default function AdminDashboardPage() {
               </Link>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
-              {checks.map(({ label, ok }) => (
+              {sorted.map(({ label, ok }) => (
                 <span key={label} className="flex items-center gap-1">
                   <span className={`inline-block h-1.5 w-1.5 rounded-full ${ok ? 'bg-green-500' : 'bg-red-500'}`} />
                   <span className={ok ? '' : 'text-red-600'}>{label}</span>
