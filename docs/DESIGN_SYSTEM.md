@@ -81,40 +81,21 @@ CSO 정산 포털 디자인 토큰 및 색상 시스템 정의.
 | `.login-icon-glow` | 아이콘 네온 글로우 + pulse 애니메이션 |
 | `.login-glass-footer` | 반투명 유리 푸터 |
 
-#### 대시보드 전용 (v0.28.0 구현 완료)
+#### 대시보드 전용
 
-| 클래스 | 용도 | 핵심 속성 |
-|--------|------|-----------|
-| `.dashboard-glass-bg` | 대시보드 그래디언트 배경 | oklch chroma 0.01 (로그인 0.03 대비 톤다운) |
-| `.dashboard-orb-{1,2}` | 배경 오브 2개 | blur 80px, opacity 0.3, 30~35초 주기 |
-| `.glass-kpi-card` | KPI 카드 (frosted glass) | backdrop-filter blur(20px) saturate(180%), hover translateY(-2px) |
-| `.glass-action-card` | Quick Action 카드 (compact) | --glass-bg-action, hover translateY(-3px) scale(1.02) |
-| `.glass-icon` | 아이콘 글로우 컨테이너 | 2.5rem 원형, KPI 내부에서는 bg/glow 없이 색상만 |
-| `.glass-icon-{color}` | 아이콘 hue modifier | blue/green/cyan/purple/orange/pink/teal 7색 |
-| `.glass-select` | Select 트리거 glass 스타일 | backdrop-filter blur(12px), focus 링 |
-| `.dashboard-glass-footer` | 시스템 상태 footer (반투명) | oklch(1 0 0 / 40%), blur(10px) |
-| `.dashboard-status-dot-ok` | 상태 dot (정상) | oklch green + box-shadow 글로우 |
-| `.dashboard-status-dot-fail` | 상태 dot (실패) | oklch red + box-shadow 글로우 |
+| 클래스 | 용도 |
+|--------|------|
+| `.dashboard-glass-bg` | 대시보드 그래디언트 배경 |
+| `.dashboard-orb-{1,2}` | 배경 오브 (로그인보다 작고 연함) |
+| `.glass-kpi-card` | KPI 카드 (frosted glass) |
+| `.glass-action-card` | Quick Action 카드 (hover lift + scale) |
+| `.glass-icon` | 아이콘 글로우 컨테이너 (원형, `--icon-hue` 기반) |
+| `.glass-icon-{color}` | 아이콘 hue modifier (blue/green/red/cyan/purple/orange/pink) |
+| `.glass-select` | Select 트리거 glass 스타일 |
+| `.dashboard-glass-footer` | 시스템 상태 footer (반투명) |
+| `.dashboard-status-dot` | 상태 표시 dot (ok: green glow, fail: red glow) |
 
-`prefers-reduced-motion: reduce` 시 오브 애니메이션 정지, hover lift/scale 비활성화.
-
-#### 대시보드 Bento Grid 레이아웃
-
-```
-5-column grid (gap-4)
-
-Row 1:  [CSO 업체 ── 2col][접속 1col][정산월 1col][이메일 1col]
-Row 2:  [총수수료 ── 2col][빠른 작업 ──────────── 3col       ]
-                           (내부 2x3 compact grid)
-
-Footer: [glass footer ─────────────── full width]
-```
-
-| 뷰포트 | 레이아웃 |
-|--------|---------|
-| `lg+` (1024px~) | 5열 Bento Grid |
-| `sm~lg` (640~1023px) | 3열 collapse |
-| `~sm` (~639px) | 1열 세로 스택 |
+`prefers-reduced-motion: reduce` 시 모든 애니메이션 정지.
 
 ## 파일 위치
 
