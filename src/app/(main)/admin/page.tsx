@@ -77,10 +77,13 @@ function getMonthDateRange(monthKey: string): { startDate: string; endDate: stri
 
 // ── Quick Actions ──
 
-const quickActions = [
+const taskActions = [
   { href: '/admin/upload', icon: Upload, title: '정산서 업로드', description: '정산서 데이터 업로드', iconColor: 'glass-icon-blue' },
   { href: '/admin/members?filter=pending', icon: Users, title: '회원 승인', description: '대기 중인 회원 승인', iconColor: 'glass-icon-green' },
   { href: '/admin/integrity', icon: Link2, title: '거래처 매핑', description: 'CSO 관리업체 매칭 상태 검수', iconColor: 'glass-icon-cyan' },
+];
+
+const menuActions = [
   { href: '/admin/data', icon: Database, title: '데이터 관리', description: '정산 데이터 관리', iconColor: 'glass-icon-purple' },
   { href: '/admin/columns', icon: Columns, title: '컬럼 설정', description: '표시 컬럼 관리', iconColor: 'glass-icon-orange' },
   { href: '/admin/mailmerge', icon: MailPlus, title: '메일머지', description: '일괄 이메일 발송', iconColor: 'glass-icon-pink' },
@@ -283,6 +286,10 @@ export default function AdminDashboardPage() {
     }
   }
 
+  if (emailStats && emailStats.failed > 0) {
+    badgeMap['/admin/emails'] = { label: `실패 ${emailStats.failed}`, variant: 'secondary' };
+  }
+
   return (
     <div className="flex flex-col flex-1 space-y-6">
         {/* Header + Month Select */}
@@ -414,9 +421,7 @@ export default function AdminDashboardPage() {
             ) : emailStats ? (
               <>
                 <div className="text-2xl font-bold">{emailStats.total}</div>
-                <p className={`text-xs ${emailStats.failed > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                  {emailStats.failed > 0 ? `${selectedMonthLabel} 실패 ${emailStats.failed}` : `${selectedMonthLabel} 전체 성공`}
-                </p>
+                <p className="text-xs text-muted-foreground">{selectedMonthLabel} 발송 완료</p>
               </>
             ) : (
               <>
@@ -428,10 +433,33 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* 빠른 작업 */}
-        <div>
-          <h2 className="text-lg font-semibold mb-4">빠른 작업</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {quickActions.map((action) => {
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">빠른 작업</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {taskActions.map((action) => {
+              const badge = badgeMap[action.href];
+              return (
+                <Link key={action.href} href={action.href}>
+                  <div className="glass-action-card">
+                    <div className="flex items-center justify-between">
+                      <div className={`glass-icon ${action.iconColor}`}>
+                        <action.icon className="h-5 w-5" />
+                      </div>
+                      {badge && (
+                        <Badge variant={badge.variant} className="text-xs">
+                          {badge.label}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-base font-semibold mt-3">{action.title}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">{action.description}</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {menuActions.map((action) => {
               const badge = badgeMap[action.href];
               return (
                 <Link key={action.href} href={action.href}>
