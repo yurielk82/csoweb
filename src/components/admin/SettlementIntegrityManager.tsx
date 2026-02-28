@@ -403,12 +403,9 @@ export default function SettlementIntegrityManager() {
 
   // Add new row dialog state
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [newBusinessNumber, setNewBusinessNumber] = useState('');
-  const [newBusinessName, setNewBusinessName] = useState('');
+  const [selectedUnmappedBizNum, setSelectedUnmappedBizNum] = useState('');
   const [newCsoName, setNewCsoName] = useState('');
   const [addingRow, setAddingRow] = useState(false);
-  const [verifyingBizNum, setVerifyingBizNum] = useState(false);
-  const [verifiedUser, setVerifiedUser] = useState<{ company_name: string; is_approved: boolean } | null>(null);
 
   // ===========================================
   // Data Fetching
@@ -562,6 +559,13 @@ export default function SettlementIntegrityManager() {
       unprocessed,
     };
   }, [tableData, selectedMonth, scope]);
+
+  // 미매핑 회원 목록: 가입 완료(registered) + CSO 매핑 없음
+  const unmappedRegisteredUsers = useMemo(() => {
+    return tableData
+      .filter((r) => r.registration_status === 'registered' && r.cso_company_names.length === 0)
+      .sort((a, b) => (a.business_name ?? '').localeCompare(b.business_name ?? ''));
+  }, [tableData]);
 
   // ===========================================
   // CSO Tag Handlers
@@ -832,55 +836,12 @@ export default function SettlementIntegrityManager() {
   // ===========================================
   // Add New Row Handler
   // ===========================================
-  const handleVerifyBusinessNumber = async () => {
-    const cleanedBizNum = newBusinessNumber.replace(/\D/g, '');
-    if (cleanedBizNum.length !== 10) {
-      toast({
-        variant: 'destructive',
-        title: '입력 오류',
-        description: '사업자번호는 10자리 숫자여야 합니다.',
-      });
-      return;
-    }
-
-    setVerifyingBizNum(true);
-    try {
-      const res = await fetch(`/api/users?search=${cleanedBizNum}`);
-      const result = await res.json();
-
-      if (result.success && result.data.length > 0) {
-        const user = result.data[0];
-        setVerifiedUser({
-          company_name: user.company_name,
-          is_approved: user.is_approved,
-        });
-        setNewBusinessName(user.company_name);
-        toast({
-          title: '회원 확인',
-          description: `${user.company_name} (${user.is_approved ? '가입완료' : '미가입'})`,
-        });
-      } else {
-        setVerifiedUser(null);
-        toast({
-          title: '미가입 사업자',
-          description: '회원가입되지 않은 사업자번호입니다. 사업자명을 직접 입력하세요.',
-        });
-      }
-    } catch (error) {
-      console.error('Verify business number error:', error);
-      setVerifiedUser(null);
-    } finally {
-      setVerifyingBizNum(false);
-    }
-  };
-
   const handleAddNewRow = async () => {
-    const cleanedBizNum = newBusinessNumber.replace(/\D/g, '');
-    if (cleanedBizNum.length !== 10) {
+    if (!selectedUnmappedBizNum) {
       toast({
         variant: 'destructive',
         title: '입력 오류',
-        description: '사업자번호는 10자리 숫자여야 합니다.',
+        description: '회원을 선택해주세요.',
       });
       return;
     }
@@ -900,7 +861,7 @@ export default function SettlementIntegrityManager() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: [{ cso_company_name: newCsoName.trim(), business_number: cleanedBizNum }],
+          items: [{ cso_company_name: newCsoName.trim(), business_number: selectedUnmappedBizNum }],
         }),
       });
 
@@ -909,13 +870,11 @@ export default function SettlementIntegrityManager() {
       if (result.success) {
         toast({
           title: '추가 완료',
-          description: `새 매핑이 추가되었습니다.`,
+          description: '새 매핑이 추가되었습니다.',
         });
         setShowAddDialog(false);
-        setNewBusinessNumber('');
-        setNewBusinessName('');
+        setSelectedUnmappedBizNum('');
         setNewCsoName('');
-        setVerifiedUser(null);
         fetchIntegrityData();
       } else {
         throw new Error(result.error);
@@ -1599,7 +1558,13 @@ export default function SettlementIntegrityManager() {
       </Dialog>
 
       {/* Add New Row Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+      <Dialog open={showAddDialog} onOpenChange={(open) => {
+        setShowAddDialog(open);
+        if (!open) {
+          setSelectedUnmappedBizNum('');
+          setNewCsoName('');
+        }
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1607,49 +1572,33 @@ export default function SettlementIntegrityManager() {
               새 매핑 추가
             </DialogTitle>
             <DialogDescription>
-              사업자번호와 CSO관리업체명을 입력하여 새 매핑을 추가합니다.
+              가입 완료된 회원 중 CSO 매핑이 없는 회원을 선택하여 매핑을 추가합니다.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">
-                사업자번호 <span className="text-red-500">*</span>
+                회원 선택 <span className="text-red-500">*</span>
               </label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="000-00-00000"
-                  value={formatBusinessNumber(newBusinessNumber)}
-                  onChange={(e) => setNewBusinessNumber(e.target.value.replace(/\D/g, ''))}
-                  maxLength={12}
-                  className="font-mono"
-                />
-                <Button
-                  variant="outline"
-                  onClick={handleVerifyBusinessNumber}
-                  disabled={verifyingBizNum || newBusinessNumber.replace(/\D/g, '').length !== 10}
-                >
-                  {verifyingBizNum ? <Loader2 className="h-4 w-4 animate-spin" /> : '검증'}
-                </Button>
-              </div>
-              {verifiedUser && (
-                <p className="text-sm text-green-600">
-                  ✓ {verifiedUser.company_name} ({verifiedUser.is_approved ? '가입완료' : '미가입'})
+              {unmappedRegisteredUsers.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">
+                  매핑이 필요한 회원이 없습니다.
                 </p>
+              ) : (
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  value={selectedUnmappedBizNum}
+                  onChange={(e) => setSelectedUnmappedBizNum(e.target.value)}
+                >
+                  <option value="">선택하세요 ({unmappedRegisteredUsers.length}건)</option>
+                  {unmappedRegisteredUsers.map((user) => (
+                    <option key={user.business_number} value={user.business_number}>
+                      {user.business_name} ({formatBusinessNumber(user.business_number)})
+                    </option>
+                  ))}
+                </select>
               )}
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                사업자명 {!verifiedUser && <span className="text-red-500">*</span>}
-              </label>
-              <Input
-                placeholder="사업자명 입력"
-                value={newBusinessName}
-                onChange={(e) => setNewBusinessName(e.target.value)}
-                disabled={!!verifiedUser}
-                className={verifiedUser ? 'bg-gray-100' : ''}
-              />
             </div>
 
             <div className="space-y-2">
@@ -1670,7 +1619,7 @@ export default function SettlementIntegrityManager() {
             </Button>
             <Button
               onClick={handleAddNewRow}
-              disabled={addingRow || newBusinessNumber.replace(/\D/g, '').length !== 10 || !newCsoName.trim()}
+              disabled={addingRow || !selectedUnmappedBizNum || !newCsoName.trim()}
             >
               {addingRow ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
               추가

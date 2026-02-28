@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getUserRepository } from '@/infrastructure/supabase';
-import { invalidateUserCache } from '@/lib/data-cache';
+import { invalidateUserCache, invalidateCSOMatchingCache } from '@/lib/data-cache';
+import { getSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -107,6 +108,23 @@ export async function DELETE(
     const success = await getUserRepository().delete(businessNumber);
     
     if (success) {
+      // 해당 사업자번호의 CSO 매핑도 함께 삭제
+      try {
+        const supabase = getSupabase();
+        const { error: matchError } = await supabase
+          .from('cso_matching')
+          .delete()
+          .eq('business_number', businessNumber);
+        if (matchError) {
+          console.error('[Delete User] CSO 매핑 삭제 DB 에러:', matchError.message);
+        } else {
+          invalidateCSOMatchingCache();
+          console.log(`[Delete User] CSO 매핑 삭제 완료: ${businessNumber}`);
+        }
+      } catch (error) {
+        console.error('[Delete User] CSO 매핑 삭제 실패:', error);
+      }
+
       invalidateUserCache();
       return NextResponse.json({
         success: true,
