@@ -324,7 +324,8 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-5rem)] space-y-6">
+    <div className="flex flex-col min-h-[calc(100vh-5rem)]">
+      <div className="space-y-6">
       {/* Header + Month Select */}
       <div className="flex items-end justify-between gap-4">
         <div>
@@ -469,6 +470,7 @@ export default function AdminDashboardPage() {
             );
           })}
         </div>
+      </div>
       </div>
 
       {/* System Footer */}
