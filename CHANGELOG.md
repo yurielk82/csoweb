@@ -5,6 +5,32 @@
 
 ---
 
+## [0.24.0] - 2026-02-28
+
+### 변경 — 대시보드 접속업체 로직 + 월 선택 + 이메일 카드 + 도구 UI 복원
+
+v0.23.0 대시보드 피드백 반영.
+
+#### 추가
+- **월 선택**: 헤더 우측 shadcn `Select`로 조회 기준 월 변경. 정산 데이터가 있는 월 + 당월 옵션. CSO업체·수수료·이메일 KPI가 선택 월에 연동
+- **이메일 KPI 카드**: 5번째 KPI로 추가. 선택 월 기준 전송 건수 표시, 실패 시 `text-destructive`로 실패 건수 강조
+- **신규 API**: `GET /api/settlements/cso-companies?month=YYYYMM` — 정산월별 CSO 업체 business_number 목록 반환
+
+#### 변경
+- **접속업체 로직**: 전체 비관리자 → "당월 정산 CSO 업체 중 접속한 업체"로 수정. 과거 월 선택 시 "—" 표시
+- **도구 카드 복원**: v0.22.0 스타일(아이콘+제목+설명) 7개 카드를 업무 순서대로 정렬 (업로드→회원승인→거래처매핑→데이터관리→컬럼설정→메일머지→이메일이력)
+- **KPI 그리드**: 4열 → 5열 (`grid-cols-2 sm:grid-cols-3 lg:grid-cols-5`)
+
+#### 제거
+- **파이프라인 섹션**: `PipelineStatus`, `PipelineStep` 타입, `getPipelineIcon()`, `getPipelineBorder()` 헬퍼, 파이프라인 JSX 전부 제거
+- 미사용 import: `CheckCircle2`, `AlertTriangle`, `Clock`, `ChevronRight`
+
+#### 수정 파일
+- `src/app/api/settlements/cso-companies/route.ts` (신규)
+- `src/app/(main)/admin/page.tsx`
+
+---
+
 ## [0.23.0] - 2026-02-28
 
 ### 추가 — 관리자 대시보드 재설계 (KPI + 파이프라인 + 접속 추적)
