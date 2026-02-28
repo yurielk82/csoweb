@@ -284,7 +284,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="dashboard-glass-bg flex flex-col flex-1 -mx-4 -mt-6 px-4 pt-6 pb-6">
+    <div className="dashboard-glass-bg flex flex-col flex-1 -my-6 px-4 sm:px-6 lg:px-8 py-6">
       {/* Floating Orbs */}
       <div className="dashboard-orb dashboard-orb-1" />
       <div className="dashboard-orb dashboard-orb-2" />
