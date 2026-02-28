@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getUserRepository } from '@/infrastructure/supabase';
 import { sendEmail } from '@/lib/email';
-import { invalidateUserCache } from '@/lib/data-cache';
+import { invalidateUserCache, invalidateCSOMatchingCache } from '@/lib/data-cache';
+import { getSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,7 +59,30 @@ export async function POST(request: NextRequest) {
       console.log(`[Approve] Email sent successfully to: ${user.email}`);
     }
     
-    // CSO 목록 캐시 무효화
+    // CSO 매핑 자동 등록: 회사명 → 사업자번호 (승인 시 보장)
+    try {
+      const supabase = getSupabase();
+      const { error: matchError } = await supabase
+        .from('cso_matching')
+        .upsert(
+          {
+            cso_company_name: user.company_name.trim(),
+            business_number: user.business_number,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'cso_company_name', ignoreDuplicates: true }
+        );
+      if (matchError) {
+        console.error('[Approve] CSO 매핑 자동 등록 DB 에러:', matchError.message);
+      } else {
+        invalidateCSOMatchingCache();
+        console.log(`[Approve] CSO 매핑 자동 등록: ${user.company_name} → ${user.business_number}`);
+      }
+    } catch (error) {
+      console.error('[Approve] CSO 매핑 자동 등록 실패 (승인은 정상 처리됨):', error);
+    }
+
+    // 캐시 무효화
     invalidateUserCache();
 
     return NextResponse.json({
