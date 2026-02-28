@@ -83,7 +83,6 @@ const ADMIN_NAV: NavEntry[] = [
     items: [
       { href: '/admin/mailmerge', label: '메일머지', icon: MailPlus },
       { href: '/admin/emails', label: '이메일 이력', icon: Mail },
-      { href: '/admin/email-settings', label: '이메일 설정', icon: Settings },
     ],
   },
   { href: '/admin/master', label: '마스터 조회', icon: Search },
@@ -254,6 +253,12 @@ function MobileNav({
                 사이트 설정
               </Button>
             </Link>
+            <Link href="/admin/email-settings" onClick={onNavigate}>
+              <Button variant="ghost" className="w-full justify-start gap-2">
+                <Mail className="h-4 w-4" />
+                이메일 설정
+              </Button>
+            </Link>
             <Link href="/admin/system" onClick={onNavigate}>
               <Button variant="ghost" className="w-full justify-start gap-2">
                 <Monitor className="h-4 w-4" />
@@ -348,6 +353,12 @@ export function Header() {
                     <Link href="/admin/settings" className="cursor-pointer">
                       <Settings className="mr-2 h-4 w-4" />
                       사이트 설정
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/email-settings" className="cursor-pointer">
+                      <Mail className="mr-2 h-4 w-4" />
+                      이메일 설정
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
