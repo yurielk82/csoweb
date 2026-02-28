@@ -3,6 +3,12 @@
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 [Semantic Versioning](https://semver.org/) 및 [Keep a Changelog](https://keepachangelog.com/) 형식을 따릅니다.
 
+## [0.28.8] - 2026-03-01
+
+### Fixed
+- Vitest worker 타임아웃 해결 — WSL2+OneDrive 환경 대응 (maxWorkers: 1 + postinstall 패치)
+- 전역 afterEach(cleanup) 추가로 테스트 간 DOM 정리 보장
+
 ## [0.28.7] - 2026-03-01
 
 ### Removed
