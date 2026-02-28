@@ -47,7 +47,21 @@ CSO 정산 포털 디자인 토큰 및 색상 시스템 정의.
 
 ### auth 페이지 배경
 
-- 통일: `bg-muted` (이전: `bg-gradient-to-br from-blue-50 to-indigo-100`)
+- **로그인**: Liquid Glass — `.login-glass-bg` (animated mesh gradient + frosted glass card). 테마 독립적 다크 그래디언트 배경.
+- **기타 auth 페이지** (회원가입, 비밀번호 찾기): `bg-muted`
+
+### Liquid Glass 토큰 (로그인 전용)
+
+| 클래스 | 용도 |
+|--------|------|
+| `.login-glass-bg` | 메시 그래디언트 배경 컨테이너 |
+| `.login-orb-{1,2,3}` | 떠다니는 그래디언트 오브 (Teal/Violet/Green-Teal) |
+| `.glass-card` | Frosted glass 카드 (`backdrop-filter: blur(20px)`) |
+| `.glass-button` | 3D 유리 버튼 (hover scale + spring easing) |
+| `.login-icon-glow` | 아이콘 네온 글로우 + pulse 애니메이션 |
+| `.login-glass-footer` | 반투명 유리 푸터 |
+
+`prefers-reduced-motion: reduce` 시 모든 애니메이션 정지.
 
 ## 파일 위치
 
