@@ -5,6 +5,79 @@
 
 ---
 
+## [0.28.4] - 2026-02-28
+
+### 개선 — 관리자 대시보드 빠른작업 그리드 통합
+
+#### 변경
+- 빠른작업 그룹 분리 제거, 단일 4열 그리드로 통합 (동일 크기 카드)
+
+#### 수정 파일
+- `src/app/(main)/admin/page.tsx`
+
+---
+
+## [0.28.3] - 2026-02-28
+
+### 수정 — 헤더 메뉴 반응형 정렬 수정
+
+#### 변경
+- `container` → `max-w-screen-xl` 통일, 대시보드와 헤더 너비 일치
+
+#### 수정 파일
+- `src/components/shared/header.tsx`
+
+---
+
+## [0.28.2] - 2026-02-28
+
+### 개선 — 관리자 대시보드 빠른작업 그룹 분리 + 이메일 카드 개선
+
+#### 변경
+- 빠른작업을 "업무 프로세스" / "도구" 2개 그룹으로 분리
+- 이메일 관련 카드 UI 개선
+
+#### 수정 파일
+- `src/app/(main)/admin/page.tsx`
+
+---
+
+## [0.28.1] - 2026-02-28
+
+### 개선 — 관리자 대시보드 Glass-like 디자인
+
+v0.28.0 Bento Grid revert 후, 기존 레이아웃 유지하면서 카드/버튼만 Glass 스타일 적용.
+
+#### 변경
+- 멀티레이어 소프트 쉐도우 + 인셋 하이라이트 + oklch 7색 아이콘 + hover lift/scale
+
+#### 수정 파일
+- `src/app/(main)/admin/page.tsx`
+
+---
+
+## [0.28.0] - 2026-02-28 (reverted)
+
+### 추가 — 관리자 대시보드 Bento Grid + Liquid Glass 리디자인
+
+- 관리자 대시보드 Bento Grid + Liquid Glass 리디자인 → 즉시 revert
+
+---
+
+## [0.27.6] - 2026-02-28
+
+### 리팩토링 — 관리자 대시보드 Liquid Glass 제거
+
+#### 변경
+- dashboard-glass-bg + Orb 배경 제거, shadcn Card + Tailwind 표준으로 전환
+- `globals.css` 대시보드 전용 Liquid Glass CSS 186줄 제거
+
+#### 수정 파일
+- `src/app/(main)/admin/page.tsx`
+- `src/app/globals.css`
+
+---
+
 ## [0.27.5] - 2026-02-28
 
 ### 리팩토링 — 레이아웃 max-width 2-Tier 라우트 그룹 표준화
@@ -33,6 +106,98 @@
 - `src/app/(main)/admin/(narrow)/system/page.tsx` (이동)
 - `src/app/(main)/admin/(narrow)/settings/page.tsx` (이동)
 - `src/app/(main)/admin/(narrow)/mailmerge/page.tsx` (이동)
+
+---
+
+## [0.27.4] - 2026-02-28
+
+### 리팩토링 — 대시보드 푸터 div 중첩 제거
+
+#### 변경
+- wrapper div → dashboard-glass-footer 병합, Fragment 통합
+
+#### 수정 파일
+- `src/app/(main)/admin/page.tsx`
+
+---
+
+## [0.27.3] - 2026-02-28
+
+### 개선 — 관리자 대시보드 full-bleed 배경
+
+#### 변경
+- dashboard-glass-bg에 `calc(-50vw + 50%)` 적용, 뷰포트 전체 확장
+- layout에 `overflow-x-hidden` 추가
+
+#### 수정 파일
+- `src/app/(main)/admin/page.tsx`
+- `src/app/(main)/layout.tsx`
+
+---
+
+## [0.27.2] - 2026-02-28
+
+### 개선 — 관리자 대시보드 점진적 로딩
+
+#### 변경
+- Promise.all 전체 블로킹 → KPI/배지/시스템 3그룹 독립 병렬 페칭 + 인라인 스켈레톤
+
+#### 수정 파일
+- `src/app/(main)/admin/page.tsx`
+
+---
+
+## [0.27.1] - 2026-02-28
+
+### 개선 — 대시보드 수수료 단위·배지 톤 다운
+
+#### 변경
+- 총수수료 ₩ 통화 기호 제거, 배지 destructive → secondary, 아이콘 채도 감소
+
+#### 수정 파일
+- `src/app/(main)/admin/page.tsx`
+
+---
+
+## [0.27.0] - 2026-02-28
+
+### 추가 — 관리자 대시보드 Liquid Glass 전면 재구성
+
+#### 변경
+- KPI 카드 5개 → glass-kpi-card, Quick Action 7개 → glass-action-card
+- 배경 glass 그래디언트 + floating orbs
+- `DESIGN_SYSTEM.md` 토큰 문서화
+
+#### 수정 파일
+- `src/app/(main)/admin/page.tsx`
+- `src/app/globals.css`
+- `docs/DESIGN_SYSTEM.md`
+
+---
+
+## [0.26.4] - 2026-02-28
+
+### 개선 — Liquid Glass 쿨톤 복원
+
+#### 변경
+- 오렌지+화이트 팔레트 폐기, 시안/바이올렛/틸 원본 Hue 복원
+- 라이트 모드 유지: 화이트 배경 + 패스텔 쿨톤 오브
+
+#### 수정 파일
+- `src/app/globals.css`
+
+---
+
+## [0.26.3] - 2026-02-28
+
+### 변경 — 로그인 페이지 라이트 테마 전환
+
+#### 변경
+- 다크 네이비 배경 → 웜 화이트 그래디언트
+- 텍스트·카드·입력·버튼·링크·푸터 명암 반전
+
+#### 수정 파일
+- `src/app/globals.css`
 
 ---
 
