@@ -65,55 +65,115 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 파일 내 중복 제거 (동일 cso_company_name은 마지막 값 유지)
+    const dedupMap = new Map<string, string>();
+    let duplicatesRemoved = 0;
+    for (const item of validItems) {
+      const existing = dedupMap.get(item.cso_company_name);
+      if (existing !== undefined) {
+        duplicatesRemoved++;
+      }
+      dedupMap.set(item.cso_company_name, item.business_number);
+    }
+
     const supabase = getSupabase();
 
-    // Upsert in batches
-    const batchSize = 100;
-    let upsertedCount = 0;
+    // 기존 DB 매칭 데이터 조회
+    const { data: existingData, error: fetchError } = await supabase
+      .from('cso_matching')
+      .select('cso_company_name, business_number');
 
-    for (let i = 0; i < validItems.length; i += batchSize) {
-      const batch = validItems.slice(i, i + batchSize).map(item => ({
-        cso_company_name: item.cso_company_name,
-        business_number: item.business_number,
-        updated_at: new Date().toISOString(),
-      }));
-
-      const { error } = await supabase
-        .from('cso_matching')
-        .upsert(batch, {
-          onConflict: 'cso_company_name',
-          ignoreDuplicates: false,
-        });
-
-      if (error) {
-        console.error('Upsert error:', error);
-        // 테이블이 없을 수 있으므로 생성 시도
-        if (error.code === '42P01') {
-          return NextResponse.json(
-            { success: false, error: 'cso_matching 테이블이 존재하지 않습니다. 데이터베이스를 확인해주세요.' },
-            { status: 500 }
-          );
-        }
+    if (fetchError) {
+      console.error('Fetch existing data error:', fetchError);
+      if (fetchError.code === '42P01') {
         return NextResponse.json(
-          { success: false, error: `데이터 저장 실패: ${error.message}` },
+          { success: false, error: 'cso_matching 테이블이 존재하지 않습니다. 데이터베이스를 확인해주세요.' },
           { status: 500 }
         );
       }
-
-      upsertedCount += batch.length;
+      return NextResponse.json(
+        { success: false, error: `기존 데이터 조회 실패: ${fetchError.message}` },
+        { status: 500 }
+      );
     }
 
-    // CSO 매칭 캐시 무효화
-    invalidateCSOMatchingCache();
+    const existingMap = new Map<string, string>();
+    for (const row of existingData || []) {
+      existingMap.set(row.cso_company_name, row.business_number);
+    }
+
+    // 비교 분류
+    const toInsert: MatchingItem[] = [];
+    let skipped = 0;
+    const conflicts: string[] = [];
+
+    for (const [csoName, bizNum] of dedupMap) {
+      const existingBizNum = existingMap.get(csoName);
+
+      if (existingBizNum === undefined) {
+        // DB에 없음 → 신규 추가
+        toInsert.push({ cso_company_name: csoName, business_number: bizNum });
+      } else if (existingBizNum === bizNum) {
+        // 동일 정보 → 스킵
+        skipped++;
+      } else {
+        // 사업자번호 불일치 → 충돌 (변경 불가)
+        conflicts.push(csoName);
+      }
+    }
+
+    // 신규 항목만 INSERT (배치 100건)
+    let insertedCount = 0;
+
+    if (toInsert.length > 0) {
+      const batchSize = 100;
+      for (let i = 0; i < toInsert.length; i += batchSize) {
+        const batch = toInsert.slice(i, i + batchSize).map(item => ({
+          cso_company_name: item.cso_company_name,
+          business_number: item.business_number,
+          updated_at: new Date().toISOString(),
+        }));
+
+        const { error } = await supabase
+          .from('cso_matching')
+          .upsert(batch, {
+            onConflict: 'cso_company_name',
+            ignoreDuplicates: false,
+          });
+
+        if (error) {
+          console.error('Upsert error:', error);
+          return NextResponse.json(
+            { success: false, error: `데이터 저장 실패: ${error.message}` },
+            { status: 500 }
+          );
+        }
+
+        insertedCount += batch.length;
+      }
+
+      // CSO 매칭 캐시 무효화 (실제 변경이 있을 때만)
+      invalidateCSOMatchingCache();
+    }
+
+    // 결과 메시지 구성
+    const messageParts: string[] = [];
+    if (insertedCount > 0) messageParts.push(`신규 ${insertedCount}건 추가`);
+    if (skipped > 0) messageParts.push(`동일 ${skipped}건 스킵`);
+    if (conflicts.length > 0) messageParts.push(`충돌 ${conflicts.length}건`);
+    if (duplicatesRemoved > 0) messageParts.push(`파일 내 중복 ${duplicatesRemoved}건 제거`);
 
     return NextResponse.json({
       success: true,
       data: {
-        upserted: upsertedCount,
+        inserted: insertedCount,
+        skipped,
+        duplicatesRemoved,
+        conflicts: conflicts.length > 0 ? conflicts.slice(0, 20) : undefined,
         errors: errors.length > 0 ? errors.slice(0, 10) : undefined,
         hasMoreErrors: errors.length > 10,
       },
-      message: `${upsertedCount}건의 매칭 데이터가 저장되었습니다.`,
+      message: messageParts.join(', ') || '변경 사항이 없습니다.',
     });
   } catch (error) {
     console.error('Upsert error:', error);

@@ -395,6 +395,8 @@ export default function SettlementIntegrityManager() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadPreview, setUploadPreview] = useState<MatchingUploadItem[]>([]);
+  const [uploadDuplicatesRemoved, setUploadDuplicatesRemoved] = useState(0);
+  const [uploadRawCount, setUploadRawCount] = useState(0);
 
   // Delete dialog state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -902,7 +904,7 @@ export default function SettlementIntegrityManager() {
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
 
-      const items: MatchingUploadItem[] = [];
+      const rawItems: MatchingUploadItem[] = [];
 
       for (const row of jsonData) {
         const companyNameKeys = ['업체명', 'CSO관리업체', 'CSO관리업체명', '관리업체명', '회사명'];
@@ -924,13 +926,29 @@ export default function SettlementIntegrityManager() {
         }
 
         if (companyName && bizNum && bizNum.length === 10) {
-          items.push({
+          rawItems.push({
             cso_company_name: companyName,
             business_number: bizNum,
           });
         }
       }
 
+      // 파일 내 중복 제거 (동일 cso_company_name + 동일 business_number)
+      const dedupMap = new Map<string, MatchingUploadItem>();
+      let dupsRemoved = 0;
+      for (const item of rawItems) {
+        const key = item.cso_company_name;
+        const existing = dedupMap.get(key);
+        if (existing && existing.business_number === item.business_number) {
+          dupsRemoved++;
+        } else {
+          dedupMap.set(key, item);
+        }
+      }
+
+      const items = Array.from(dedupMap.values());
+      setUploadRawCount(rawItems.length);
+      setUploadDuplicatesRemoved(dupsRemoved);
       setUploadPreview(items);
 
       if (items.length === 0) {
@@ -938,6 +956,11 @@ export default function SettlementIntegrityManager() {
           variant: 'destructive',
           title: '파싱 오류',
           description: '유효한 매칭 데이터를 찾을 수 없습니다.',
+        });
+      } else if (dupsRemoved > 0) {
+        toast({
+          title: '중복 제거',
+          description: `파일 내 동일 항목 ${dupsRemoved}건이 제거되었습니다. (${rawItems.length}건 → ${items.length}건)`,
         });
       }
     } catch (error) {
@@ -991,13 +1014,32 @@ export default function SettlementIntegrityManager() {
       const result = await res.json();
 
       if (result.success) {
+        const { inserted, skipped, conflicts } = result.data;
+
+        // 결과 메시지 구성
+        const parts: string[] = [];
+        if (inserted > 0) parts.push(`신규 ${inserted}건 추가`);
+        if (skipped > 0) parts.push(`동일 ${skipped}건 스킵`);
+
         toast({
           title: '업로드 완료',
-          description: `${result.data.upserted}건의 매칭 데이터가 저장되었습니다.`,
+          description: parts.join(', ') || '변경 사항이 없습니다.',
         });
+
+        // 충돌 항목이 있으면 별도 경고
+        if (conflicts && conflicts.length > 0) {
+          toast({
+            variant: 'destructive',
+            title: `사업자번호 불일치 ${conflicts.length}건`,
+            description: `다음 CSO명은 기존과 다른 사업자번호로 등록 시도되어 스킵됩니다 (삭제 후 재등록 필요): ${conflicts.slice(0, 5).join(', ')}${conflicts.length > 5 ? ` 외 ${conflicts.length - 5}건` : ''}`,
+          });
+        }
+
         setShowUploadDialog(false);
         setUploadFile(null);
         setUploadPreview([]);
+        setUploadDuplicatesRemoved(0);
+        setUploadRawCount(0);
         fetchIntegrityData();
       } else {
         toast({
@@ -1446,14 +1488,16 @@ export default function SettlementIntegrityManager() {
                   <div>
                     <p className="font-medium">{uploadFile.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {(uploadFile.size / 1024).toFixed(1)} KB | {uploadPreview.length}건 감지됨
+                      {(uploadFile.size / 1024).toFixed(1)} KB | {uploadDuplicatesRemoved > 0
+                        ? `${uploadRawCount}건 중 중복 ${uploadDuplicatesRemoved}건 제거 → ${uploadPreview.length}건`
+                        : `${uploadPreview.length}건 감지됨`}
                     </p>
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => { setUploadFile(null); setUploadPreview([]); }}
+                  onClick={() => { setUploadFile(null); setUploadPreview([]); setUploadDuplicatesRemoved(0); setUploadRawCount(0); }}
                   disabled={uploading}
                 >
                   <X className="h-4 w-4" />
