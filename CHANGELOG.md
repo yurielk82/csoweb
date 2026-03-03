@@ -3,6 +3,12 @@
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 [Semantic Versioning](https://semver.org/) 및 [Keep a Changelog](https://keepachangelog.com/) 형식을 따릅니다.
 
+## [0.28.11] - 2026-03-04
+
+### Added
+- 로드맵: 실시간 상담 시스템 Phase 1~7 추가 (채널톡 유사, Supabase Realtime 기반)
+- 로드맵 정렬: 완료 항목 상단, 미완료 항목 하단으로 재배치
+
 ## [0.28.10] - 2026-03-03
 
 ### Changed
