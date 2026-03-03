@@ -3,6 +3,11 @@
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 [Semantic Versioning](https://semver.org/) 및 [Keep a Changelog](https://keepachangelog.com/) 형식을 따릅니다.
 
+## [0.28.9] - 2026-03-03
+
+### Fixed
+- netlify.toml `[functions]` region 설정 문법 오류 제거 — CLI 파싱 정상화
+
 ## [0.28.8] - 2026-03-01
 
 ### Fixed
