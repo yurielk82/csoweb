@@ -3,6 +3,14 @@
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 [Semantic Versioning](https://semver.org/) 및 [Keep a Changelog](https://keepachangelog.com/) 형식을 따릅니다.
 
+## [0.28.10] - 2026-03-03
+
+### Changed
+- CLAUDE.md Deploy 항목: Netlify → Vercel (프로덕션) + Netlify (레거시) 업데이트
+
+### Chore
+- 원격 claude/* 브랜치 11개 정리 (PR 없는 잔존 브랜치 삭제)
+
 ## [0.28.9] - 2026-03-03
 
 ### Fixed

@@ -12,7 +12,7 @@ CSO 정산 포털 — B2B 제약 정산 수수료 조회 시스템
 - **Email**: Resend API + SMTP 하이웍스 (듀얼 프로바이더)
 - **Excel**: exceljs (export) + xlsx (parse)
 - **Test**: Vitest (27파일/171케이스) + Playwright (E2E)
-- **Deploy**: Netlify (GitHub → main push 자동 배포)
+- **Deploy**: Vercel (GitHub → main push 자동 배포) + Netlify (레거시)
 
 ## 주요 명령어
 
