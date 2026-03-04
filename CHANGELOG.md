@@ -3,6 +3,12 @@
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 [Semantic Versioning](https://semver.org/) 및 [Keep a Changelog](https://keepachangelog.com/) 형식을 따릅니다.
 
+## [0.29.1] - 2026-03-04
+
+### Fixed
+- 관리자 대시보드 당월 접속업체 KPI 카드 제거 (업로드 스냅샷 기반으로 통합)
+- CSO 매칭 무결성 검사에서 관리자 사업자번호 필터링 추가
+
 ## [0.29.0] - 2026-03-04
 
 ### Added

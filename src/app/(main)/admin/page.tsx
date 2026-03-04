@@ -143,17 +143,7 @@ export default function AdminDashboardPage() {
     bn => !adminBusinessNumbers.has(bn)
   );
 
-  const isCurrentMonth = selectedMonth === currentMonthKey;
-  const firstOfMonth = `${now.getFullYear()}-${String(currentMonthNum).padStart(2, '0')}-01T00:00:00`;
-  const accessedCount = isCurrentMonth
-    ? allUsers.filter(
-        (u) =>
-          !u.is_admin &&
-          filteredCsoBusinessNumbers.includes(u.business_number) &&
-          u.last_login_at &&
-          u.last_login_at >= firstOfMonth
-      ).length
-    : null;
+
 
   // Fetch email stats for selected month
   const fetchEmailStats = useCallback(async (monthKey: string) => {
@@ -394,18 +384,6 @@ export default function AdminDashboardPage() {
               <>
                 <Skeleton className="h-8 w-16 mb-1" />
                 <Skeleton className="h-3 w-28" />
-              </>
-            ) : isCurrentMonth ? (
-              <>
-                <div className="text-2xl font-bold">
-                  {accessedCount}
-                  <span className="text-base font-normal text-muted-foreground">
-                    /{filteredCsoBusinessNumbers.length}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {currentMonthNum}월 CSO 업체 중 접속
-                </p>
               </>
             ) : uploadSnapshot ? (
               <>

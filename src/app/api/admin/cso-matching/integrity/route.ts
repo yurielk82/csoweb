@@ -82,13 +82,17 @@ export async function GET(request: NextRequest) {
       is_admin: boolean;
     };
 
-    // 사업자번호로 회원 정보 맵 생성
+    // 사업자번호로 회원 정보 맵 생성 + 관리자 사업자번호 수집
     const userMap = new Map<string, {
       company_name: string;
       is_approved: boolean;
     }>();
+    const adminBizNumbers = new Set<string>();
     for (const user of (usersData as unknown as UserRow[]) || []) {
-      if (user.is_admin) continue;
+      if (user.is_admin) {
+        adminBizNumbers.add(user.business_number);
+        continue;
+      }
       userMap.set(user.business_number, {
         company_name: user.company_name,
         is_approved: user.is_approved,
@@ -129,11 +133,12 @@ export async function GET(request: NextRequest) {
       page++;
     }
 
-    // CSO관리업체별 통계
+    // CSO관리업체별 통계 (관리자 사업자번호 제외)
     const csoStats = new Map<string, { count: number; lastMonth: string | null }>();
     for (const row of allSettlementData) {
       const csoName = row['CSO관리업체'];
       if (!csoName) continue;
+      if (adminBizNumbers.has(row.business_number)) continue;
 
       if (!csoStats.has(csoName)) {
         csoStats.set(csoName, { count: 0, lastMonth: null });
@@ -149,8 +154,9 @@ export async function GET(request: NextRequest) {
     const results: IntegrityResultV2[] = [];
     const processedBusinessNumbers = new Set<string>();
 
-    // 4-1. 매칭 테이블에 있는 사업자번호 처리
+    // 4-1. 매칭 테이블에 있는 사업자번호 처리 (관리자 제외)
     for (const [bizNum, csoNames] of bizToCSO.entries()) {
+      if (adminBizNumbers.has(bizNum)) continue;
       processedBusinessNumbers.add(bizNum);
       
       const user = userMap.get(bizNum);
