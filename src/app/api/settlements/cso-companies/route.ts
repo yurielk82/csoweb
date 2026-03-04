@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getSettlementRepository } from '@/infrastructure/supabase';
-import { getCachedCSOList } from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,16 +24,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const [businessNumbers, allCsoList] = await Promise.all([
-      getSettlementRepository().getBusinessNumbersForMonth(month),
-      getCachedCSOList(),
-    ]);
-    const bizSet = new Set(businessNumbers);
-    const filtered = allCsoList.filter(u => bizSet.has(u.business_number));
+    const companies = await getSettlementRepository().getCSOCompaniesForMonth(month);
 
     return NextResponse.json({
       success: true,
-      data: filtered,
+      data: companies,
     });
   } catch (error) {
     console.error('Get CSO companies error:', error);

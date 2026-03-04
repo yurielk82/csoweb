@@ -52,6 +52,7 @@ export interface SettlementRepository {
   getTotalsByCSOMatching(matchedNames: string[], settlementMonth?: string): Promise<SettlementTotals>;
   getBusinessNumbersForMonth(settlementMonth: string): Promise<string[]>;
   getCSOCompanyNamesForMonth(settlementMonth: string): Promise<string[]>;
+  getCSOCompaniesForMonth(settlementMonth: string): Promise<{ business_number: string; company_name: string }[]>;
   getSummary(businessNumber: string, settlementMonth: string): Promise<SettlementSummary>;
   getSummaryByCSOMatching(matchedNames: string[], settlementMonth: string): Promise<SettlementSummary>;
   getStats(): Promise<SettlementStats>;

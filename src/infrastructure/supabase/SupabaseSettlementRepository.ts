@@ -224,6 +224,24 @@ export class SupabaseSettlementRepository implements SettlementRepository {
     )];
   }
 
+  async getCSOCompaniesForMonth(settlementMonth: string): Promise<{ business_number: string; company_name: string }[]> {
+    const { data, error } = await supabase
+      .from('settlements')
+      .select('business_number, CSO관리업체')
+      .eq('정산월', settlementMonth);
+
+    if (error || !data) return [];
+    const map = new Map<string, string>();
+    for (const row of data as unknown as Record<string, string>[]) {
+      const bn = row.business_number;
+      const name = row.CSO관리업체;
+      if (bn && !map.has(bn)) {
+        map.set(bn, name || bn);
+      }
+    }
+    return Array.from(map.entries()).map(([business_number, company_name]) => ({ business_number, company_name }));
+  }
+
   async getSummary(businessNumber: string, settlementMonth: string): Promise<SettlementSummary> {
     const { data, error } = await supabase
       .from('settlements')
