@@ -3,6 +3,11 @@
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 [Semantic Versioning](https://semver.org/) 및 [Keep a Changelog](https://keepachangelog.com/) 형식을 따릅니다.
 
+## [0.28.12] - 2026-03-04
+
+### Improved
+- 거래처 매핑 엑셀 업로드 스마트 upsert: 파일 내 중복 제거, DB 비교 후 신규/스킵/충돌 분류, 상세 결과 메시지
+
 ## [0.28.11] - 2026-03-04
 
 ### Added
