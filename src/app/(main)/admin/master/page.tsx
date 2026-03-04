@@ -107,7 +107,7 @@ export default function AdminMasterPage() {
   const [csoSearch, setCsoSearch] = useState('');
   const [selectedCSO, setSelectedCSO] = useState<CSOOption | null>(null);
   const [showCsoDropdown, setShowCsoDropdown] = useState(false);
-  const [csoLoading] = useState(false);
+  const [csoLoading, setCsoLoading] = useState(false);
   const csoInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -119,11 +119,28 @@ export default function AdminMasterPage() {
       )
     : csoList;
 
-  // 초기화: 통합 init API 1회 (columns + yearMonths + notice + csoList)
+  // 정산월별 CSO 업체 목록 조회
+  const fetchCsoList = useCallback(async (month: string) => {
+    if (!month) return;
+    setCsoLoading(true);
+    try {
+      const res = await fetch(`/api/settlements/cso-companies?month=${encodeURIComponent(month)}`);
+      const result = await res.json();
+      if (result.success) {
+        setCsoList(result.data);
+      }
+    } catch (err) {
+      console.error('CSO list fetch error:', err);
+    } finally {
+      setCsoLoading(false);
+    }
+  }, []);
+
+  // 초기화: 통합 init API 1회 (columns + yearMonths + notice)
   useEffect(() => {
     const init = async () => {
       try {
-        const res = await fetch('/api/dashboard/init?include_settlements=false&include_cso_list=true');
+        const res = await fetch('/api/dashboard/init?include_settlements=false');
         const initRes = await res.json();
 
         if (initRes.success) {
@@ -147,10 +164,6 @@ export default function AdminMasterPage() {
           if (d.notice) {
             setNoticeSettings(d.notice);
           }
-
-          if (d.csoList) {
-            setCsoList(d.csoList);
-          }
         }
       } catch (err) {
         console.error('Init error:', err);
@@ -160,7 +173,19 @@ export default function AdminMasterPage() {
     };
 
     init();
+  // fetchCsoList는 useCallback으로 안정적이므로 deps에 포함
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 정산월 변경 시 CSO 목록 갱신 및 선택 초기화
+  useEffect(() => {
+    if (!selectedMonth) return;
+    fetchCsoList(selectedMonth);
+    setSelectedCSO(null);
+    setCsoSearch('');
+    setQueryStarted(false);
+    setData(null);
+  }, [selectedMonth]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Click outside to close dropdown
   useEffect(() => {
