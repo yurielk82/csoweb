@@ -149,6 +149,20 @@ export const getCachedCSOMatchingList = unstable_cache(
   { tags: ['cso-matching'] }
 );
 
+// ── Settlement Upload Snapshots ──
+// 태그: settlement-data (업로드 시 자동 무효화)
+export const getCachedUploadSnapshot = unstable_cache(
+  async (month: string) => getSettlementRepository().getUploadSnapshot(month),
+  ['settlement-upload-single'],
+  { tags: ['settlement-data'] }
+);
+
+export const getCachedUploadSnapshots = unstable_cache(
+  async () => getSettlementRepository().getAllUploadSnapshots(),
+  ['settlement-uploads-data'],
+  { tags: ['settlement-data'] }
+);
+
 // ── Cache Invalidation Functions ──
 // 각 쓰기 API에서 호출
 

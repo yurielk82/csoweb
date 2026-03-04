@@ -3,6 +3,19 @@
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 [Semantic Versioning](https://semver.org/) 및 [Keep a Changelog](https://keepachangelog.com/) 형식을 따릅니다.
 
+## [0.29.0] - 2026-03-04
+
+### Added
+- 정산서 업로드 시 접속업체 스냅샷 저장 (`settlement_uploads` 테이블)
+- 과거 월 접속업체 데이터 조회 (업로드 시점 스냅샷 기반)
+- 업로드 스냅샷 조회 API (`GET /api/settlements/uploads`)
+- 사용자 대시보드 "정산서 미업로드" 안내 화면 (매칭은 있으나 데이터 없는 경우)
+
+### Changed
+- 관리자 대시보드 기본 표시 월을 정산서 업로드 기준으로 변경
+- 접속 업체 KPI 분모에서 관리자 business_number 제외
+- 메일머지 배지 판단에서도 관리자 제외
+
 ## [0.28.12] - 2026-03-04
 
 ### Improved

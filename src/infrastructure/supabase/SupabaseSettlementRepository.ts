@@ -15,6 +15,7 @@ import type {
   SettlementStats,
   SettlementStatsByMonth,
   InsertSettlementsResult,
+  SettlementUpload,
 } from '@/domain/settlement/types';
 import { SUPABASE_PAGE_SIZE, SUPABASE_BATCH_SIZE } from '@/constants/defaults';
 
@@ -457,6 +458,57 @@ export class SupabaseSettlementRepository implements SettlementRepository {
       제약수수료_합계: Number(row['total_제약수수료_합계']) || 0,
       담당수수료_합계: Number(row['total_담당수수료_합계']) || 0,
     };
+  }
+
+  // ============================================
+  // 업로드 스냅샷 메서드
+  // ============================================
+
+  async upsertUploadSnapshot(data: {
+    settlement_month: string;
+    row_count: number;
+    cso_business_numbers: string[];
+    accessed_business_numbers: string[];
+  }): Promise<void> {
+    const { error } = await supabase
+      .from('settlement_uploads')
+      .upsert(
+        {
+          settlement_month: data.settlement_month,
+          uploaded_at: new Date().toISOString(),
+          row_count: data.row_count,
+          cso_business_numbers: data.cso_business_numbers,
+          accessed_business_numbers: data.accessed_business_numbers,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'settlement_month' }
+      );
+
+    if (error) {
+      console.error('upsertUploadSnapshot error:', error);
+      throw new Error(error.message);
+    }
+  }
+
+  async getUploadSnapshot(settlementMonth: string): Promise<SettlementUpload | null> {
+    const { data, error } = await supabase
+      .from('settlement_uploads')
+      .select('*')
+      .eq('settlement_month', settlementMonth)
+      .single();
+
+    if (error || !data) return null;
+    return data as unknown as SettlementUpload;
+  }
+
+  async getAllUploadSnapshots(): Promise<SettlementUpload[]> {
+    const { data, error } = await supabase
+      .from('settlement_uploads')
+      .select('*')
+      .order('settlement_month', { ascending: false });
+
+    if (error || !data) return [];
+    return data as unknown as SettlementUpload[];
   }
 
 }

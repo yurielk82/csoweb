@@ -106,8 +106,26 @@ export default function DashboardPage() {
     );
   }
 
-  // 4. CSO 매칭 없음
-  if (yearMonths.length === 0 || errorType === 'no_matching') {
+  // 4. 정산서 미업로드 (매칭은 있으나 데이터 없음)
+  if (errorType === 'no_data' && yearMonths.length === 0) {
+    return (
+      <div className="space-y-6">
+        <PageHeader />
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <FileSpreadsheet className="h-16 w-16 text-blue-400 mb-4" />
+            <h2 className="text-xl font-semibold text-blue-800 mb-2">정산서가 아직 업로드되지 않았습니다</h2>
+            <p className="text-blue-700 text-center max-w-md">
+              관리자가 정산서를 업로드하면 이곳에서 조회할 수 있습니다.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // 5. CSO 매칭 없음
+  if (errorType === 'no_matching') {
     return (
       <div className="space-y-6">
         <PageHeader />

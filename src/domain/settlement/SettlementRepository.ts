@@ -8,6 +8,7 @@ import type {
   SettlementStats,
   SettlementStatsByMonth,
   InsertSettlementsResult,
+  SettlementUpload,
 } from './types';
 
 /** DB 레벨 페이지네이션 결과 */
@@ -58,4 +59,18 @@ export interface SettlementRepository {
   deleteByMonth(month: string): Promise<number>;
   getMonthlySummaryByBusinessNumber(businessNumber: string, summaryColumnKeys: string[]): Promise<Map<string, { summaries: Record<string, number>; count: number }>>;
   getMonthlySummaryByCSOMatching(matchedNames: string[], summaryColumnKeys: string[]): Promise<Map<string, { summaries: Record<string, number>; count: number }>>;
+
+  /** 업로드 스냅샷 저장 (upsert) */
+  upsertUploadSnapshot(data: {
+    settlement_month: string;
+    row_count: number;
+    cso_business_numbers: string[];
+    accessed_business_numbers: string[];
+  }): Promise<void>;
+
+  /** 업로드 스냅샷 단건 조회 */
+  getUploadSnapshot(settlementMonth: string): Promise<SettlementUpload | null>;
+
+  /** 업로드 스냅샷 전체 조회 */
+  getAllUploadSnapshots(): Promise<SettlementUpload[]>;
 }

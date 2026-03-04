@@ -95,7 +95,7 @@ export function useSettlementData() {
         } else if (months.length > 0) {
           setSelectedMonth(months[0]);
         } else {
-          setErrorType('no_matching');
+          setErrorType('no_data');
         }
 
         // Notice

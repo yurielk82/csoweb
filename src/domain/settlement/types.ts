@@ -90,3 +90,15 @@ export interface InsertSettlementsResult {
   rowCount: number;
   settlementMonths: string[];
 }
+
+/** 정산서 업로드 이력 + 접속업체 스냅샷 */
+export interface SettlementUpload {
+  id: string;
+  settlement_month: string;
+  uploaded_at: string;
+  row_count: number;
+  cso_business_numbers: string[];
+  accessed_business_numbers: string[];
+  created_at: string;
+  updated_at: string;
+}

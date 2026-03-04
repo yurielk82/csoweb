@@ -97,13 +97,18 @@ export default function AdminDashboardPage() {
   const [kpiLoaded, setKpiLoaded] = useState(false);
   const [badgesLoaded, setBadgesLoaded] = useState(false);
   const [systemLoaded, setSystemLoaded] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
+  const [selectedMonth, setSelectedMonth] = useState('');
 
   // Data sources
   const [months, setMonths] = useState<SettlementMonth[]>([]);
   const [allUsers, setAllUsers] = useState<UserData[]>([]);
   const [csoBusinessNumbers, setCsoBusinessNumbers] = useState<string[]>([]);
   const [emailStats, setEmailStats] = useState<EmailStats | null>(null);
+  const [uploadSnapshot, setUploadSnapshot] = useState<{
+    cso_business_numbers: string[];
+    accessed_business_numbers: string[];
+    uploaded_at: string;
+  } | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [unmappedCount, setUnmappedCount] = useState(0);
   const [emailLoading, setEmailLoading] = useState(false);
@@ -130,13 +135,21 @@ export default function AdminDashboardPage() {
   const totalCommission = selectedMonthData?.totalCommission ?? 0;
   const totalMonths = months.length;
 
+  // 관리자 business_number를 CSO 업체 목록에서 제외
+  const adminBusinessNumbers = new Set(
+    allUsers.filter(u => u.is_admin).map(u => u.business_number)
+  );
+  const filteredCsoBusinessNumbers = csoBusinessNumbers.filter(
+    bn => !adminBusinessNumbers.has(bn)
+  );
+
   const isCurrentMonth = selectedMonth === currentMonthKey;
   const firstOfMonth = `${now.getFullYear()}-${String(currentMonthNum).padStart(2, '0')}-01T00:00:00`;
   const accessedCount = isCurrentMonth
     ? allUsers.filter(
         (u) =>
           !u.is_admin &&
-          csoBusinessNumbers.includes(u.business_number) &&
+          filteredCsoBusinessNumbers.includes(u.business_number) &&
           u.last_login_at &&
           u.last_login_at >= firstOfMonth
       ).length
@@ -161,6 +174,21 @@ export default function AdminDashboardPage() {
       setEmailStats(null);
     } finally {
       setEmailLoading(false);
+    }
+  }, []);
+
+  // Fetch upload snapshot for selected month
+  const fetchUploadSnapshot = useCallback(async (monthKey: string) => {
+    try {
+      const res = await fetch(`/api/settlements/uploads?month=${monthKey}`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        setUploadSnapshot(json.data);
+      } else {
+        setUploadSnapshot(null);
+      }
+    } catch {
+      setUploadSnapshot(null);
     }
   }, []);
 
@@ -195,7 +223,27 @@ export default function AdminDashboardPage() {
           usersRes.json(),
         ]);
         if (statsData.success && statsData.data?.months) {
-          setMonths(statsData.data.months);
+          const monthsList: SettlementMonth[] = statsData.data.months;
+          setMonths(monthsList);
+
+          // 기본 월 선택: N월 정산서 존재 → N월, 없으면 최신 정산월
+          const currentMonthExists = monthsList.some(m => m.month === currentMonthKey);
+          const defaultMonth = currentMonthExists
+            ? currentMonthKey
+            : monthsList.length > 0
+              ? monthsList[0].month
+              : currentMonthKey;
+          setSelectedMonth(defaultMonth);
+
+          // 선택된 월의 스냅샷 조회
+          fetchUploadSnapshot(defaultMonth);
+
+          // 기본 월이 현재 월과 다르면 해당 월의 CSO 업체도 조회
+          if (defaultMonth !== currentMonthKey) {
+            fetchCsoCompanies(defaultMonth);
+          }
+        } else {
+          setSelectedMonth(currentMonthKey);
         }
         if (csoData.success) {
           setCsoBusinessNumbers(csoData.data);
@@ -249,8 +297,9 @@ export default function AdminDashboardPage() {
       setSelectedMonth(monthKey);
       fetchEmailStats(monthKey);
       fetchCsoCompanies(monthKey);
+      fetchUploadSnapshot(monthKey);
     },
-    [fetchEmailStats, fetchCsoCompanies]
+    [fetchEmailStats, fetchCsoCompanies, fetchUploadSnapshot]
   );
 
   // Month options: settlement months + current month (deduplicated)
@@ -278,7 +327,7 @@ export default function AdminDashboardPage() {
     if (unmappedCount > 0) {
       badgeMap['/admin/integrity'] = { label: `${unmappedCount}`, variant: 'secondary' };
     }
-    if (csoBusinessNumbers.length > 0 && (!emailStats || emailStats.total === 0)) {
+    if (filteredCsoBusinessNumbers.length > 0 && (!emailStats || emailStats.total === 0)) {
       badgeMap['/admin/mailmerge'] = { label: '발송 필요', variant: 'outline' };
     }
   }
@@ -351,17 +400,29 @@ export default function AdminDashboardPage() {
                 <div className="text-2xl font-bold">
                   {accessedCount}
                   <span className="text-base font-normal text-muted-foreground">
-                    /{csoBusinessNumbers.length}
+                    /{filteredCsoBusinessNumbers.length}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {currentMonthNum}월 CSO 업체 중 접속
                 </p>
               </>
+            ) : uploadSnapshot ? (
+              <>
+                <div className="text-2xl font-bold">
+                  {uploadSnapshot.accessed_business_numbers.length}
+                  <span className="text-base font-normal text-muted-foreground">
+                    /{uploadSnapshot.cso_business_numbers.length}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  업로드 시점 접속 업체
+                </p>
+              </>
             ) : (
               <>
                 <div className="text-2xl font-bold text-muted-foreground">&mdash;</div>
-                <p className="text-xs text-muted-foreground">당월만 조회 가능</p>
+                <p className="text-xs text-muted-foreground">스냅샷 없음</p>
               </>
             )}
           </div>
