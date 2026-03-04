@@ -107,6 +107,7 @@ export async function POST(request: NextRequest) {
     invalidateSettlementCache();
 
     // ── 접속업체 스냅샷 저장 (실패해도 업로드 성공에 영향 없음) ──
+    // 업로드 시점부터 접속 추적 시작 (업로드 전에는 해당 월 데이터가 없으므로 접속해도 볼 데이터 없음)
     try {
       const supabaseClient = getSupabase();
 
@@ -117,16 +118,6 @@ export async function POST(request: NextRequest) {
         .eq('is_admin', true);
       const adminBnSet = new Set((adminUsers || []).map((u: { business_number: string }) => u.business_number));
 
-      // 전체 비관리자 사용자 조회 (접속 판단용)
-      const { data: allNonAdminUsers } = await supabaseClient
-        .from('users')
-        .select('business_number, last_login_at')
-        .eq('is_admin', false)
-        .not('last_login_at', 'is', null);
-
-      // 이전 업로드 스냅샷 조회 (통계 기간 시작점 결정)
-      const allSnapshots = await settlementRepo.getAllUploadSnapshots();
-
       for (const month of settlementMonths) {
         // 해당 월의 CSO business_numbers (관리자 제외)
         const monthBizNumbers = [...new Set(
@@ -136,23 +127,13 @@ export async function POST(request: NextRequest) {
             .filter((bn): bn is string => !!bn && !adminBnSet.has(bn))
         )];
 
-        // 통계 기간 시작: 이전 월의 uploaded_at 또는 해당 월 1일
-        const prevSnapshot = allSnapshots.find(s => s.settlement_month < month);
-        const periodStart = prevSnapshot?.uploaded_at || `${month}-01T00:00:00`;
-
-        // 해당 기간 내 접속한 CSO 업체
-        const accessedBns = (allNonAdminUsers || [])
-          .filter((u: { business_number: string; last_login_at: string }) =>
-            monthBizNumbers.includes(u.business_number) &&
-            u.last_login_at >= periodStart
-          )
-          .map((u: { business_number: string }) => u.business_number);
-
+        // 업로드 시점 = 접속 추적 시작점, accessed는 빈 배열로 시작
+        // 이후 로그인 시 addAccessedBusinessNumber()로 점진적 갱신
         await settlementRepo.upsertUploadSnapshot({
           settlement_month: month,
           row_count: data.filter(row => row.정산월 === month).length,
           cso_business_numbers: monthBizNumbers,
-          accessed_business_numbers: [...new Set(accessedBns)],
+          accessed_business_numbers: [],
         });
       }
 

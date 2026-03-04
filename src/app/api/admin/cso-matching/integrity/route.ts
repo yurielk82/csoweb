@@ -82,15 +82,19 @@ export async function GET(request: NextRequest) {
       is_admin: boolean;
     };
 
-    // 사업자번호로 회원 정보 맵 생성 + 관리자 사업자번호 수집
+    // 사업자번호로 회원 정보 맵 생성 + 관리자 사업자번호/업체명 수집
     const userMap = new Map<string, {
       company_name: string;
       is_approved: boolean;
     }>();
     const adminBizNumbers = new Set<string>();
+    const adminCompanyNames = new Set<string>();
     for (const user of (usersData as unknown as UserRow[]) || []) {
       if (user.is_admin) {
         adminBizNumbers.add(user.business_number);
+        if (user.company_name) {
+          adminCompanyNames.add(user.company_name);
+        }
         continue;
       }
       userMap.set(user.business_number, {
@@ -133,12 +137,13 @@ export async function GET(request: NextRequest) {
       page++;
     }
 
-    // CSO관리업체별 통계 (관리자 사업자번호 제외)
+    // CSO관리업체별 통계 (관리자 사업자번호 + 관리자 업체명 제외)
     const csoStats = new Map<string, { count: number; lastMonth: string | null }>();
     for (const row of allSettlementData) {
       const csoName = row['CSO관리업체'];
       if (!csoName) continue;
       if (adminBizNumbers.has(row.business_number)) continue;
+      if (adminCompanyNames.has(csoName)) continue;
 
       if (!csoStats.has(csoName)) {
         csoStats.set(csoName, { count: 0, lastMonth: null });
