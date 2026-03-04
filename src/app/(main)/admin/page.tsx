@@ -259,7 +259,8 @@ export default function AdminDashboardPage() {
           setPendingCount(pendingData.data.length);
         }
         if (integrityData.success && integrityData.data?.stats) {
-          setUnmappedCount(integrityData.data.stats.noCsoMappingCount ?? 0);
+          const count = integrityData.data.stats.no_cso_match ?? 0;
+          setUnmappedCount(count);
         }
       })
       .catch((error) => console.error('Fetch badges error:', error))
