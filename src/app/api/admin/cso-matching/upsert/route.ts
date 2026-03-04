@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     // 비교 분류
     const toInsert: MatchingItem[] = [];
     let skipped = 0;
-    const conflicts: string[] = [];
+    let updated = 0;
 
     for (const [csoName, bizNum] of dedupMap) {
       const existingBizNum = existingMap.get(csoName);
@@ -117,8 +117,9 @@ export async function POST(request: NextRequest) {
         // 동일 정보 → 스킵
         skipped++;
       } else {
-        // 사업자번호 불일치 → 충돌 (변경 불가)
-        conflicts.push(csoName);
+        // 사업자번호 변경 → 업데이트
+        toInsert.push({ cso_company_name: csoName, business_number: bizNum });
+        updated++;
       }
     }
 
@@ -157,19 +158,20 @@ export async function POST(request: NextRequest) {
     }
 
     // 결과 메시지 구성
+    const newInsertCount = insertedCount - updated;
     const messageParts: string[] = [];
-    if (insertedCount > 0) messageParts.push(`신규 ${insertedCount}건 추가`);
+    if (newInsertCount > 0) messageParts.push(`신규 ${newInsertCount}건 추가`);
+    if (updated > 0) messageParts.push(`${updated}건 업데이트`);
     if (skipped > 0) messageParts.push(`동일 ${skipped}건 스킵`);
-    if (conflicts.length > 0) messageParts.push(`충돌 ${conflicts.length}건`);
     if (duplicatesRemoved > 0) messageParts.push(`파일 내 중복 ${duplicatesRemoved}건 제거`);
 
     return NextResponse.json({
       success: true,
       data: {
-        inserted: insertedCount,
+        inserted: newInsertCount,
+        updated,
         skipped,
         duplicatesRemoved,
-        conflicts: conflicts.length > 0 ? conflicts.slice(0, 20) : undefined,
         errors: errors.length > 0 ? errors.slice(0, 10) : undefined,
         hasMoreErrors: errors.length > 10,
       },

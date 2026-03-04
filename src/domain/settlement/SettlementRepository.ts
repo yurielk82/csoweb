@@ -73,4 +73,7 @@ export interface SettlementRepository {
 
   /** 업로드 스냅샷 전체 조회 */
   getAllUploadSnapshots(): Promise<SettlementUpload[]>;
+
+  /** 접속업체 스냅샷 갱신 — 로그인한 사업자번호를 해당 월 스냅샷에 추가 */
+  addAccessedBusinessNumber(businessNumber: string): Promise<void>;
 }

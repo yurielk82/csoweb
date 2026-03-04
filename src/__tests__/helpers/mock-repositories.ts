@@ -57,6 +57,10 @@ export function createMockSettlementRepository(): {
     findByCSOMatchingPaginated: vi.fn(),
     getTotals: vi.fn(),
     getTotalsByCSOMatching: vi.fn(),
+    upsertUploadSnapshot: vi.fn(),
+    getUploadSnapshot: vi.fn(),
+    getAllUploadSnapshots: vi.fn(),
+    addAccessedBusinessNumber: vi.fn(),
   };
 }
 

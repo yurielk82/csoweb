@@ -511,4 +511,28 @@ export class SupabaseSettlementRepository implements SettlementRepository {
     return data as unknown as SettlementUpload[];
   }
 
+  async addAccessedBusinessNumber(businessNumber: string): Promise<void> {
+    // cso_business_numbers에 해당 bn이 포함된 스냅샷 조회
+    const { data: snapshots, error: fetchError } = await supabase
+      .from('settlement_uploads')
+      .select('settlement_month, cso_business_numbers, accessed_business_numbers');
+
+    if (fetchError || !snapshots) return;
+
+    for (const snapshot of snapshots) {
+      const csoBns: string[] = snapshot.cso_business_numbers || [];
+      const accessedBns: string[] = snapshot.accessed_business_numbers || [];
+
+      // 해당 월의 CSO 업체이고, 아직 접속 기록이 없는 경우만 업데이트
+      if (csoBns.includes(businessNumber) && !accessedBns.includes(businessNumber)) {
+        const updatedAccessed = [...accessedBns, businessNumber];
+
+        await supabase
+          .from('settlement_uploads')
+          .update({ accessed_business_numbers: updatedAccessed })
+          .eq('settlement_month', snapshot.settlement_month);
+      }
+    }
+  }
+
 }

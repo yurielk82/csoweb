@@ -2,9 +2,10 @@
 // Login Use Case
 // ============================================
 
-import { getUserRepository, getPasswordResetTokenRepository } from '@/infrastructure/supabase';
+import { getUserRepository, getPasswordResetTokenRepository, getSettlementRepository } from '@/infrastructure/supabase';
 import { verifyPassword, formatBusinessNumber } from '@/lib/auth';
 import { sendEmail } from '@/lib/email';
+import { invalidateSettlementCache } from '@/lib/data-cache';
 import { MAX_FAILED_LOGIN_ATTEMPTS, TOKEN_EXPIRY_MINUTES } from '@/constants/defaults';
 
 type LoginResult =
@@ -67,6 +68,17 @@ export async function authenticateUser(
     await userRepo.resetFailedLogin(businessNumber);
   }
   await userRepo.updateLastLogin(businessNumber);
+
+  // 접속업체 스냅샷 갱신 (비관리자, 승인된 사용자만)
+  if (!user.is_admin && user.is_approved) {
+    try {
+      const settlementRepo = getSettlementRepository();
+      await settlementRepo.addAccessedBusinessNumber(businessNumber);
+      invalidateSettlementCache();
+    } catch (error) {
+      console.error('[Login] 접속업체 스냅샷 갱신 실패 (로그인에 영향 없음):', error);
+    }
+  }
 
   if (!user.is_admin && !user.is_approved) {
     return { type: 'pending' };

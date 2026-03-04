@@ -1,6 +1,12 @@
 # Changelog
 
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
+
+## [0.29.2] - 2026-03-04
+
+### Fixed
+- 접속업체 KPI 자동 갱신: 사용자 로그인 시 접속업체 스냅샷에 자동 반영
+- 거래처 매핑 upsert: 기존 매핑과 사업자번호 불일치 시 충돌 거부 → 업데이트로 변경
 [Semantic Versioning](https://semver.org/) 및 [Keep a Changelog](https://keepachangelog.com/) 형식을 따릅니다.
 
 ## [0.29.1] - 2026-03-04
