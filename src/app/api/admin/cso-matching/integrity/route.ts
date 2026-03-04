@@ -55,11 +55,12 @@ export async function GET(request: NextRequest) {
     const csoToBiz = new Map<string, string>(); // CSO명 → 사업자번호 (중복 검증용)
     
     for (const match of (matchingData as unknown as MatchingRow[]) || []) {
+      const normalizedName = match.cso_company_name.trim();
       if (!bizToCSO.has(match.business_number)) {
         bizToCSO.set(match.business_number, new Set());
       }
-      bizToCSO.get(match.business_number)!.add(match.cso_company_name);
-      csoToBiz.set(match.cso_company_name, match.business_number);
+      bizToCSO.get(match.business_number)!.add(normalizedName);
+      csoToBiz.set(normalizedName, match.business_number);
     }
 
     // 2. 회원(users) 테이블 조회
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
       if (user.is_admin) {
         adminBizNumbers.add(user.business_number);
         if (user.company_name) {
-          adminCompanyNames.add(user.company_name);
+          adminCompanyNames.add(user.company_name.trim());
         }
         continue;
       }
@@ -140,7 +141,7 @@ export async function GET(request: NextRequest) {
     // CSO관리업체별 통계 (관리자 사업자번호 + 관리자 업체명 제외)
     const csoStats = new Map<string, { count: number; lastMonth: string | null }>();
     for (const row of allSettlementData) {
-      const csoName = row['CSO관리업체'];
+      const csoName = row['CSO관리업체']?.trim();
       if (!csoName) continue;
       if (adminBizNumbers.has(row.business_number)) continue;
       if (adminCompanyNames.has(csoName)) continue;

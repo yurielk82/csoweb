@@ -259,7 +259,11 @@ export default function AdminDashboardPage() {
           setPendingCount(pendingData.data.length);
         }
         if (integrityData.success && integrityData.data?.stats) {
-          setUnmappedCount(integrityData.data.stats.noCsoMappingCount ?? 0);
+          const count = integrityData.data.stats.noCsoMappingCount ?? 0;
+          setUnmappedCount(count);
+          if (count > 0) {
+            console.warn('[거래처매핑] 미매핑 CSO명:', integrityData.data.unmappedCsoNames);
+          }
         }
       })
       .catch((error) => console.error('Fetch badges error:', error))
