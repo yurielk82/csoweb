@@ -259,7 +259,7 @@ export default function AdminDashboardPage() {
           setPendingCount(pendingData.data.length);
         }
         if (integrityData.success && integrityData.data?.stats) {
-          const count = integrityData.data.stats.no_cso_match ?? 0;
+          const count = integrityData.data.stats.no_cso_match_settlement ?? 0;
           setUnmappedCount(count);
         }
       })

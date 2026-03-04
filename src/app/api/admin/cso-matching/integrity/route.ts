@@ -284,6 +284,8 @@ export async function GET(request: NextRequest) {
       unregistered: results.filter(r => r.registration_status === 'unregistered').length,
       pending_approval: results.filter(r => r.registration_status === 'pending_approval').length,
       no_cso_match: results.filter(r => r.cso_company_names.length === 0).length,
+      // 정산대상(last_settlement_month 있음) 중 CSO 미매핑 — 배지용
+      no_cso_match_settlement: results.filter(r => r.last_settlement_month !== null && r.cso_company_names.length === 0).length,
     };
 
     // 7. 사용 가능한 정산월 목록
