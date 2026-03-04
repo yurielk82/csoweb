@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Database, Calendar, Trash2, RefreshCw, Loader2, FileSpreadsheet, Users, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Database, Calendar, Trash2, RefreshCw, Loader2, FileSpreadsheet, Users, AlertTriangle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,13 @@ import {
   AlertDescription,
   AlertTitle,
 } from '@/components/ui/alert';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 
 interface SettlementMonthData {
@@ -43,7 +50,13 @@ export default function DataManagementPage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<SettlementMonthData[]>([]);
   const [totalStats, setTotalStats] = useState({ totalRows: 0, totalMonths: 0, totalBusinesses: 0 });
-  
+
+  // 처방월 필터 (기본값: 가장 최근 처방월)
+  const [selectedPrescriptionMonth, setSelectedPrescriptionMonth] = useState<string>('all');
+
+  // CSV 다운로드 중인 정산월
+  const [downloadingMonth, setDownloadingMonth] = useState<string | null>(null);
+
   // Delete dialog
   const [deleteMonth, setDeleteMonth] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -60,6 +73,17 @@ export default function DataManagementPage() {
           totalMonths: result.data.months.length,
           totalBusinesses: result.data.totalBusinesses,
         });
+
+        // 처방월 기본값: DB에 있는 가장 최근 처방월
+        const months: SettlementMonthData[] = result.data.months;
+        const latestPrescriptionMonth = months
+          .map((m: SettlementMonthData) => m.prescriptionMonth)
+          .filter(Boolean)
+          .sort()
+          .reverse()[0];
+        if (latestPrescriptionMonth) {
+          setSelectedPrescriptionMonth(latestPrescriptionMonth);
+        }
       }
     } catch (error) {
       console.error('Fetch data error:', error);
@@ -72,17 +96,29 @@ export default function DataManagementPage() {
     fetchData();
   }, []);
 
+  // 고유 처방월 목록 (내림차순)
+  const prescriptionMonths = useMemo(() => {
+    const unique = [...new Set(data.map(d => d.prescriptionMonth).filter(Boolean))];
+    return unique.sort().reverse();
+  }, [data]);
+
+  // 처방월 필터 적용
+  const filteredData = useMemo(() => {
+    if (selectedPrescriptionMonth === 'all') return data;
+    return data.filter(d => d.prescriptionMonth === selectedPrescriptionMonth);
+  }, [data, selectedPrescriptionMonth]);
+
   const handleDelete = async () => {
     if (!deleteMonth) return;
-    
+
     setDeleting(true);
     try {
       const res = await fetch(`/api/settlements/month/${encodeURIComponent(deleteMonth)}`, {
         method: 'DELETE',
       });
-      
+
       const result = await res.json();
-      
+
       if (result.success) {
         toast({
           title: '삭제 완료',
@@ -106,6 +142,33 @@ export default function DataManagementPage() {
       });
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleCsvDownload = async (month: string) => {
+    setDownloadingMonth(month);
+    try {
+      const res = await fetch(`/api/settlements/csv?month=${encodeURIComponent(month)}`);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'CSV 다운로드 실패');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `정산서_${month}_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('CSV 다운로드 오류:', error);
+      toast({
+        variant: 'destructive',
+        title: 'CSV 다운로드 실패',
+        description: error instanceof Error ? error.message : 'CSV 다운로드 중 오류가 발생했습니다.',
+      });
+    } finally {
+      setDownloadingMonth(null);
     }
   };
 
@@ -172,7 +235,7 @@ export default function DataManagementPage() {
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>주의사항</AlertTitle>
         <AlertDescription>
-          정산월 데이터를 삭제하면 해당 월의 모든 정산 내역이 삭제됩니다. 
+          정산월 데이터를 삭제하면 해당 월의 모든 정산 내역이 삭제됩니다.
           같은 정산월 데이터를 다시 업로드하면 기존 데이터가 자동으로 교체됩니다.
         </AlertDescription>
       </Alert>
@@ -180,8 +243,27 @@ export default function DataManagementPage() {
       {/* Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">정산월별 데이터</CardTitle>
-          <CardDescription>각 정산월의 데이터 현황을 확인하고 관리할 수 있습니다.</CardDescription>
+          <div className="flex flex-col sm:flex-row justify-between gap-3">
+            <div>
+              <CardTitle className="text-base">정산월별 데이터</CardTitle>
+              <CardDescription>각 정산월의 데이터 현황을 확인하고 관리할 수 있습니다.</CardDescription>
+            </div>
+            {/* 처방월 필터 */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">처방월</span>
+              <Select value={selectedPrescriptionMonth} onValueChange={setSelectedPrescriptionMonth}>
+                <SelectTrigger className="w-36">
+                  <SelectValue placeholder="전체" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체</SelectItem>
+                  {prescriptionMonths.map(pm => (
+                    <SelectItem key={pm} value={pm}>{pm}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           <Table>
@@ -197,7 +279,7 @@ export default function DataManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((item) => (
+              {filteredData.map((item) => (
                 <TableRow key={item.month}>
                   <TableCell>
                     <Badge variant="outline" className="font-mono">
@@ -223,19 +305,35 @@ export default function DataManagementPage() {
                     {formatCurrency(item.totalCommission)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeleteMonth(item.month)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      삭제
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCsvDownload(item.month)}
+                        disabled={downloadingMonth === item.month}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        {downloadingMonth === item.month ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4 mr-1" />
+                        )}
+                        CSV
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeleteMonth(item.month)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        삭제
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
-              {data.length === 0 && (
+              {filteredData.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     {loading ? (
