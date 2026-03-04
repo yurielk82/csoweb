@@ -107,7 +107,7 @@ export default function AdminMasterPage() {
   const [csoSearch, setCsoSearch] = useState('');
   const [selectedCSO, setSelectedCSO] = useState<CSOOption | null>(null);
   const [showCsoDropdown, setShowCsoDropdown] = useState(false);
-  const [csoLoading] = useState(false);
+  const [csoLoading, setCsoLoading] = useState(false);
   const csoInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -123,7 +123,7 @@ export default function AdminMasterPage() {
   useEffect(() => {
     const init = async () => {
       try {
-        const res = await fetch('/api/dashboard/init?include_settlements=false&include_cso_list=true');
+        const res = await fetch('/api/dashboard/init?include_settlements=false');
         const initRes = await res.json();
 
         if (initRes.success) {
@@ -146,10 +146,6 @@ export default function AdminMasterPage() {
 
           if (d.notice) {
             setNoticeSettings(d.notice);
-          }
-
-          if (d.csoList) {
-            setCsoList(d.csoList);
           }
         }
       } catch (err) {
@@ -177,6 +173,32 @@ export default function AdminMasterPage() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // 정산월별 CSO 목록 조회
+  const fetchCsoList = useCallback(async (month: string) => {
+    if (!month) return;
+    setCsoLoading(true);
+    try {
+      const res = await fetch(`/api/settlements/cso-companies?month=${encodeURIComponent(month)}`);
+      const result = await res.json();
+      if (result.success) {
+        setCsoList(result.data);
+      }
+    } finally {
+      setCsoLoading(false);
+    }
+  }, []);
+
+  // 정산월 변경 시 CSO 목록 재조회
+  useEffect(() => {
+    if (selectedMonth) {
+      fetchCsoList(selectedMonth);
+      setSelectedCSO(null);
+      setCsoSearch('');
+      setQueryStarted(false);
+      setData(null);
+    }
+  }, [selectedMonth, fetchCsoList]);
 
   // Fetch settlements — DB 레벨 페이지네이션
   const fetchSettlements = useCallback(async () => {
