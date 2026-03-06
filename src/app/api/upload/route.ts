@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
             .filter((bn): bn is string => !!bn && !adminBnSet.has(bn))
         )];
 
-        // 업로드 시점 = 접속 추적 시작점, accessed는 빈 배열로 시작
+        // 정산월은 항상 1개. 업로드 시점 = 접속 추적 시작점
         // 이후 로그인 시 addAccessedBusinessNumber()로 점진적 갱신
         await settlementRepo.upsertUploadSnapshot({
           settlement_month: month,

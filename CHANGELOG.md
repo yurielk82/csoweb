@@ -2,6 +2,12 @@
 
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 
+## [0.30.1] - 2026-03-07
+
+### Changed
+- `.gitignore`에 `CLAUDE.local.md` 추가 (개인 설정 git 미추적)
+- 업로드 API 주석 정리 (`upload/route.ts`)
+
 ## [0.30.0] - 2026-03-07
 
 ### Added
