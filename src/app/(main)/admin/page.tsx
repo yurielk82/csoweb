@@ -1,16 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Users,
   Columns,
   Mail,
   MailPlus,
-  TrendingUp,
   Database,
   ArrowRight,
-  Banknote,
   Upload,
   Link2,
   Calendar,
@@ -32,6 +30,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { SystemStatus } from '@/types';
+import type { SettlementUpload } from '@/domain/settlement/types';
+import type { EmailMonthlyStat } from '@/domain/email/types';
 
 // ── Types ──
 
@@ -44,12 +44,6 @@ interface SettlementMonth {
   totalCommission: number;
 }
 
-interface UserData {
-  business_number: string;
-  is_admin: boolean;
-  last_login_at?: string | null;
-}
-
 interface EmailStats {
   total: number;
   sent: number;
@@ -59,13 +53,6 @@ interface EmailStats {
 
 // ── Helpers ──
 
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat('ko-KR', {
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-/** monthKey: "YYYY-MM" 형식 (DB 정산월 포맷) */
 function monthKeyToLabel(monthKey: string): string {
   const [year, mm] = monthKey.split('-');
   const month = parseInt(mm, 10);
@@ -109,17 +96,15 @@ export default function AdminDashboardPage() {
 
   // Data sources
   const [months, setMonths] = useState<SettlementMonth[]>([]);
-  const [allUsers, setAllUsers] = useState<UserData[]>([]);
+  const [allUsers, setAllUsers] = useState<{ business_number: string; is_admin: boolean }[]>([]);
   const [csoBusinessNumbers, setCsoBusinessNumbers] = useState<string[]>([]);
   const [emailStats, setEmailStats] = useState<EmailStats | null>(null);
-  const [uploadSnapshot, setUploadSnapshot] = useState<{
-    cso_business_numbers: string[];
-    accessed_business_numbers: string[];
-    uploaded_at: string;
-  } | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [unmappedCount, setUnmappedCount] = useState(0);
-  const [emailLoading, setEmailLoading] = useState(false);
+  // 차트용 추가 데이터
+  const [allSnapshots, setAllSnapshots] = useState<SettlementUpload[]>([]);
+  const [emailMonthlyStats, setEmailMonthlyStats] = useState<EmailMonthlyStat[]>([]);
+
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     supabase: false,
     resend: false,
@@ -137,12 +122,6 @@ export default function AdminDashboardPage() {
     jwt_configured: false,
   });
 
-  // Derived KPI
-  const selectedMonthData = months.find((m) => m.month === selectedMonth);
-  const csoCount = selectedMonthData?.csoCount ?? 0;
-  const totalCommission = selectedMonthData?.totalCommission ?? 0;
-  const totalMonths = months.length;
-
   // 관리자 business_number를 CSO 업체 목록에서 제외
   const adminBusinessNumbers = new Set(
     allUsers.filter(u => u.is_admin).map(u => u.business_number)
@@ -151,11 +130,24 @@ export default function AdminDashboardPage() {
     bn => !adminBusinessNumbers.has(bn)
   );
 
+  // 차트 데이터: 정산 통계 + 접속업체 + 이메일 발송 병합
+  const enrichedChartData = useMemo(() => {
+    const snapshotMap = new Map(
+      allSnapshots.map(s => [s.settlement_month, s.accessed_business_numbers?.length ?? 0])
+    );
+    const emailMap = new Map(
+      emailMonthlyStats.map(e => [e.month, e.total])
+    );
 
+    return months.map(m => ({
+      ...m,
+      accessedCount: snapshotMap.get(m.month) ?? 0,
+      emailSentCount: emailMap.get(m.month) ?? 0,
+    }));
+  }, [months, allSnapshots, emailMonthlyStats]);
 
-  // Fetch email stats for selected month
+  // Fetch email stats for selected month (배지용)
   const fetchEmailStats = useCallback(async (monthKey: string) => {
-    setEmailLoading(true);
     try {
       const { startDate, endDate } = getMonthDateRange(monthKey);
       const res = await fetch(
@@ -170,23 +162,6 @@ export default function AdminDashboardPage() {
     } catch (error) {
       console.error('Fetch email stats error:', error);
       setEmailStats(null);
-    } finally {
-      setEmailLoading(false);
-    }
-  }, []);
-
-  // Fetch upload snapshot for selected month
-  const fetchUploadSnapshot = useCallback(async (monthKey: string) => {
-    try {
-      const res = await fetch(`/api/settlements/uploads?month=${monthKey}`);
-      const json = await res.json();
-      if (json.success && json.data) {
-        setUploadSnapshot(json.data);
-      } else {
-        setUploadSnapshot(null);
-      }
-    } catch {
-      setUploadSnapshot(null);
     }
   }, []);
 
@@ -224,7 +199,6 @@ export default function AdminDashboardPage() {
           const monthsList: SettlementMonth[] = statsData.data.months;
           setMonths(monthsList);
 
-          // 기본 월 선택: N월 정산서 존재 → N월, 없으면 최신 정산월
           const currentMonthExists = monthsList.some(m => m.month === currentMonthKey);
           const defaultMonth = currentMonthExists
             ? currentMonthKey
@@ -233,10 +207,6 @@ export default function AdminDashboardPage() {
               : currentMonthKey;
           setSelectedMonth(defaultMonth);
 
-          // 선택된 월의 스냅샷 조회
-          fetchUploadSnapshot(defaultMonth);
-
-          // 기본 월이 현재 월과 다르면 해당 월의 CSO 업체도 조회
           if (defaultMonth !== currentMonthKey) {
             fetchCsoCompanies(defaultMonth);
           }
@@ -285,8 +255,28 @@ export default function AdminDashboardPage() {
       .catch((error) => console.error('Fetch system status error:', error))
       .finally(() => setSystemLoaded(true));
 
-    // 그룹 4: 이메일 (기존 로직 유지)
+    // 그룹 4: 이메일 배지용
     fetchEmailStats(currentMonthKey);
+
+    // 그룹 5: 차트용 추가 데이터 (전체 스냅샷 + 이메일 월별 통계)
+    Promise.all([
+      fetch('/api/settlements/uploads'),
+      fetch('/api/email/monthly-stats'),
+    ])
+      .then(async ([snapshotsRes, emailMonthlyRes]) => {
+        const [snapshotsData, emailMonthlyData] = await Promise.all([
+          snapshotsRes.json(),
+          emailMonthlyRes.json(),
+        ]);
+        if (snapshotsData.success && Array.isArray(snapshotsData.data)) {
+          setAllSnapshots(snapshotsData.data);
+        }
+        if (emailMonthlyData.success && Array.isArray(emailMonthlyData.data)) {
+          setEmailMonthlyStats(emailMonthlyData.data);
+        }
+      })
+      .catch((error) => console.error('Fetch chart extra data error:', error));
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -296,9 +286,8 @@ export default function AdminDashboardPage() {
       setSelectedMonth(monthKey);
       fetchEmailStats(monthKey);
       fetchCsoCompanies(monthKey);
-      fetchUploadSnapshot(monthKey);
     },
-    [fetchEmailStats, fetchCsoCompanies, fetchUploadSnapshot]
+    [fetchEmailStats, fetchCsoCompanies]
   );
 
   // Month options: settlement months + current month (deduplicated)
@@ -308,11 +297,9 @@ export default function AdminDashboardPage() {
     return Array.from(keys).sort().reverse();
   })();
 
-  const selectedMonthLabel = monthKeyToLabel(selectedMonth);
-
   const activeProvider = systemStatus.email_provider;
 
-  // 빠른 작업 배지 맵 (배지 데이터 로딩 전에는 빈 맵)
+  // 빠른 작업 배지 맵
   const badgeMap: Record<string, { label: string; variant: 'secondary' | 'outline' }> = {};
 
   if (kpiLoaded && badgesLoaded) {
@@ -362,126 +349,11 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        {/* KPI 카드 (5개) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {/* CSO 업체 */}
-          <div className="glass-kpi-card">
-            <div className="flex items-center justify-between pb-2">
-              <span className="text-sm font-medium">CSO 업체</span>
-              <TrendingUp className="h-4 w-4 glass-icon-teal" />
-            </div>
-            {kpiLoaded ? (
-              <>
-                <div className="text-2xl font-bold">{csoCount}</div>
-                <p className="text-xs text-muted-foreground">{selectedMonthLabel} 정산 업체</p>
-              </>
-            ) : (
-              <>
-                <Skeleton className="h-8 w-16 mb-1" />
-                <Skeleton className="h-3 w-28" />
-              </>
-            )}
-          </div>
-
-          {/* 접속 업체 */}
-          <div className="glass-kpi-card">
-            <div className="flex items-center justify-between pb-2">
-              <span className="text-sm font-medium">접속 업체</span>
-              <Users className="h-4 w-4 glass-icon-green" />
-            </div>
-            {!kpiLoaded ? (
-              <>
-                <Skeleton className="h-8 w-16 mb-1" />
-                <Skeleton className="h-3 w-28" />
-              </>
-            ) : uploadSnapshot ? (
-              <>
-                <div className="text-2xl font-bold">
-                  {uploadSnapshot.accessed_business_numbers.length}
-                  <span className="text-base font-normal text-muted-foreground">
-                    /{uploadSnapshot.cso_business_numbers.length}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  업로드 시점 접속 업체
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-muted-foreground">&mdash;</div>
-                <p className="text-xs text-muted-foreground">스냅샷 없음</p>
-              </>
-            )}
-          </div>
-
-          {/* 총수수료 */}
-          <div className="glass-kpi-card">
-            <div className="flex items-center justify-between pb-2">
-              <span className="text-sm font-medium">총수수료</span>
-              <Banknote className="h-4 w-4 glass-icon-orange" />
-            </div>
-            {kpiLoaded ? (
-              <>
-                <div className="text-2xl font-bold">{formatNumber(totalCommission)}</div>
-                <p className="text-xs text-muted-foreground">{selectedMonthLabel} 정산 수수료</p>
-              </>
-            ) : (
-              <>
-                <Skeleton className="h-8 w-16 mb-1" />
-                <Skeleton className="h-3 w-28" />
-              </>
-            )}
-          </div>
-
-          {/* 총 정산월 */}
-          <div className="glass-kpi-card">
-            <div className="flex items-center justify-between pb-2">
-              <span className="text-sm font-medium">총 정산월</span>
-              <Database className="h-4 w-4 glass-icon-purple" />
-            </div>
-            {kpiLoaded ? (
-              <>
-                <div className="text-2xl font-bold">{totalMonths}</div>
-                <p className="text-xs text-muted-foreground">업로드된 정산 데이터</p>
-              </>
-            ) : (
-              <>
-                <Skeleton className="h-8 w-16 mb-1" />
-                <Skeleton className="h-3 w-28" />
-              </>
-            )}
-          </div>
-
-          {/* 이메일 발송 */}
-          <div className="glass-kpi-card">
-            <div className="flex items-center justify-between pb-2">
-              <span className="text-sm font-medium">이메일 발송</span>
-              <Mail className="h-4 w-4 glass-icon-pink" />
-            </div>
-            {emailLoading ? (
-              <>
-                <Skeleton className="h-8 w-16 mb-1" />
-                <Skeleton className="h-3 w-20" />
-              </>
-            ) : emailStats ? (
-              <>
-                <div className="text-2xl font-bold">{emailStats.total}</div>
-                <p className="text-xs text-muted-foreground">{selectedMonthLabel} 발송 완료</p>
-              </>
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-muted-foreground">0</div>
-                <p className="text-xs text-muted-foreground">{selectedMonthLabel} 발송 없음</p>
-              </>
-            )}
-          </div>
-        </div>
-
         {/* 월별 통계 */}
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">월별 통계</h2>
           {kpiLoaded ? (
-            <MonthlyStatsChart data={months} />
+            <MonthlyStatsChart data={enrichedChartData} />
           ) : (
             <Skeleton className="h-[300px] rounded-xl" />
           )}

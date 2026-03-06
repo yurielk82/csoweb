@@ -3,6 +3,7 @@ export type {
   EmailStatus,
   EmailLog,
   EmailStats,
+  EmailMonthlyStat,
   CreateEmailLogData,
   UpdateEmailLogData,
   EmailLogFilter,

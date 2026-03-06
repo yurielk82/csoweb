@@ -4,7 +4,7 @@
 
 import { supabase } from './client';
 import type { EmailLogRepository } from '@/domain/email/EmailLogRepository';
-import type { EmailLog, EmailStats, CreateEmailLogData, UpdateEmailLogData, EmailLogFilter } from '@/domain/email/types';
+import type { EmailLog, EmailStats, EmailMonthlyStat, CreateEmailLogData, UpdateEmailLogData, EmailLogFilter } from '@/domain/email/types';
 
 export class SupabaseEmailLogRepository implements EmailLogRepository {
   async create(data: CreateEmailLogData): Promise<EmailLog> {
@@ -65,6 +65,25 @@ export class SupabaseEmailLogRepository implements EmailLogRepository {
 
     if (error || !data) return [];
     return data as EmailLog[];
+  }
+
+  async getMonthlyStats(): Promise<EmailMonthlyStat[]> {
+    const { data, error } = await supabase
+      .from('email_logs')
+      .select('created_at')
+      .eq('status', 'sent');
+
+    if (error || !data) return [];
+
+    const monthCounts = new Map<string, number>();
+    for (const log of data) {
+      const month = (log.created_at as string).substring(0, 7);
+      monthCounts.set(month, (monthCounts.get(month) || 0) + 1);
+    }
+
+    return Array.from(monthCounts.entries())
+      .map(([month, total]) => ({ month, total }))
+      .sort((a, b) => a.month.localeCompare(b.month));
   }
 
   async getStats(filter?: EmailLogFilter): Promise<EmailStats> {

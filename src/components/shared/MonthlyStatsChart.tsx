@@ -25,26 +25,15 @@ export interface MonthlyStatData {
   totalAmount: number;
   totalCommission: number;
   csoCount: number;
+  /** 접속 업체 수 (optional — admin 전용) */
+  accessedCount?: number;
+  /** 이메일 발송 수 (optional — admin 전용) */
+  emailSentCount?: number;
 }
 
 interface MonthlyStatsChartProps {
   data: MonthlyStatData[];
 }
-
-const chartConfig = {
-  totalAmount: {
-    label: '금액(만원)',
-    color: 'hsl(var(--chart-1))',
-  },
-  totalCommission: {
-    label: '수수료(만원)',
-    color: 'hsl(var(--chart-2))',
-  },
-  csoCount: {
-    label: 'CSO 업체 수',
-    color: 'hsl(var(--chart-3))',
-  },
-} satisfies ChartConfig;
 
 // 만원 단위 포맷
 function formatManWon(value: number): string {
@@ -70,6 +59,40 @@ export default function MonthlyStatsChart({ data }: MonthlyStatsChartProps) {
       label: toMonthLabel(d.month),
     }));
   }, [data]);
+
+  // 접속업체/이메일 데이터가 하나라도 있는지 확인
+  const hasAccessedData = chartData.some((d) => d.accessedCount !== undefined);
+  const hasEmailData = chartData.some((d) => d.emailSentCount !== undefined);
+
+  const chartConfig = useMemo(() => {
+    const config: ChartConfig = {
+      totalAmount: {
+        label: '금액(만원)',
+        color: 'hsl(var(--chart-1))',
+      },
+      totalCommission: {
+        label: '수수료(만원)',
+        color: 'hsl(var(--chart-2))',
+      },
+      csoCount: {
+        label: 'CSO 업체 수',
+        color: 'hsl(var(--chart-3))',
+      },
+    };
+    if (hasAccessedData) {
+      config.accessedCount = {
+        label: '접속 업체 수',
+        color: 'hsl(var(--chart-4))',
+      };
+    }
+    if (hasEmailData) {
+      config.emailSentCount = {
+        label: '이메일 발송',
+        color: 'hsl(var(--chart-5))',
+      };
+    }
+    return config;
+  }, [hasAccessedData, hasEmailData]);
 
   if (chartData.length === 0) {
     return (
@@ -113,6 +136,8 @@ export default function MonthlyStatsChart({ data }: MonthlyStatsChartProps) {
                 <ChartTooltipContent
                   formatter={(value, name) => {
                     if (name === 'csoCount') return [value, 'CSO 업체 수'];
+                    if (name === 'accessedCount') return [value, '접속 업체 수'];
+                    if (name === 'emailSentCount') return [value, '이메일 발송'];
                     return [formatManWon(value as number) + '만원', name === 'totalAmount' ? '금액' : '수수료'];
                   }}
                 />
@@ -141,6 +166,27 @@ export default function MonthlyStatsChart({ data }: MonthlyStatsChartProps) {
               dot={{ r: 3 }}
               type="monotone"
             />
+            {hasAccessedData && (
+              <Line
+                yAxisId="count"
+                dataKey="accessedCount"
+                stroke="var(--color-accessedCount)"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+                type="monotone"
+                strokeDasharray="5 3"
+              />
+            )}
+            {hasEmailData && (
+              <Line
+                yAxisId="count"
+                dataKey="emailSentCount"
+                stroke="var(--color-emailSentCount)"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+                type="monotone"
+              />
+            )}
           </ComposedChart>
         </ResponsiveContainer>
       </ChartContainer>

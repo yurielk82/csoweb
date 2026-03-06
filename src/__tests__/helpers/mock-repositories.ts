@@ -96,6 +96,7 @@ export function createMockEmailLogRepository(): {
     update: vi.fn(),
     findAll: vi.fn(),
     getStats: vi.fn(),
+    getMonthlyStats: vi.fn(),
   };
 }
 

@@ -2,6 +2,16 @@
 
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 
+## [0.31.0] - 2026-03-07
+
+### Changed
+- Admin 대시보드: 5개 개별 KPI 카드 삭제
+- 월별 통계 차트에 접속업체 수, 이메일 발송 수 라인 추가
+
+### Added
+- `GET /api/email/monthly-stats` — 이메일 월별 발송 통계 API
+- `EmailLogRepository.getMonthlyStats()` — 월별 발송 건수 집계 메서드
+
 ## [0.30.1] - 2026-03-07
 
 ### Changed

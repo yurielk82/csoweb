@@ -48,3 +48,9 @@ export interface EmailLogFilter {
   start_date?: string;
   end_date?: string;
 }
+
+/** 월별 이메일 발송 건수 (차트용) */
+export interface EmailMonthlyStat {
+  month: string;
+  total: number;
+}
