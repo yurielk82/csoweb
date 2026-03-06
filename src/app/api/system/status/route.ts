@@ -40,8 +40,14 @@ export async function GET() {
     const nextVersion = (packageJson.dependencies as Record<string, string>)['next'] || 'unknown';
 
     // 배포 플랫폼 감지
-    const deployPlatform = process.env.NETLIFY ? 'Netlify' : 'Unknown';
-    const deployUrl = process.env.URL || null;
+    const deployPlatform = process.env.VERCEL
+      ? 'Vercel'
+      : process.env.NETLIFY
+        ? 'Netlify'
+        : 'Unknown';
+    const deployUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.URL || null;
 
     return NextResponse.json({
       success: true,
