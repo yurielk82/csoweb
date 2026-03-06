@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: '이미 프로필이 완성되어 있습니다.',
-        data: { redirect: session.is_admin ? '/admin' : '/dashboard' },
+        data: { redirect: session.is_admin ? '/admin' : '/home' },
       });
     }
 
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     };
     await setSession(updatedSession);
 
-    const redirectUrl = session.is_admin ? '/admin' : '/dashboard';
+    const redirectUrl = session.is_admin ? '/admin' : '/home';
 
     return NextResponse.json({
       success: true,

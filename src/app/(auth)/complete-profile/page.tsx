@@ -91,7 +91,7 @@ export default function CompleteProfilePage() {
 
         // 이미 프로필 완성됨
         if (sessionResult.data.profile_complete) {
-          router.push(sessionResult.data.is_admin ? '/admin' : '/dashboard');
+          router.push(sessionResult.data.is_admin ? '/admin' : '/home');
           return;
         }
 
@@ -225,7 +225,7 @@ export default function CompleteProfilePage() {
         return;
       }
 
-      router.push(result.data?.redirect || '/dashboard');
+      router.push(result.data?.redirect || '/home');
     } catch (error) {
       console.error('프로필 저장 처리 중 오류:', error);
       setError('처리 중 오류가 발생했습니다.');

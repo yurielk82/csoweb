@@ -1,6 +1,6 @@
 {
   "name": "webapp",
-  "version": "0.29.3",
+  "version": "0.30.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -51,6 +51,7 @@
     "react": "^18",
     "react-dom": "^18",
     "react-dropzone": "^14.3.8",
+    "recharts": "^2.15.4",
     "resend": "^6.9.1",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",

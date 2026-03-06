@@ -99,7 +99,7 @@ describe('POST /api/auth/login', () => {
         must_change_password: false,
         profile_complete: true,
       },
-      redirect: '/dashboard',
+      redirect: '/home',
     });
 
     const res = await POST(createLoginRequest({
@@ -110,7 +110,7 @@ describe('POST /api/auth/login', () => {
 
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
-    expect(json.data.redirect).toBe('/dashboard');
+    expect(json.data.redirect).toBe('/home');
     expect(json.data.user.business_number).toBe('9876543210');
     expect(mockSetSession).toHaveBeenCalled();
   });

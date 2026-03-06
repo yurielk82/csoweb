@@ -15,9 +15,15 @@ import {
   Link2,
   Calendar,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const MonthlyStatsChart = dynamic(
+  () => import('@/components/shared/MonthlyStatsChart'),
+  { ssr: false, loading: () => <Skeleton className="h-[300px] rounded-xl" /> }
+);
 import {
   Select,
   SelectContent,
@@ -33,6 +39,8 @@ interface SettlementMonth {
   month: string;
   count: number;
   csoCount: number;
+  totalQuantity: number;
+  totalAmount: number;
   totalCommission: number;
 }
 
@@ -467,6 +475,16 @@ export default function AdminDashboardPage() {
               </>
             )}
           </div>
+        </div>
+
+        {/* 월별 통계 */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">월별 통계</h2>
+          {kpiLoaded ? (
+            <MonthlyStatsChart data={months} />
+          ) : (
+            <Skeleton className="h-[300px] rounded-xl" />
+          )}
         </div>
 
         {/* 빠른 작업 */}

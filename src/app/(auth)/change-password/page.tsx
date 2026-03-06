@@ -46,7 +46,7 @@ export default function ChangePasswordPage() {
           if (!sessionResult.data.profile_complete) {
             router.push('/complete-profile');
           } else {
-            router.push(sessionResult.data.is_admin ? '/admin' : '/dashboard');
+            router.push(sessionResult.data.is_admin ? '/admin' : '/home');
           }
           return;
         }
@@ -104,7 +104,7 @@ export default function ChangePasswordPage() {
         return;
       }
 
-      router.push(result.data?.redirect || '/dashboard');
+      router.push(result.data?.redirect || '/home');
     } catch (error) {
       console.error('비밀번호 변경 처리 중 오류:', error);
       setError('처리 중 오류가 발생했습니다.');

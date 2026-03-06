@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     // 프로필 미완성이면 /complete-profile로, 아니면 대시보드로
     const redirectUrl = !user.profile_complete
       ? '/complete-profile'
-      : (session.is_admin ? '/admin' : '/dashboard');
+      : (session.is_admin ? '/admin' : '/home');
 
     return NextResponse.json({
       success: true,

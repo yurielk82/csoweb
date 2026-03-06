@@ -471,6 +471,15 @@
   box-shadow: var(--glass-shadow-hover), var(--glass-shadow-inset);
 }
 
+/* Chart Card */
+.glass-chart-card {
+  border-radius: var(--glass-radius);
+  border: 1px solid var(--glass-border);
+  background: hsl(var(--card));
+  padding: 1.25rem;
+  box-shadow: var(--glass-shadow), var(--glass-shadow-inset);
+}
+
 /* Quick Action Card */
 .glass-action-card {
   border-radius: var(--glass-radius);

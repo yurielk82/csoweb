@@ -103,6 +103,6 @@ export async function authenticateUser(
     return { type: 'incomplete', user: sessionUser, redirect: '/complete-profile' };
   }
 
-  const redirect = user.is_admin ? '/admin' : '/dashboard';
+  const redirect = user.is_admin ? '/admin' : '/home';
   return { type: 'success', user: sessionUser, redirect };
 }

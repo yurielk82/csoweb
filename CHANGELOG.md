@@ -2,6 +2,19 @@
 
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 
+## [0.30.0] - 2026-03-07
+
+### Added
+- Admin 대시보드에 1년치 월별 통계 그래프 추가 (금액/수수료 Bar + CSO 업체 수 Line)
+- User 홈 대시보드(`/home`) 신규 생성 — 요약 카드 3개 + 월별 추이 차트 + 바로가기
+- 공유 차트 컴포넌트 `MonthlyStatsChart` (recharts + shadcn/ui chart)
+- glass-chart-card CSS 스타일 추가
+- 헤더 USER_NAV에 '홈' 메뉴 항목 추가
+
+### Changed
+- 일반 사용자 기본 랜딩 페이지를 `/dashboard` → `/home`으로 변경
+- 로고 클릭, 로그인 성공, 비밀번호 변경, 프로필 완성 후 리다이렉트 대상 일괄 변경
+
 ## [0.29.3] - 2026-03-04
 
 ### Fixed

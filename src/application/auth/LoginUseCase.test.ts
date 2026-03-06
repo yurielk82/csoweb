@@ -105,7 +105,7 @@ describe('authenticateUser', () => {
     const result = await authenticateUser('9876543210', 'correctpassword');
     expect(result.type).toBe('success');
     if (result.type === 'success') {
-      expect(result.redirect).toBe('/dashboard');
+      expect(result.redirect).toBe('/home');
       expect(result.user.business_number).toBe('9876543210');
     }
   });
