@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getSettlementRepository } from '@/infrastructure/supabase';
-import { getCachedCSOList } from '@/lib/data-cache';
+import { getCachedCSOMatchingList } from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,12 +25,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const [businessNumbers, allCsoList] = await Promise.all([
+    const [businessNumbers, allMatchings] = await Promise.all([
       getSettlementRepository().getBusinessNumbersForMonth(month),
-      getCachedCSOList(),
+      getCachedCSOMatchingList(),
     ]);
-    const bizSet = new Set(businessNumbers);
-    const filtered = allCsoList.filter(u => bizSet.has(u.business_number));
+    const bizSet = new Set(businessNumbers.filter(Boolean));
+    // business_number당 첫 번째 CSO명 사용 (1 BN → N개 CSO명 가능)
+    const bnToName = new Map<string, string>();
+    for (const m of allMatchings) {
+      if (bizSet.has(m.business_number) && !bnToName.has(m.business_number)) {
+        bnToName.set(m.business_number, m.cso_company_name);
+      }
+    }
+    const filtered = Array.from(bnToName.entries())
+      .map(([bn, name]) => ({ business_number: bn, company_name: name }))
+      .sort((a, b) => a.company_name.localeCompare(b.company_name));
 
     return NextResponse.json({
       success: true,
