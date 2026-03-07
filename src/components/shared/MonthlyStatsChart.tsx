@@ -92,7 +92,7 @@ export default function MonthlyStatsChart({ data }: MonthlyStatsChartProps) {
 
   if (chartData.length === 0) {
     return (
-      <div className="glass-chart-card flex flex-col items-center justify-center h-[300px] text-muted-foreground">
+      <div className="glass-chart-card flex flex-col items-center justify-center h-52 text-muted-foreground">
         <BarChart3 className="h-10 w-10 mb-2 opacity-40" />
         <p className="text-sm">아직 통계 데이터가 없습니다</p>
       </div>
@@ -101,7 +101,7 @@ export default function MonthlyStatsChart({ data }: MonthlyStatsChartProps) {
 
   return (
     <div className="glass-chart-card">
-      <ChartContainer config={chartConfig} className="h-[300px] sm:h-[350px] w-full">
+      <ChartContainer config={chartConfig} className="h-60 lg:h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart accessibilityLayer data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>

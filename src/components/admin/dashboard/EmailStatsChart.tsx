@@ -59,7 +59,7 @@ export const EmailStatsChart = memo(function EmailStatsChart({
 
   if (chartData.length === 0) {
     return (
-      <div className="glass-chart-card flex flex-col items-center justify-center h-[300px] text-muted-foreground">
+      <div className="glass-chart-card flex flex-col items-center justify-center h-52 text-muted-foreground">
         <Mail className="h-10 w-10 mb-2 opacity-40" />
         <p className="text-sm">이메일 발송 데이터가 없습니다</p>
       </div>
@@ -74,7 +74,7 @@ export const EmailStatsChart = memo(function EmailStatsChart({
           총 <span className="font-medium text-foreground">{totalSent.toLocaleString()}건</span> 발송
         </p>
       </div>
-      <ChartContainer config={chartConfig} className="h-[230px] w-full">
+      <ChartContainer config={chartConfig} className="h-48 lg:h-52 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart accessibilityLayer data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
             <defs>

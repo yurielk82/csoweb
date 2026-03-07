@@ -184,7 +184,7 @@ export default function UserHomePage() {
       <div className="space-y-4">
         <h2 className="text-lg font-semibold">월별 추이</h2>
         {loading ? (
-          <Skeleton className="h-[300px] rounded-xl" />
+          <Skeleton className="h-60 rounded-xl" />
         ) : (
           <MonthlyStatsChart data={chartData} />
         )}

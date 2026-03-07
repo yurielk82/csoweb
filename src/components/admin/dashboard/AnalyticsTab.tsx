@@ -115,9 +115,9 @@ export const AnalyticsTab = memo(function AnalyticsTab({ data }: AnalyticsTabPro
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-3">
       {/* 전월 대비 증감 카드 */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {deltaCards.map((card) => (
           <div key={card.title} className="glass-kpi-card">
             <div className="flex items-center justify-between mb-2">
@@ -139,17 +139,17 @@ export const AnalyticsTab = memo(function AnalyticsTab({ data }: AnalyticsTabPro
       </div>
 
       {/* 월별 정산 추이 (Gradient Area + Line) */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <h2 className="text-lg font-semibold">월별 정산 추이</h2>
         {kpiLoaded ? (
           <MonthlyStatsChart data={enrichedChartData} />
         ) : (
-          <Skeleton className="h-[350px] rounded-xl" />
+          <Skeleton className="h-64 rounded-xl" />
         )}
       </div>
 
       {/* 하단 차트 2열 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-3">
         <CsoShareChart data={csoShareData} title="월별 수수료 비중" />
         <EmailStatsChart data={emailMonthlyStats} />
       </div>

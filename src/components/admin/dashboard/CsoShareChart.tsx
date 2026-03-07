@@ -71,7 +71,7 @@ export const CsoShareChart = memo(function CsoShareChart({
 
   if (data.length === 0) {
     return (
-      <div className="glass-chart-card flex flex-col items-center justify-center h-[300px] text-muted-foreground">
+      <div className="glass-chart-card flex flex-col items-center justify-center h-52 text-muted-foreground">
         <PieChartIcon className="h-10 w-10 mb-2 opacity-40" />
         <p className="text-sm">비중 데이터가 없습니다</p>
       </div>
@@ -83,7 +83,7 @@ export const CsoShareChart = memo(function CsoShareChart({
       <div className="px-5 pt-5 pb-3">
         <h3 className="text-base font-semibold">{title}</h3>
       </div>
-      <ChartContainer config={chartConfig} className="h-[280px] w-full">
+      <ChartContainer config={chartConfig} className="h-52 lg:h-56 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart accessibilityLayer>
             <ChartTooltip
@@ -97,8 +97,8 @@ export const CsoShareChart = memo(function CsoShareChart({
               data={chartData}
               cx="50%"
               cy="45%"
-              innerRadius={60}
-              outerRadius={100}
+              innerRadius={45}
+              outerRadius={75}
               paddingAngle={2}
               dataKey="value"
               nameKey="name"
