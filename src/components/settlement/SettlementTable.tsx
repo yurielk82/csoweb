@@ -1,12 +1,7 @@
 import { memo, type ReactNode } from 'react';
 import { FileSpreadsheet } from 'lucide-react';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import type { Settlement, ColumnSetting } from '@/types';
 import { getSettlementValue } from '@/types';
@@ -29,6 +24,8 @@ interface SettlementTableProps {
   yearMonths: string[];
   searchQuery: string;
 }
+
+const SUMMARY_KEYS = ['수량', '금액', '제약수수료_합계'] as const;
 
 function formatNumber(value: number | null) {
   if (value === null || value === undefined) return '-';
@@ -71,10 +68,77 @@ function buildGroupedData(settlements: Settlement[]): GroupedData[] {
   return result;
 }
 
+/** 개별 데이터 행 렌더링 */
+function renderDataRow(row: Settlement, displayColumns: ColumnSetting[], key: string): ReactNode {
+  return (
+    <TableRow key={key}>
+      {displayColumns.map(col => {
+        const value = getSettlementValue(row, col.column_key);
+        const isNumber = typeof value === 'number';
+        return (
+          <TableCell key={col.column_key} className={isNumber ? 'text-right font-mono tabular-nums' : ''}>
+            {isNumber ? formatNumber(value) : (value || '-')}
+          </TableCell>
+        );
+      })}
+    </TableRow>
+  );
+}
+
+interface SummaryCellProps {
+  col: ColumnSetting;
+  colIdx: number;
+  labelColumnIndex: number;
+  label: string;
+  totals: GroupedData['total'];
+  isPrimary: boolean;
+}
+
+/** 합계 셀 값 렌더링 (소계/총합계 공용) */
+function renderSummaryCell({ col, colIdx, labelColumnIndex, label, totals, isPrimary }: SummaryCellProps): ReactNode {
+  if (colIdx === labelColumnIndex) {
+    return <span className={isPrimary ? 'text-primary' : 'text-muted-foreground'}>{label}</span>;
+  }
+  if (col.column_key === '제약수수료_합계') {
+    return <span className="text-primary">{formatNumber(totals.제약수수료_합계)}</span>;
+  }
+  if (col.column_key === '수량') return formatNumber(totals.수량);
+  if (col.column_key === '금액') return formatNumber(totals.금액);
+  return '';
+}
+
+interface SummaryRowProps {
+  rowKey: string;
+  className: string;
+  displayColumns: ColumnSetting[];
+  labelColumnIndex: number;
+  label: string;
+  totals: GroupedData['total'];
+  isPrimary: boolean;
+}
+
+/** 소계/총합계 행 렌더링 */
+function renderSummaryRow({ rowKey, className, displayColumns, labelColumnIndex, label, totals, isPrimary }: SummaryRowProps): ReactNode {
+  return (
+    <TableRow key={rowKey} className={className}>
+      {displayColumns.map((col, colIdx) => {
+        const isSummaryCol = SUMMARY_KEYS.includes(col.column_key as typeof SUMMARY_KEYS[number]);
+        return (
+          <TableCell
+            key={col.column_key}
+            className={`${isSummaryCol ? 'text-right font-mono tabular-nums' : ''} ${isPrimary ? 'font-bold' : 'font-medium'}`}
+          >
+            {renderSummaryCell({ col, colIdx, labelColumnIndex, label, totals, isPrimary })}
+          </TableCell>
+        );
+      })}
+    </TableRow>
+  );
+}
+
+/** 그룹화된 행 전체 생성 */
 function renderGroupedRows(
-  groupedData: GroupedData[],
-  displayColumns: ColumnSetting[],
-  labelColumnIndex: number,
+  groupedData: GroupedData[], displayColumns: ColumnSetting[], labelColumnIndex: number,
 ): ReactNode[] {
   const rows: ReactNode[] = [];
 
@@ -82,85 +146,24 @@ function renderGroupedRows(
     for (let custIdx = 0; custIdx < csoGroup.customers.length; custIdx++) {
       const customer = csoGroup.customers[custIdx];
 
-      // 데이터 행
       for (let rowIdx = 0; rowIdx < customer.rows.length; rowIdx++) {
-        const row = customer.rows[rowIdx];
-        rows.push(
-          <TableRow key={`${csoGroup.csoName}-${customer.customerName}-${rowIdx}`}>
-            {displayColumns.map(col => {
-              const value = getSettlementValue(row, col.column_key);
-              const isNumber = typeof value === 'number';
-              return (
-                <TableCell
-                  key={col.column_key}
-                  className={isNumber ? 'text-right font-mono tabular-nums' : ''}
-                >
-                  {isNumber ? formatNumber(value) : (value || '-')}
-                </TableCell>
-              );
-            })}
-          </TableRow>
-        );
+        rows.push(renderDataRow(customer.rows[rowIdx], displayColumns, `${csoGroup.csoName}-${customer.customerName}-${rowIdx}`));
       }
 
-      // 거래처 소계 행
-      rows.push(
-        <TableRow
-          key={`subtotal-${csoGroup.csoName}-${customer.customerName}`}
-          className="bg-muted hover:bg-muted"
-        >
-          {displayColumns.map((col, colIdx) => (
-            <TableCell
-              key={col.column_key}
-              className={
-                col.column_key === '수량' || col.column_key === '금액' || col.column_key === '제약수수료_합계'
-                  ? 'text-right font-mono tabular-nums font-medium'
-                  : 'font-medium'
-              }
-            >
-              {colIdx === labelColumnIndex ? (
-                <span className="text-muted-foreground">{customer.customerName} 합계</span>
-              ) : col.column_key === '수량' ? (
-                formatNumber(customer.subtotal.수량)
-              ) : col.column_key === '금액' ? (
-                formatNumber(customer.subtotal.금액)
-              ) : col.column_key === '제약수수료_합계' ? (
-                <span className="text-primary">{formatNumber(customer.subtotal.제약수수료_합계)}</span>
-              ) : ''}
-            </TableCell>
-          ))}
-        </TableRow>
-      );
+      rows.push(renderSummaryRow({
+        rowKey: `subtotal-${csoGroup.csoName}-${customer.customerName}`,
+        className: 'bg-muted hover:bg-muted',
+        displayColumns, labelColumnIndex,
+        label: `${customer.customerName} 합계`, totals: customer.subtotal, isPrimary: false,
+      }));
 
-      // CSO 총합계 행 (마지막 거래처 후)
       if (custIdx === csoGroup.customers.length - 1) {
-        rows.push(
-          <TableRow
-            key={`total-${csoGroup.csoName}`}
-            className="bg-primary/5 hover:bg-primary/5 border-b-2 border-primary/20"
-          >
-            {displayColumns.map((col, colIdx) => (
-              <TableCell
-                key={col.column_key}
-                className={
-                  col.column_key === '수량' || col.column_key === '금액' || col.column_key === '제약수수료_합계'
-                    ? 'text-right font-mono tabular-nums font-bold'
-                    : 'font-bold'
-                }
-              >
-                {colIdx === labelColumnIndex ? (
-                  <span className="text-primary">{csoGroup.csoName} 총합계</span>
-                ) : col.column_key === '수량' ? (
-                  formatNumber(csoGroup.total.수량)
-                ) : col.column_key === '금액' ? (
-                  formatNumber(csoGroup.total.금액)
-                ) : col.column_key === '제약수수료_합계' ? (
-                  <span className="text-primary">{formatNumber(csoGroup.total.제약수수료_합계)}</span>
-                ) : ''}
-              </TableCell>
-            ))}
-          </TableRow>
-        );
+        rows.push(renderSummaryRow({
+          rowKey: `total-${csoGroup.csoName}`,
+          className: 'bg-primary/5 hover:bg-primary/5 border-b-2 border-primary/20',
+          displayColumns, labelColumnIndex,
+          label: `${csoGroup.csoName} 총합계`, totals: csoGroup.total, isPrimary: true,
+        }));
       }
     }
   }
@@ -193,25 +196,12 @@ export const SettlementTable = memo(function SettlementTable({
           </TableHeader>
           <TableBody>
             {tableRows.length > 0 ? tableRows : (
-              <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={displayColumns.length} className="text-center py-12">
-                  <div className="flex flex-col items-center gap-3">
-                    <FileSpreadsheet className="h-12 w-12 text-muted-foreground/50" />
-                    <div className="space-y-1">
-                      <p className="text-lg font-medium text-muted-foreground">
-                        {selectedMonth ? `${selectedMonth} 정산 데이터가 없습니다.` : '정산 데이터가 없습니다.'}
-                      </p>
-                      <p className="text-sm text-muted-foreground/70">
-                        {yearMonths.length === 0
-                          ? '아직 등록된 정산 데이터가 없습니다. 관리자에게 문의해주세요.'
-                          : searchQuery
-                            ? `"${searchQuery}" 검색 결과가 없습니다. 다른 검색어를 입력해보세요.`
-                            : '해당 월에 매칭된 정산 내역이 없습니다.'}
-                      </p>
-                    </div>
-                  </div>
-                </TableCell>
-              </TableRow>
+              <EmptyTableRow
+                colSpan={displayColumns.length}
+                selectedMonth={selectedMonth}
+                yearMonths={yearMonths}
+                searchQuery={searchQuery}
+              />
             )}
           </TableBody>
         </Table>
@@ -219,3 +209,29 @@ export const SettlementTable = memo(function SettlementTable({
     </div>
   );
 });
+
+function EmptyTableRow({ colSpan, selectedMonth, yearMonths, searchQuery }: {
+  colSpan: number; selectedMonth: string; yearMonths: string[]; searchQuery: string;
+}) {
+  return (
+    <TableRow className="hover:bg-transparent">
+      <TableCell colSpan={colSpan} className="text-center py-12">
+        <div className="flex flex-col items-center gap-3">
+          <FileSpreadsheet className="h-12 w-12 text-muted-foreground/50" />
+          <div className="space-y-1">
+            <p className="text-lg font-medium text-muted-foreground">
+              {selectedMonth ? `${selectedMonth} 정산 데이터가 없습니다.` : '정산 데이터가 없습니다.'}
+            </p>
+            <p className="text-sm text-muted-foreground/70">
+              {yearMonths.length === 0
+                ? '아직 등록된 정산 데이터가 없습니다. 관리자에게 문의해주세요.'
+                : searchQuery
+                  ? `"${searchQuery}" 검색 결과가 없습니다. 다른 검색어를 입력해보세요.`
+                  : '해당 월에 매칭된 정산 내역이 없습니다.'}
+            </p>
+          </div>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}

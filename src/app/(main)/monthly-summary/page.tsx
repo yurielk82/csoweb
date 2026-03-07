@@ -1,100 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Calculator, RefreshCw, TrendingUp } from 'lucide-react';
+import { Calculator, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loading } from '@/components/shared/loading';
 import { Badge } from '@/components/ui/badge';
-import { API_ROUTES } from '@/constants/api';
-
-interface SummaryColumn {
-  column_key: string;
-  column_name: string;
-  display_order: number;
-}
-
-interface MonthlyData {
-  settlement_month: string;
-  summaries: Record<string, number>;
-  row_count: number;
-}
-
-interface MonthlySummaryResponse {
-  months: MonthlyData[];
-  summary_columns: SummaryColumn[];
-}
+import { useMonthlySummary } from '@/hooks/useMonthlySummary';
+import { MonthlySummaryTable } from '@/components/settlement/MonthlySummaryTable';
 
 export default function MonthlySummaryPage() {
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [data, setData] = useState<MonthlySummaryResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchData = async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    
-    setError(null);
-    
-    try {
-      const res = await fetch(API_ROUTES.SETTLEMENTS.MONTHLY_SUMMARY);
-      const result = await res.json();
-      
-      if (result.success) {
-        setData(result.data);
-      } else {
-        setError(result.error || '데이터를 불러오는데 실패했습니다.');
-      }
-    } catch (err) {
-      console.error('Fetch error:', err);
-      setError('네트워크 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  // 숫자 포맷
-  const formatNumber = (value: number) => {
-    return value.toLocaleString('ko-KR');
-  };
-
-  // 전체 월에서 합계가 0인 컬럼 필터링 + 순서 재배치 (건수→수량→금액→수수료→합계)
-  const getVisibleColumns = (): SummaryColumn[] => {
-    if (!data?.months || !data?.summary_columns) return [];
-
-    // 1. 모든 월에서 값이 0인 컬럼 제거
-    const filtered = data.summary_columns.filter(col => {
-      return data.months.some(month => (month.summaries[col.column_key] || 0) !== 0);
-    });
-
-    // 2. 우선순위 기반 정렬: 수량 → 금액 → 수수료 → 합계
-    const getOrder = (name: string): number => {
-      if (name.includes('수량')) return 1;
-      if (name.includes('금액')) return 2;
-      if (name.includes('합계')) return 4;
-      if (name.includes('수수료')) return 3;
-      return 5;
-    };
-
-    return filtered.sort((a, b) => getOrder(a.column_name) - getOrder(b.column_name));
-  };
-
-  const visibleColumns = data ? getVisibleColumns() : [];
-
-  // 전체 합계 계산
-  const calculateGrandTotal = (key: string): number => {
-    if (!data?.months) return 0;
-    return data.months.reduce((sum, month) => sum + (month.summaries[key] || 0), 0);
-  };
-
-  // 총 건수 계산
-  const totalRowCount = data?.months?.reduce((sum, m) => sum + m.row_count, 0) || 0;
+  const {
+    loading, refreshing, data, error,
+    visibleColumns, totalRowCount,
+    formatNumber, calculateGrandTotal, fetchData,
+  } = useMonthlySummary();
 
   if (loading) {
     return <Loading text="월별 합계를 불러오는 중..." />;
@@ -102,24 +21,7 @@ export default function MonthlySummaryPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Calculator className="h-6 w-6" />
-            월별 수수료 합계
-          </h1>
-          <p className="text-muted-foreground">정산월 별 수수료 합계를 한눈에 확인하세요.</p>
-        </div>
-        <Button 
-          variant="outline" 
-          onClick={() => fetchData(true)}
-          disabled={refreshing}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          새로고침
-        </Button>
-      </div>
+      <PageHeader refreshing={refreshing} onRefresh={() => fetchData(true)} />
 
       {error && (
         <Card className="border-red-200 bg-red-50">
@@ -149,133 +51,96 @@ export default function MonthlySummaryPage() {
       )}
 
       {data && data.months.length > 0 && data.summary_columns.length > 0 && (
-        <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>총 정산월</CardDescription>
-                <CardTitle className="text-2xl">
-                  {data.months.length}개월
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>총 데이터 건수</CardDescription>
-                <CardTitle className="text-2xl">
-                  {formatNumber(totalRowCount)}건
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            {visibleColumns.filter(col => col.column_name.includes('수수료') || col.column_name.includes('합계')).slice(0, 2).map(col => (
-              <Card key={col.column_key} className="border-blue-200 bg-blue-50">
-                <CardHeader className="pb-2">
-                  <CardDescription className="text-blue-600">{col.column_name} (전체)</CardDescription>
-                  <CardTitle className="text-2xl text-blue-700">
-                    {formatNumber(calculateGrandTotal(col.column_key))}원
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-
-          {/* Monthly Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                정산월별 합계
-              </CardTitle>
-              <CardDescription>
-                관리자가 설정한 합계 컬럼 기준으로 표시됩니다.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="px-4 py-3 text-left font-medium">정산월</th>
-                      <th className="px-4 py-3 text-right font-medium">건수</th>
-                      {visibleColumns.map(col => (
-                        <th key={col.column_key} className="px-4 py-3 text-right font-medium">
-                          {col.column_name}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.months.map((month, idx) => (
-                      <tr 
-                        key={month.settlement_month} 
-                        className={`border-b hover:bg-muted/30 ${idx === 0 ? 'bg-blue-50' : ''}`}
-                      >
-                        <td className="px-4 py-3 font-medium">
-                          {month.settlement_month}
-                          {idx === 0 && (
-                            <Badge variant="secondary" className="ml-2 text-xs">최신</Badge>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right text-muted-foreground tabular-nums">
-                          {formatNumber(month.row_count)}
-                        </td>
-                        {visibleColumns.map(col => (
-                          <td 
-                            key={col.column_key} 
-                            className={`px-4 py-3 text-right font-medium tabular-nums ${
-                              col.column_key.includes('수수료') || col.column_key.includes('합계')
-                                ? 'text-blue-600'
-                                : ''
-                            }`}
-                          >
-                            {formatNumber(month.summaries[col.column_key] || 0)}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                    {/* 총합계 행 */}
-                    <tr className="bg-gray-100 font-bold border-t-2">
-                      <td className="px-4 py-3">총합계</td>
-                      <td className="px-4 py-3 text-right tabular-nums">
-                        {formatNumber(totalRowCount)}
-                      </td>
-                      {visibleColumns.map(col => (
-                        <td 
-                          key={col.column_key} 
-                          className={`px-4 py-3 text-right tabular-nums ${
-                            col.column_key.includes('수수료') || col.column_key.includes('합계')
-                              ? 'text-blue-700'
-                              : ''
-                          }`}
-                        >
-                          {formatNumber(calculateGrandTotal(col.column_key))}
-                        </td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Column Info */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-muted-foreground">표시 항목</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {visibleColumns.map(col => (
-                  <Badge key={col.column_key} variant="outline">
-                    {col.column_name}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </>
+        <MonthlySummaryContent
+          data={data}
+          visibleColumns={visibleColumns}
+          totalRowCount={totalRowCount}
+          formatNumber={formatNumber}
+          calculateGrandTotal={calculateGrandTotal}
+        />
       )}
     </div>
+  );
+}
+
+function PageHeader({ refreshing, onRefresh }: { refreshing: boolean; onRefresh: () => void }) {
+  return (
+    <div className="flex flex-col sm:flex-row justify-between gap-4">
+      <div>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Calculator className="h-6 w-6" />
+          월별 수수료 합계
+        </h1>
+        <p className="text-muted-foreground">정산월 별 수수료 합계를 한눈에 확인하세요.</p>
+      </div>
+      <Button variant="outline" onClick={onRefresh} disabled={refreshing}>
+        <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+        새로고침
+      </Button>
+    </div>
+  );
+}
+
+interface MonthlySummaryContentProps {
+  data: { months: { settlement_month: string; summaries: Record<string, number>; row_count: number }[]; summary_columns: { column_key: string; column_name: string; display_order: number }[] };
+  visibleColumns: { column_key: string; column_name: string; display_order: number }[];
+  totalRowCount: number;
+  formatNumber: (value: number) => string;
+  calculateGrandTotal: (key: string) => number;
+}
+
+function MonthlySummaryContent({ data, visibleColumns, totalRowCount, formatNumber, calculateGrandTotal }: MonthlySummaryContentProps) {
+  return (
+    <>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>총 정산월</CardDescription>
+            <CardTitle className="text-2xl">{data.months.length}개월</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>총 데이터 건수</CardDescription>
+            <CardTitle className="text-2xl">{formatNumber(totalRowCount)}건</CardTitle>
+          </CardHeader>
+        </Card>
+        {visibleColumns.filter(col => col.column_name.includes('수수료') || col.column_name.includes('합계')).slice(0, 2).map(col => (
+          <Card key={col.column_key} className="border-blue-200 bg-blue-50">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-blue-600">{col.column_name} (전체)</CardDescription>
+              <CardTitle className="text-2xl text-blue-700">
+                {formatNumber(calculateGrandTotal(col.column_key))}원
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+
+      <MonthlySummaryTable
+        months={data.months}
+        visibleColumns={visibleColumns}
+        totalRowCount={totalRowCount}
+        formatNumber={formatNumber}
+        calculateGrandTotal={calculateGrandTotal}
+      />
+
+      {/* Column Info */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm text-muted-foreground">표시 항목</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {visibleColumns.map(col => (
+              <Badge key={col.column_key} variant="outline">
+                {col.column_name}
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </>
   );
 }

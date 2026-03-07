@@ -1,38 +1,24 @@
 'use client';
 
 import {
-  Upload,
-  FileSpreadsheet,
-  Loader2,
-  X,
-  Trash2,
-  Plus,
+  Upload, FileSpreadsheet, Loader2, X, Trash2, Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import type { IntegrityRow, MatchingUploadItem } from './types';
 import { formatBusinessNumber } from './CSOTagComponents';
 
-// ── Upload Dialog ──
+// --- Upload Dialog ---
+
 interface UploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -69,43 +55,17 @@ export function UploadDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {!uploadFile ? (
-            <div
-              {...getRootProps()}
-              className={cn(
-                'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
-                isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
-              )}
-            >
-              <input {...getInputProps()} />
-              <FileSpreadsheet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              {isDragActive ? (
-                <p className="text-primary">파일을 여기에 놓으세요...</p>
-              ) : (
-                <>
-                  <p className="text-muted-foreground">파일을 드래그하거나 클릭하여 선택</p>
-                  <p className="text-sm text-muted-foreground mt-2">.xlsx, .xls (최대 4MB)</p>
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
-              <div className="flex items-center gap-3">
-                <FileSpreadsheet className="h-8 w-8 text-green-600" />
-                <div>
-                  <p className="font-medium">{uploadFile.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {(uploadFile.size / 1024).toFixed(1)} KB | {uploadDuplicatesRemoved > 0
-                      ? `${uploadRawCount}건 중 중복 ${uploadDuplicatesRemoved}건 제거 → ${uploadPreview.length}건`
-                      : `${uploadPreview.length}건 감지됨`}
-                  </p>
-                </div>
-              </div>
-              <Button variant="ghost" size="icon" onClick={clearUploadFile} disabled={uploading}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+          <UploadDropZone
+            uploadFile={uploadFile}
+            uploading={uploading}
+            uploadDuplicatesRemoved={uploadDuplicatesRemoved}
+            uploadRawCount={uploadRawCount}
+            uploadPreviewCount={uploadPreview.length}
+            clearUploadFile={clearUploadFile}
+            getRootProps={getRootProps}
+            getInputProps={getInputProps}
+            isDragActive={isDragActive}
+          />
 
           {uploading && (
             <div className="space-y-2">
@@ -114,42 +74,11 @@ export function UploadDialog({
             </div>
           )}
 
-          {uploadPreview.length > 0 && (
-            <div>
-              <h4 className="text-sm font-medium mb-2">미리보기 (처음 10건)</h4>
-              <ScrollArea className="h-[200px] border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>CSO업체명</TableHead>
-                      <TableHead>사업자번호</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {uploadPreview.slice(0, 10).map((item, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell>{item.cso_company_name}</TableCell>
-                        <TableCell className="font-mono">{formatBusinessNumber(item.business_number)}</TableCell>
-                      </TableRow>
-                    ))}
-                    {uploadPreview.length > 10 && (
-                      <TableRow>
-                        <TableCell colSpan={2} className="text-center text-muted-foreground">
-                          ... 외 {uploadPreview.length - 10}건
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            </div>
-          )}
+          {uploadPreview.length > 0 && <UploadPreviewTable uploadPreview={uploadPreview} />}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={uploading}>
-            취소
-          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={uploading}>취소</Button>
           <Button onClick={handleUpload} disabled={uploading || uploadPreview.length === 0}>
             {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
             {uploadPreview.length}건 업로드
@@ -160,7 +89,104 @@ export function UploadDialog({
   );
 }
 
-// ── Delete Confirmation Dialog ──
+// --- UploadDropZone (서브) ---
+
+interface UploadDropZoneProps {
+  uploadFile: File | null;
+  uploading: boolean;
+  uploadDuplicatesRemoved: number;
+  uploadRawCount: number;
+  uploadPreviewCount: number;
+  clearUploadFile: () => void;
+  getRootProps: ReturnType<typeof import('react-dropzone').useDropzone>['getRootProps'];
+  getInputProps: ReturnType<typeof import('react-dropzone').useDropzone>['getInputProps'];
+  isDragActive: boolean;
+}
+
+function UploadDropZone({
+  uploadFile, uploading, uploadDuplicatesRemoved, uploadRawCount, uploadPreviewCount,
+  clearUploadFile, getRootProps, getInputProps, isDragActive,
+}: UploadDropZoneProps) {
+  if (!uploadFile) {
+    return (
+      <div
+        {...getRootProps()}
+        className={cn(
+          'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
+          isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50',
+        )}
+      >
+        <input {...getInputProps()} />
+        <FileSpreadsheet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+        {isDragActive ? (
+          <p className="text-primary">파일을 여기에 놓으세요...</p>
+        ) : (
+          <>
+            <p className="text-muted-foreground">파일을 드래그하거나 클릭하여 선택</p>
+            <p className="text-sm text-muted-foreground mt-2">.xlsx, .xls (최대 4MB)</p>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+      <div className="flex items-center gap-3">
+        <FileSpreadsheet className="h-8 w-8 text-green-600" />
+        <div>
+          <p className="font-medium">{uploadFile.name}</p>
+          <p className="text-sm text-muted-foreground">
+            {(uploadFile.size / 1024).toFixed(1)} KB | {uploadDuplicatesRemoved > 0
+              ? `${uploadRawCount}건 중 중복 ${uploadDuplicatesRemoved}건 제거 → ${uploadPreviewCount}건`
+              : `${uploadPreviewCount}건 감지됨`}
+          </p>
+        </div>
+      </div>
+      <Button variant="ghost" size="icon" onClick={clearUploadFile} disabled={uploading}>
+        <X className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
+// --- UploadPreviewTable (서브) ---
+
+function UploadPreviewTable({ uploadPreview }: { uploadPreview: MatchingUploadItem[] }) {
+  return (
+    <div>
+      <h4 className="text-sm font-medium mb-2">미리보기 (처음 10건)</h4>
+      <ScrollArea className="h-[200px] border rounded-md">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>CSO업체명</TableHead>
+              <TableHead>사업자번호</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {uploadPreview.slice(0, 10).map((item, idx) => (
+              <TableRow key={idx}>
+                <TableCell>{item.cso_company_name}</TableCell>
+                <TableCell className="font-mono">{formatBusinessNumber(item.business_number)}</TableCell>
+              </TableRow>
+            ))}
+            {uploadPreview.length > 10 && (
+              <TableRow>
+                <TableCell colSpan={2} className="text-center text-muted-foreground">
+                  ... 외 {uploadPreview.length - 10}건
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </ScrollArea>
+    </div>
+  );
+}
+
+// --- Delete Dialog ---
+
 interface DeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -204,9 +230,7 @@ export function DeleteDialog({ open, onOpenChange, deleteTarget, deleting, onCon
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={deleting}>
-            취소
-          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={deleting}>취소</Button>
           <Button variant="destructive" onClick={onConfirm} disabled={deleting}>
             {deleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
             전체 삭제
@@ -217,7 +241,8 @@ export function DeleteDialog({ open, onOpenChange, deleteTarget, deleting, onCon
   );
 }
 
-// ── Add Mapping Dialog ──
+// --- Add Mapping Dialog ---
+
 interface AddMappingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -257,55 +282,59 @@ export function AddMappingDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              회원 선택 <span className="text-red-500">*</span>
-            </label>
-            {unmappedRegisteredUsers.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-2">
-                매핑이 필요한 회원이 없습니다.
-              </p>
-            ) : (
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={selectedUnmappedBizNum}
-                onChange={(e) => setSelectedUnmappedBizNum(e.target.value)}
-              >
-                <option value="">선택하세요 ({unmappedRegisteredUsers.length}건)</option>
-                {unmappedRegisteredUsers.map((user) => (
-                  <option key={user.business_number} value={user.business_number}>
-                    {user.business_name} ({formatBusinessNumber(user.business_number)})
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
+          <UserSelect
+            unmappedRegisteredUsers={unmappedRegisteredUsers}
+            selectedUnmappedBizNum={selectedUnmappedBizNum}
+            setSelectedUnmappedBizNum={setSelectedUnmappedBizNum}
+          />
           <div className="space-y-2">
             <label className="text-sm font-medium">
               CSO관리업체명 <span className="text-red-500">*</span>
             </label>
-            <Input
-              placeholder="CSO관리업체명 입력"
-              value={newCsoName}
-              onChange={(e) => setNewCsoName(e.target.value)}
-            />
+            <Input placeholder="CSO관리업체명 입력" value={newCsoName} onChange={(e) => setNewCsoName(e.target.value)} />
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={addingRow}>
-            취소
-          </Button>
-          <Button
-            onClick={onConfirm}
-            disabled={addingRow || !selectedUnmappedBizNum || !newCsoName.trim()}
-          >
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={addingRow}>취소</Button>
+          <Button onClick={onConfirm} disabled={addingRow || !selectedUnmappedBizNum || !newCsoName.trim()}>
             {addingRow ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
             추가
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// --- UserSelect (서브) ---
+
+function UserSelect({ unmappedRegisteredUsers, selectedUnmappedBizNum, setSelectedUnmappedBizNum }: {
+  unmappedRegisteredUsers: IntegrityRow[];
+  selectedUnmappedBizNum: string;
+  setSelectedUnmappedBizNum: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium">
+        회원 선택 <span className="text-red-500">*</span>
+      </label>
+      {unmappedRegisteredUsers.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-2">매핑이 필요한 회원이 없습니다.</p>
+      ) : (
+        <select
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          value={selectedUnmappedBizNum}
+          onChange={(e) => setSelectedUnmappedBizNum(e.target.value)}
+        >
+          <option value="">선택하세요 ({unmappedRegisteredUsers.length}건)</option>
+          {unmappedRegisteredUsers.map((user) => (
+            <option key={user.business_number} value={user.business_number}>
+              {user.business_name} ({formatBusinessNumber(user.business_number)})
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
   );
 }

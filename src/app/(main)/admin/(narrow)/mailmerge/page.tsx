@@ -9,135 +9,105 @@ import { ProgressPanel } from '@/components/admin/mailmerge/ProgressPanel';
 import { SendResult } from '@/components/admin/mailmerge/SendResult';
 
 export default function MailMergePage() {
-  const {
-    // 수신 대상 상태
-    recipientType,
-    setRecipientType,
-    selectedYearMonth,
-    setSelectedYearMonth,
-    includeSettlementTable,
-    setIncludeSettlementTable,
-    sections,
-    yearMonthOptions,
-
-    // 메일 내용 상태
-    subject,
-    setSubject,
-    body,
-    setBody,
-
-    // 미리보기 상태
-    preview,
-    previewOpen,
-    setPreviewOpen,
-    testSending,
-    testCompanies,
-    selectedTestBn,
-
-    // 수신 대상 수
-    recipientCount,
-    loadingCount,
-
-    // 발송 상태
-    sending,
-    progress,
-    sendLogs,
-    result,
-    logsEndRef,
-
-    // 계산값
-    progressPercent,
-    remainingTime,
-
-    // 핸들러
-    insertVariable,
-    toggleSection,
-    moveSection,
-    handlePreview,
-    handleTestCompanyChange,
-    handleTestSend,
-    handleSend,
-    handleCancel,
-    formatTime,
-  } = useMailMerge();
+  const mm = useMailMerge();
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <MailPlus className="h-6 w-6" />
-          메일머지
-        </h1>
-        <p className="text-muted-foreground">업체들에게 개인화된 이메일을 일괄 발송합니다.</p>
-      </div>
+      <PageHeader />
 
-      {/* 수신 대상 선택 */}
       <RecipientCard
-        recipientType={recipientType}
-        setRecipientType={setRecipientType}
-        selectedYearMonth={selectedYearMonth}
-        setSelectedYearMonth={setSelectedYearMonth}
-        includeSettlementTable={includeSettlementTable}
-        setIncludeSettlementTable={setIncludeSettlementTable}
-        sections={sections}
-        yearMonthOptions={yearMonthOptions}
-        toggleSection={toggleSection}
-        moveSection={moveSection}
-        recipientCount={recipientCount}
-        loadingCount={loadingCount}
-        sending={sending}
+        recipientType={mm.recipientType}
+        setRecipientType={mm.setRecipientType}
+        selectedYearMonth={mm.selectedYearMonth}
+        setSelectedYearMonth={mm.setSelectedYearMonth}
+        includeSettlementTable={mm.includeSettlementTable}
+        setIncludeSettlementTable={mm.setIncludeSettlementTable}
+        sections={mm.sections}
+        yearMonthOptions={mm.yearMonthOptions}
+        toggleSection={mm.toggleSection}
+        moveSection={mm.moveSection}
+        recipientCount={mm.recipientCount}
+        loadingCount={mm.loadingCount}
+        sending={mm.sending}
       />
 
-      {/* 메일 작성 */}
       <EmailContentCard
-        subject={subject}
-        setSubject={setSubject}
-        body={body}
-        setBody={setBody}
-        insertVariable={insertVariable}
-        sending={sending}
+        subject={mm.subject}
+        setSubject={mm.setSubject}
+        body={mm.body}
+        setBody={mm.setBody}
+        insertVariable={mm.insertVariable}
+        sending={mm.sending}
       />
 
-      {/* 진행률 패널 */}
-      {(sending || result) && progress && (
+      {(mm.sending || mm.result) && mm.progress && (
         <ProgressPanel
-          sending={sending}
-          progress={progress}
-          result={result}
-          sendLogs={sendLogs}
-          logsEndRef={logsEndRef}
-          progressPercent={progressPercent}
-          remainingTime={remainingTime}
-          formatTime={formatTime}
-          onCancel={handleCancel}
+          sending={mm.sending}
+          progress={mm.progress}
+          result={mm.result}
+          sendLogs={mm.sendLogs}
+          logsEndRef={mm.logsEndRef}
+          progressPercent={mm.progressPercent}
+          remainingTime={mm.remainingTime}
+          formatTime={mm.formatTime}
+          onCancel={mm.handleCancel}
         />
       )}
 
-      {/* 액션 버튼 */}
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={handlePreview} disabled={sending}>
-          <Eye className="h-4 w-4 mr-2" />미리보기
-        </Button>
-        <Button onClick={handleSend} disabled={sending || (recipientType === 'year_month' && !selectedYearMonth)}>
-          {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-          발송하기
-        </Button>
-      </div>
-
-      {/* 발송 결과 */}
-      {result && !sending && <SendResult result={result} />}
-
-      {/* 미리보기 다이얼로그 */}
-      <PreviewDialog
-        open={previewOpen}
-        onOpenChange={setPreviewOpen}
-        preview={preview}
-        testCompanies={testCompanies}
-        selectedTestBn={selectedTestBn}
-        onTestCompanyChange={handleTestCompanyChange}
-        testSending={testSending}
-        onTestSend={handleTestSend}
+      <ActionButtons
+        sending={mm.sending}
+        recipientType={mm.recipientType}
+        selectedYearMonth={mm.selectedYearMonth}
+        onPreview={mm.handlePreview}
+        onSend={mm.handleSend}
       />
+
+      {mm.result && !mm.sending && <SendResult result={mm.result} />}
+
+      <PreviewDialog
+        open={mm.previewOpen}
+        onOpenChange={mm.setPreviewOpen}
+        preview={mm.preview}
+        testCompanies={mm.testCompanies}
+        selectedTestBn={mm.selectedTestBn}
+        onTestCompanyChange={mm.handleTestCompanyChange}
+        testSending={mm.testSending}
+        onTestSend={mm.handleTestSend}
+      />
+    </div>
+  );
+}
+
+function PageHeader() {
+  return (
+    <div>
+      <h1 className="text-2xl font-bold flex items-center gap-2">
+        <MailPlus className="h-6 w-6" />
+        메일머지
+      </h1>
+      <p className="text-muted-foreground">업체들에게 개인화된 이메일을 일괄 발송합니다.</p>
+    </div>
+  );
+}
+
+interface ActionButtonsProps {
+  sending: boolean;
+  recipientType: string;
+  selectedYearMonth: string;
+  onPreview: () => void;
+  onSend: () => void;
+}
+
+function ActionButtons({ sending, recipientType, selectedYearMonth, onPreview, onSend }: ActionButtonsProps) {
+  return (
+    <div className="flex justify-end gap-2">
+      <Button variant="outline" onClick={onPreview} disabled={sending}>
+        <Eye className="h-4 w-4 mr-2" />미리보기
+      </Button>
+      <Button onClick={onSend} disabled={sending || (recipientType === 'year_month' && !selectedYearMonth)}>
+        {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+        발송하기
+      </Button>
     </div>
   );
 }
