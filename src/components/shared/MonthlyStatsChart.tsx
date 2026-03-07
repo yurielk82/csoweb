@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import { BarChart3 } from 'lucide-react';
 import {
@@ -57,53 +58,76 @@ function toMonthLabel(monthKey: string): string {
 
 const RECENT_MONTHS = 12;
 
+interface SeriesFlags {
+  hasCsoData: boolean;
+  hasClientData: boolean;
+  hasAccessedData: boolean;
+  hasEmailData: boolean;
+}
+
+function buildChartConfig(flags: SeriesFlags): ChartConfig {
+  const config: ChartConfig = {
+    totalCommission: { label: '수수료(만원)', color: 'var(--chart-1)' },
+  };
+  if (flags.hasCsoData) {
+    config.csoCount = { label: 'CSO 업체 수', color: 'var(--chart-2)' };
+  }
+  if (flags.hasClientData) {
+    config.clientCount = { label: '거래처 수', color: 'var(--chart-2)' };
+  }
+  if (flags.hasAccessedData) {
+    config.accessedCount = { label: '접속 업체 수', color: 'var(--chart-3)' };
+  }
+  if (flags.hasEmailData) {
+    config.emailSentCount = { label: '이메일 발송', color: 'var(--chart-5)' };
+  }
+  return config;
+}
+
+function tooltipFormatter(value: number | string | Array<number | string>, name: string | number): [ReactNode, string | number] {
+  if (name === 'csoCount') return [value as ReactNode, 'CSO 업체 수'];
+  if (name === 'clientCount') return [value as ReactNode, '거래처 수'];
+  if (name === 'accessedCount') return [value as ReactNode, '접속 업체 수'];
+  if (name === 'emailSentCount') return [value as ReactNode, '이메일 발송'];
+  return [`${formatManWon(value as number)}만원`, '수수료'];
+}
+
+/* 추가 시계열 라인 (CSO/거래처/접속/이메일) */
+function CountLines({ hasCsoData, hasClientData, hasAccessedData, hasEmailData }: SeriesFlags) {
+  return (
+    <>
+      {hasCsoData && (
+        <Line yAxisId="count" type="monotone" dataKey="csoCount" stroke="var(--color-csoCount)" strokeWidth={2} dot={{ r: 3 }} />
+      )}
+      {hasClientData && (
+        <Line yAxisId="count" type="monotone" dataKey="clientCount" stroke="var(--color-clientCount)" strokeWidth={2} dot={{ r: 3 }} />
+      )}
+      {hasAccessedData && (
+        <Line yAxisId="count" type="monotone" dataKey="accessedCount" stroke="var(--color-accessedCount)" strokeWidth={2} dot={{ r: 3 }} strokeDasharray="5 3" />
+      )}
+      {hasEmailData && (
+        <Line yAxisId="count" type="monotone" dataKey="emailSentCount" stroke="var(--color-emailSentCount)" strokeWidth={2} dot={{ r: 3 }} />
+      )}
+    </>
+  );
+}
+
 export default function MonthlyStatsChart({ data, compact, title }: MonthlyStatsChartProps) {
   const chartData = useMemo(() => {
     const sorted = [...data].sort((a, b) => a.month.localeCompare(b.month));
-    return sorted.slice(-RECENT_MONTHS).map((d) => ({
-      ...d,
-      label: toMonthLabel(d.month),
-    }));
+    return sorted.slice(-RECENT_MONTHS).map((d) => ({ ...d, label: toMonthLabel(d.month) }));
   }, [data]);
 
-  const hasCsoData = chartData.some((d) => (d.csoCount ?? 0) > 0);
-  const hasClientData = chartData.some((d) => (d.clientCount ?? 0) > 0);
-  const hasAccessedData = chartData.some((d) => d.accessedCount !== undefined);
-  const hasEmailData = chartData.some((d) => d.emailSentCount !== undefined);
+  const flags: SeriesFlags = {
+    hasCsoData: chartData.some((d) => (d.csoCount ?? 0) > 0),
+    hasClientData: chartData.some((d) => (d.clientCount ?? 0) > 0),
+    hasAccessedData: chartData.some((d) => d.accessedCount !== undefined),
+    hasEmailData: chartData.some((d) => d.emailSentCount !== undefined),
+  };
+  const hasCountAxis = flags.hasCsoData || flags.hasClientData || flags.hasAccessedData || flags.hasEmailData;
 
-  const chartConfig = useMemo(() => {
-    const config: ChartConfig = {
-      totalCommission: {
-        label: '수수료(만원)',
-        color: 'var(--chart-1)',
-      },
-    };
-    if (hasCsoData) {
-      config.csoCount = {
-        label: 'CSO 업체 수',
-        color: 'var(--chart-2)',
-      };
-    }
-    if (hasClientData) {
-      config.clientCount = {
-        label: '거래처 수',
-        color: 'var(--chart-2)',
-      };
-    }
-    if (hasAccessedData) {
-      config.accessedCount = {
-        label: '접속 업체 수',
-        color: 'var(--chart-3)',
-      };
-    }
-    if (hasEmailData) {
-      config.emailSentCount = {
-        label: '이메일 발송',
-        color: 'var(--chart-5)',
-      };
-    }
-    return config;
-  }, [hasCsoData, hasClientData, hasAccessedData, hasEmailData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- flags는 매 렌더 새 객체지만 개별 boolean 값으로 메모이제이션
+  const chartConfig = useMemo(() => buildChartConfig(flags), [flags.hasCsoData, flags.hasClientData, flags.hasAccessedData, flags.hasEmailData]);
 
   if (chartData.length === 0) {
     return (
@@ -116,9 +140,7 @@ export default function MonthlyStatsChart({ data, compact, title }: MonthlyStats
 
   return (
     <div className="glass-chart-card">
-      {title && (
-        <h3 className={`font-semibold mb-1 ${compact ? 'text-sm' : 'text-base'}`}>{title}</h3>
-      )}
+      {title && <h3 className={`font-semibold mb-1 ${compact ? 'text-sm' : 'text-base'}`}>{title}</h3>}
       <ChartContainer config={chartConfig} className={`${compact ? 'h-44 lg:h-48' : 'h-60 lg:h-64'} w-full`}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart accessibilityLayer data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -129,94 +151,13 @@ export default function MonthlyStatsChart({ data, compact, title }: MonthlyStats
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} className="stroke-muted" />
-            <XAxis
-              dataKey="label"
-              tick={{ fontSize: 12 }}
-              tickLine={false}
-              tickMargin={10}
-              axisLine={false}
-            />
-            <YAxis
-              yAxisId="amount"
-              tick={{ fontSize: 11 }}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={formatManWon}
-              width={55}
-            />
-            {(hasCsoData || hasClientData || hasAccessedData || hasEmailData) && (
-              <YAxis
-                yAxisId="count"
-                orientation="right"
-                tick={{ fontSize: 11 }}
-                tickLine={false}
-                axisLine={false}
-                width={30}
-              />
-            )}
-            <ChartTooltip
-              content={
-                <ChartTooltipContent
-                  formatter={(value, name) => {
-                    if (name === 'csoCount') return [value, 'CSO 업체 수'];
-                    if (name === 'clientCount') return [value, '거래처 수'];
-                    if (name === 'accessedCount') return [value, '접속 업체 수'];
-                    if (name === 'emailSentCount') return [value, '이메일 발송'];
-                    return [`${formatManWon(value as number)}만원`, '수수료'];
-                  }}
-                />
-              }
-            />
+            <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} tickMargin={10} axisLine={false} />
+            <YAxis yAxisId="amount" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={formatManWon} width={55} />
+            {hasCountAxis && <YAxis yAxisId="count" orientation="right" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={30} />}
+            <ChartTooltip content={<ChartTooltipContent formatter={tooltipFormatter} />} />
             <ChartLegend content={<ChartLegendContent />} />
-            <Area
-              yAxisId="amount"
-              type="monotone"
-              dataKey="totalCommission"
-              stroke="var(--color-totalCommission)"
-              strokeWidth={2}
-              fill="url(#fillCommission)"
-            />
-            {hasCsoData && (
-              <Line
-                yAxisId="count"
-                type="monotone"
-                dataKey="csoCount"
-                stroke="var(--color-csoCount)"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-              />
-            )}
-            {hasClientData && (
-              <Line
-                yAxisId="count"
-                type="monotone"
-                dataKey="clientCount"
-                stroke="var(--color-clientCount)"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-              />
-            )}
-            {hasAccessedData && (
-              <Line
-                yAxisId="count"
-                type="monotone"
-                dataKey="accessedCount"
-                stroke="var(--color-accessedCount)"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-                strokeDasharray="5 3"
-              />
-            )}
-            {hasEmailData && (
-              <Line
-                yAxisId="count"
-                type="monotone"
-                dataKey="emailSentCount"
-                stroke="var(--color-emailSentCount)"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-              />
-            )}
+            <Area yAxisId="amount" type="monotone" dataKey="totalCommission" stroke="var(--color-totalCommission)" strokeWidth={2} fill="url(#fillCommission)" />
+            <CountLines {...flags} />
           </ComposedChart>
         </ResponsiveContainer>
       </ChartContainer>

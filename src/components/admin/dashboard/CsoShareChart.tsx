@@ -39,37 +39,56 @@ function formatManWon(value: number): string {
   return `${man.toLocaleString()}만원`;
 }
 
+/* 상위 5개 + 나머지를 '기타'로 그룹핑 */
+function groupSlices(data: { name: string; value: number }[]) {
+  const sorted = [...data].sort((a, b) => b.value - a.value);
+  if (sorted.length <= MAX_SLICES) return sorted;
+
+  const top5 = sorted.slice(0, TOP_SLICE_COUNT);
+  const others = sorted.slice(TOP_SLICE_COUNT);
+  const otherSum = others.reduce((sum, item) => sum + item.value, 0);
+  return [...top5, { name: '기타', value: otherSum }];
+}
+
+function buildPieConfig(chartData: { name: string; value: number }[]): ChartConfig {
+  const config: ChartConfig = {};
+  chartData.forEach((item, index) => {
+    config[item.name] = { label: item.name, color: CHART_COLORS[index % CHART_COLORS.length] };
+  });
+  return config;
+}
+
+/* 중앙 총합 라벨 */
+function TotalLabel({ grandTotal }: { grandTotal: number }) {
+  return (
+    <Label
+      content={({ viewBox }) => {
+        if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
+          return (
+            <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+              <tspan x={viewBox.cx} y={(viewBox.cy ?? 0) - 8} className="fill-foreground text-lg font-bold">
+                {formatManWon(grandTotal)}
+              </tspan>
+              <tspan x={viewBox.cx} y={(viewBox.cy ?? 0) + 12} className="fill-muted-foreground text-xs">
+                총 수수료
+              </tspan>
+            </text>
+          );
+        }
+        return null;
+      }}
+    />
+  );
+}
+
 export const CsoShareChart = memo(function CsoShareChart({
   data,
   title = '월별 수수료 비중',
   compact,
 }: CsoShareChartProps) {
-  // 상위 5개 + 나머지를 '기타'로 그룹핑
-  const chartData = useMemo(() => {
-    const sorted = [...data].sort((a, b) => b.value - a.value);
-    if (sorted.length <= MAX_SLICES) return sorted;
-
-    const top5 = sorted.slice(0, TOP_SLICE_COUNT);
-    const others = sorted.slice(TOP_SLICE_COUNT);
-    const otherSum = others.reduce((sum, item) => sum + item.value, 0);
-    return [...top5, { name: '기타', value: otherSum }];
-  }, [data]);
-
-  const grandTotal = useMemo(
-    () => chartData.reduce((sum, item) => sum + item.value, 0),
-    [chartData],
-  );
-
-  const chartConfig = useMemo(() => {
-    const config: ChartConfig = {};
-    chartData.forEach((item, index) => {
-      config[item.name] = {
-        label: item.name,
-        color: CHART_COLORS[index % CHART_COLORS.length],
-      };
-    });
-    return config;
-  }, [chartData]);
+  const chartData = useMemo(() => groupSlices(data), [data]);
+  const grandTotal = useMemo(() => chartData.reduce((sum, item) => sum + item.value, 0), [chartData]);
+  const chartConfig = useMemo(() => buildPieConfig(chartData), [chartData]);
 
   if (data.length === 0) {
     return (
@@ -88,13 +107,7 @@ export const CsoShareChart = memo(function CsoShareChart({
       <ChartContainer config={chartConfig} className={`${compact ? 'h-28' : 'h-52 lg:h-56'} w-full`}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart accessibilityLayer>
-            <ChartTooltip
-              content={
-                <ChartTooltipContent
-                  formatter={(value) => [formatManWon(value as number), '']}
-                />
-              }
-            />
+            <ChartTooltip content={<ChartTooltipContent formatter={(value) => [formatManWon(value as number), '']} />} />
             <Pie
               data={chartData}
               cx="50%"
@@ -107,28 +120,9 @@ export const CsoShareChart = memo(function CsoShareChart({
               strokeWidth={0}
             >
               {chartData.map((entry, index) => (
-                <Cell
-                  key={`cell-${entry.name}`}
-                  fill={CHART_COLORS[index % CHART_COLORS.length]}
-                />
+                <Cell key={`cell-${entry.name}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
               ))}
-              <Label
-                content={({ viewBox }) => {
-                  if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
-                    return (
-                      <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                        <tspan x={viewBox.cx} y={(viewBox.cy ?? 0) - 8} className="fill-foreground text-lg font-bold">
-                          {formatManWon(grandTotal)}
-                        </tspan>
-                        <tspan x={viewBox.cx} y={(viewBox.cy ?? 0) + 12} className="fill-muted-foreground text-xs">
-                          총 수수료
-                        </tspan>
-                      </text>
-                    );
-                  }
-                  return null;
-                }}
-              />
+              <TotalLabel grandTotal={grandTotal} />
             </Pie>
             {!compact && <ChartLegend content={<ChartLegendContent />} />}
           </PieChart>

@@ -3,28 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import {
-  FileSpreadsheet,
-  LogOut,
-  Menu,
-  X,
-  User,
-  Settings,
-  LayoutDashboard,
-  Upload,
-  Users,
-  Columns,
-  Mail,
-  MailPlus,
-  Database,
-  UserCog,
-  Search,
-  Calculator,
-  Link2,
-  Loader2,
-  ChevronDown,
-  Monitor,
-} from 'lucide-react';
+import { FileSpreadsheet, LogOut, Menu, X, User, Loader2, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -37,64 +16,14 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { API_ROUTES } from '@/constants/api';
-import type { LucideIcon } from 'lucide-react';
-
-/* ─── 메뉴 타입 ─── */
-interface MenuItem {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-}
-
-interface MenuGroup {
-  label: string;
-  icon: LucideIcon;
-  items: MenuItem[];
-}
-
-type NavEntry = MenuItem | MenuGroup;
-
-function isGroup(entry: NavEntry): entry is MenuGroup {
-  return 'items' in entry;
-}
-
-/* ─── 관리자 메뉴 구조 (그룹 드롭다운) ─── */
-const ADMIN_NAV: NavEntry[] = [
-  { href: '/admin', label: '대시보드', icon: LayoutDashboard },
-  {
-    label: '정산 관리',
-    icon: FileSpreadsheet,
-    items: [
-      { href: '/admin/upload', label: '정산서 업로드', icon: Upload },
-      { href: '/admin/columns', label: '컬럼 설정', icon: Columns },
-      { href: '/admin/data', label: '데이터 관리', icon: Database },
-    ],
-  },
-  {
-    label: '회원 관리',
-    icon: Users,
-    items: [
-      { href: '/admin/members', label: '회원 관리', icon: UserCog },
-      { href: '/admin/integrity', label: '거래처 매핑', icon: Link2 },
-    ],
-  },
-  {
-    label: '이메일',
-    icon: Mail,
-    items: [
-      { href: '/admin/mailmerge', label: '메일머지', icon: MailPlus },
-      { href: '/admin/emails', label: '이메일 이력', icon: Mail },
-    ],
-  },
-  { href: '/admin/master', label: '마스터 조회', icon: Search },
-];
-
-/* ─── 일반 사용자 메뉴 ─── */
-const USER_NAV: NavEntry[] = [
-  { href: '/home', label: '홈', icon: LayoutDashboard },
-  { href: '/dashboard', label: '정산서 조회', icon: FileSpreadsheet },
-  { href: '/monthly-summary', label: '월별 합계', icon: Calculator },
-];
+import {
+  type MenuGroup,
+  type NavEntry,
+  isGroup,
+  ADMIN_NAV,
+  USER_NAV,
+  ADMIN_SETTINGS_LINKS,
+} from '@/constants/navigation';
 
 /* ─── 그룹 드롭다운 (데스크톱 — hover로 열림, Portal 없는 순수 구현) ─── */
 function NavGroupDropdown({ group, pathname }: { group: MenuGroup; pathname: string }) {
@@ -182,55 +111,69 @@ function DesktopNav({ entries, pathname }: { entries: NavEntry[]; pathname: stri
   );
 }
 
+/* ─── 모바일: 프로필/설정 섹션 ─── */
+function MobileSettingsSection({ isAdmin, onNavigate }: { isAdmin: boolean; onNavigate: () => void }) {
+  return (
+    <div className="border-t pt-2 mt-2">
+      <Link href="/profile" onClick={onNavigate}>
+        <Button variant="ghost" className="w-full justify-start gap-2">
+          <User className="h-4 w-4" />
+          내 정보 수정
+        </Button>
+      </Link>
+      {isAdmin && ADMIN_SETTINGS_LINKS.map((item) => (
+        <Link key={item.href} href={item.href} onClick={onNavigate}>
+          <Button variant="ghost" className="w-full justify-start gap-2">
+            <item.icon className="h-4 w-4" />
+            {item.label}
+          </Button>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+/* ─── 모바일: 메뉴 그룹 항목 ─── */
+function MobileNavGroup({ group, pathname, onNavigate }: { group: MenuGroup; pathname: string; onNavigate: () => void }) {
+  return (
+    <div>
+      <Link href={group.items[0].href} onClick={onNavigate}>
+        <p className="px-4 pt-3 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors cursor-pointer">
+          {group.items[0].label}
+        </p>
+      </Link>
+      {group.items.slice(1).map((item) => (
+        <Link key={item.href} href={item.href} onClick={onNavigate}>
+          <Button
+            variant="ghost"
+            className={cn('w-full justify-start gap-2 pl-8', pathname === item.href && 'bg-accent text-accent-foreground')}
+          >
+            <item.icon className="h-4 w-4" />
+            {item.label}
+          </Button>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 /* ─── 모바일 네비게이션 ─── */
 function MobileNav({
-  entries,
-  pathname,
-  onNavigate,
-  isAdmin,
+  entries, pathname, onNavigate, isAdmin,
 }: {
-  entries: NavEntry[];
-  pathname: string;
-  onNavigate: () => void;
-  isAdmin: boolean;
+  entries: NavEntry[]; pathname: string; onNavigate: () => void; isAdmin: boolean;
 }) {
   return (
     <nav className="md:hidden border-t p-4 space-y-1 bg-background">
       {entries.map((entry) => {
         if (isGroup(entry)) {
-          return (
-            <div key={entry.label}>
-              {/* 그룹 대표 라벨 — 첫 번째 항목 이름으로 표시, 클릭 시 해당 페이지 이동 */}
-              <Link href={entry.items[0].href} onClick={onNavigate}>
-                <p className="px-4 pt-3 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors cursor-pointer">
-                  {entry.items[0].label}
-                </p>
-              </Link>
-              {entry.items.slice(1).map((item) => (
-                <Link key={item.href} href={item.href} onClick={onNavigate}>
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      'w-full justify-start gap-2 pl-8',
-                      pathname === item.href && 'bg-accent text-accent-foreground'
-                    )}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {item.label}
-                  </Button>
-                </Link>
-              ))}
-            </div>
-          );
+          return <MobileNavGroup key={entry.label} group={entry} pathname={pathname} onNavigate={onNavigate} />;
         }
         return (
           <Link key={entry.href} href={entry.href} onClick={onNavigate}>
             <Button
               variant="ghost"
-              className={cn(
-                'w-full justify-start gap-2',
-                pathname === entry.href && 'bg-accent text-accent-foreground'
-              )}
+              className={cn('w-full justify-start gap-2', pathname === entry.href && 'bg-accent text-accent-foreground')}
             >
               <entry.icon className="h-4 w-4" />
               {entry.label}
@@ -238,39 +181,59 @@ function MobileNav({
           </Link>
         );
       })}
-
-      {/* 프로필/설정 */}
-      <div className="border-t pt-2 mt-2">
-        <Link href="/profile" onClick={onNavigate}>
-          <Button variant="ghost" className="w-full justify-start gap-2">
-            <User className="h-4 w-4" />
-            내 정보 수정
-          </Button>
-        </Link>
-        {isAdmin && (
-          <>
-            <Link href="/admin/settings" onClick={onNavigate}>
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <Settings className="h-4 w-4" />
-                사이트 설정
-              </Button>
-            </Link>
-            <Link href="/admin/email-settings" onClick={onNavigate}>
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <Mail className="h-4 w-4" />
-                이메일 설정
-              </Button>
-            </Link>
-            <Link href="/admin/system" onClick={onNavigate}>
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <Monitor className="h-4 w-4" />
-                시스템 정보
-              </Button>
-            </Link>
-          </>
-        )}
-      </div>
+      <MobileSettingsSection isAdmin={isAdmin} onNavigate={onNavigate} />
     </nav>
+  );
+}
+
+/* ─── 유저 드롭다운 메뉴 ─── */
+function UserDropdown({
+  user, onLogout,
+}: {
+  user: { company_name: string; email: string; is_admin: boolean; business_number: string };
+  onLogout: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="gap-2">
+          <Avatar className="h-7 w-7">
+            <AvatarFallback className="text-xs">{user.company_name.charAt(0)}</AvatarFallback>
+          </Avatar>
+          <span className="hidden sm:inline max-w-[150px] truncate">{user.company_name}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <div className="px-2 py-1.5">
+          <p className="text-sm font-medium">{user.company_name}</p>
+          <p className="text-xs text-muted-foreground">{user.email}</p>
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/profile" className="cursor-pointer">
+            <User className="mr-2 h-4 w-4" />
+            내 정보 수정
+          </Link>
+        </DropdownMenuItem>
+        {user.is_admin && ADMIN_SETTINGS_LINKS.map((item) => (
+          <DropdownMenuItem key={item.href} asChild>
+            <Link href={item.href} className="cursor-pointer">
+              <item.icon className="mr-2 h-4 w-4" />
+              {item.label}
+            </Link>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuItem disabled className="text-muted-foreground">
+          <span className="mr-2 h-4 w-4" />
+          {user.is_admin ? '관리자' : '업체'} ({user.business_number})
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={onLogout} className="text-red-600 cursor-pointer">
+          <LogOut className="mr-2 h-4 w-4" />
+          로그아웃
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -292,7 +255,6 @@ export function Header() {
     }
   };
 
-  // 마운트 전이거나 사용자 정보 없으면 로딩 상태 (Hydration 안전)
   if (!isMounted || !user) {
     return (
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -313,96 +275,20 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center max-w-screen-xl mx-auto w-full px-4 sm:px-6 lg:px-8">
-        {/* Logo */}
         <Link href={user.is_admin ? '/admin' : '/home'} className="flex items-center gap-2 mr-6">
           <FileSpreadsheet className="h-6 w-6 text-primary" />
           <span className="font-bold text-lg hidden sm:inline">CSO Portal</span>
         </Link>
-
-        {/* Desktop Navigation */}
         <DesktopNav entries={navEntries} pathname={pathname} />
-
-        {/* User Menu */}
         <div className="flex items-center gap-2 ml-auto">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <Avatar className="h-7 w-7">
-                  <AvatarFallback className="text-xs">
-                    {user.company_name.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden sm:inline max-w-[150px] truncate">
-                  {user.company_name}
-                </span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <div className="px-2 py-1.5">
-                <p className="text-sm font-medium">{user.company_name}</p>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/profile" className="cursor-pointer">
-                  <User className="mr-2 h-4 w-4" />
-                  내 정보 수정
-                </Link>
-              </DropdownMenuItem>
-              {user.is_admin && (
-                <>
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin/settings" className="cursor-pointer">
-                      <Settings className="mr-2 h-4 w-4" />
-                      사이트 설정
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin/email-settings" className="cursor-pointer">
-                      <Mail className="mr-2 h-4 w-4" />
-                      이메일 설정
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin/system" className="cursor-pointer">
-                      <Monitor className="mr-2 h-4 w-4" />
-                      시스템 정보
-                    </Link>
-                  </DropdownMenuItem>
-                </>
-              )}
-              <DropdownMenuItem disabled className="text-muted-foreground">
-                <span className="mr-2 h-4 w-4" />
-                {user.is_admin ? '관리자' : '업체'} ({user.business_number})
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
-                <LogOut className="mr-2 h-4 w-4" />
-                로그아웃
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Mobile Menu Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
+          <UserDropdown user={user} onLogout={handleLogout} />
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
       </div>
-
-      {/* Mobile Navigation */}
       {mobileMenuOpen && (
-        <MobileNav
-          entries={navEntries}
-          pathname={pathname}
-          onNavigate={() => setMobileMenuOpen(false)}
-          isAdmin={user.is_admin}
-        />
+        <MobileNav entries={navEntries} pathname={pathname} onNavigate={() => setMobileMenuOpen(false)} isAdmin={user.is_admin} />
       )}
     </header>
   );
