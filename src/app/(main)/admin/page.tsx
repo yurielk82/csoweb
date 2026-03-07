@@ -9,15 +9,14 @@ import { calculateDelta } from '@/lib/dashboard-utils';
 import { KpiCard } from '@/components/admin/dashboard/KpiCard';
 import { TodoPanel } from '@/components/admin/dashboard/TodoPanel';
 import { EmailSystemBar } from '@/components/admin/dashboard/EmailSystemBar';
-import { CsoShareChart } from '@/components/admin/dashboard/CsoShareChart';
-import { EmailStatsChart } from '@/components/admin/dashboard/EmailStatsChart';
+import { AccessRateChart } from '@/components/admin/dashboard/AccessRateChart';
+import { AvgCommissionChart } from '@/components/admin/dashboard/AvgCommissionChart';
+import { CsoCountChart } from '@/components/admin/dashboard/CsoCountChart';
 
 const MonthlyStatsChart = dynamic(
   () => import('@/components/shared/MonthlyStatsChart'),
   { ssr: false, loading: () => <Skeleton className="h-full rounded-xl" /> },
 );
-
-const RECENT_SHARE_MONTHS = 6;
 
 function formatManWon(value: number): string {
   const man = Math.round(value / 10000);
@@ -34,7 +33,6 @@ export default function AdminDashboardPage() {
     months,
     enrichedChartData,
     emailStats,
-    emailMonthlyStats,
     pendingCount,
     unmappedCount,
     allSnapshots,
@@ -61,13 +59,16 @@ export default function AdminDashboardPage() {
 
   const currentMonthUploaded = months.some((m) => m.month === currentMonthKey);
 
-  const csoShareData = useMemo(() => {
-    const sorted = [...months].sort((a, b) => a.month.localeCompare(b.month));
-    return sorted
-      .filter((m) => m.totalCommission > 0)
-      .slice(-RECENT_SHARE_MONTHS)
-      .map((m) => ({ name: `${m.month.split('-')[1]}월`, value: m.totalCommission }));
-  }, [months]);
+  const accessRateData = useMemo(() => {
+    return months.map((m) => {
+      const snap = allSnapshots.find((s) => s.settlement_month === m.month);
+      return {
+        month: m.month,
+        csoCount: m.csoCount,
+        accessedCount: snap?.accessed_business_numbers?.length ?? 0,
+      };
+    });
+  }, [months, allSnapshots]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -81,42 +82,64 @@ export default function AdminDashboardPage() {
         )}
       </div>
 
-      {/* KPI + 할 일 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {kpiLoaded ? (
-          <>
-            <KpiCard
-              title="수수료 총액"
-              value={currentMonth ? formatManWon(currentMonth.totalCommission) : '-'}
-              suffix="원"
-              icon={Calculator}
-              iconColor="glass-icon-blue"
-              delta={commissionDelta}
-              emphasis
-            />
-            <KpiCard
-              title="CSO 업체"
-              value={currentMonth ? currentMonth.csoCount.toLocaleString() : '-'}
-              suffix="개"
-              icon={Building2}
-              iconColor="glass-icon-cyan"
-              delta={csoDelta}
-            />
-            <KpiCard
-              title="접속률"
-              value={`${accessRate}`}
-              suffix="%"
-              icon={Activity}
-              iconColor="glass-icon-green"
-              delta={null}
-              sub={`${accessedCount} / ${totalCsoCount}`}
-            />
-          </>
-        ) : (
-          Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-xl" />
-          ))
-        )}
+      {/* 메인 그리드: 좌 3열 + 우 1열(할 일) */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+        {/* 좌측 컨텐츠 */}
+        <div className="lg:col-span-3 flex flex-col gap-3">
+          {/* KPI 카드 3장 */}
+          <div className="grid grid-cols-3 gap-3">
+            {kpiLoaded ? (
+              <>
+                <KpiCard
+                  title="수수료 총액"
+                  value={currentMonth ? formatManWon(currentMonth.totalCommission) : '-'}
+                  suffix="원"
+                  icon={Calculator}
+                  iconColor="glass-icon-blue"
+                  delta={commissionDelta}
+                  emphasis
+                />
+                <KpiCard
+                  title="CSO 업체"
+                  value={currentMonth ? currentMonth.csoCount.toLocaleString() : '-'}
+                  suffix="개"
+                  icon={Building2}
+                  iconColor="glass-icon-cyan"
+                  delta={csoDelta}
+                />
+                <KpiCard
+                  title="접속률"
+                  value={`${accessRate}`}
+                  suffix="%"
+                  icon={Activity}
+                  iconColor="glass-icon-green"
+                  delta={null}
+                  sub={`${accessedCount} / ${totalCsoCount}`}
+                />
+              </>
+            ) : (
+              Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-24 rounded-xl" />
+              ))
+            )}
+          </div>
+
+          {/* 월별 정산 추이 (전폭) */}
+          {kpiLoaded ? (
+            <MonthlyStatsChart data={enrichedChartData} title="월별 정산 추이" compact />
+          ) : (
+            <Skeleton className="h-64 rounded-xl" />
+          )}
+
+          {/* 하단 3열 차트 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <AccessRateChart data={accessRateData} />
+            <AvgCommissionChart data={months} />
+            <CsoCountChart data={months} />
+          </div>
+        </div>
+
+        {/* 우측: 할 일 + 빠른 이동 */}
         <TodoPanel
           currentMonthUploaded={currentMonthUploaded}
           pendingCount={pendingCount}
@@ -124,28 +147,13 @@ export default function AdminDashboardPage() {
         />
       </div>
 
-      {/* 이메일 + 시스템 상태 바 */}
+      {/* 이메일 + 시스템 상태 바 (최하단) */}
       <EmailSystemBar
         emailStats={emailStats}
         systemLoaded={systemLoaded}
         systemStatus={systemStatus}
         activeProvider={activeProvider}
       />
-
-      {/* 차트 영역 */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
-        <div className="lg:col-span-3">
-          {kpiLoaded ? (
-            <MonthlyStatsChart data={enrichedChartData} title="월별 정산 추이" compact />
-          ) : (
-            <Skeleton className="h-64 rounded-xl" />
-          )}
-        </div>
-        <div className="lg:col-span-2 flex flex-col gap-3">
-          <CsoShareChart data={csoShareData} title="수수료 비중" compact />
-          <EmailStatsChart data={emailMonthlyStats} compact />
-        </div>
-      </div>
     </div>
   );
 }

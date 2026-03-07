@@ -2,7 +2,16 @@
 
 import { memo } from 'react';
 import Link from 'next/link';
-import { Upload, Users, Link2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import {
+  Upload,
+  Users,
+  Link2,
+  AlertTriangle,
+  CheckCircle2,
+  Database,
+  Mail,
+  ArrowRight,
+} from 'lucide-react';
 
 interface TodoPanelProps {
   currentMonthUploaded: boolean;
@@ -28,7 +37,7 @@ export const TodoPanel = memo(function TodoPanel({
   }
 
   return (
-    <div className="glass-kpi-card flex flex-col">
+    <div className="glass-kpi-card flex flex-col h-full">
       <div className="flex items-center gap-1.5 mb-2">
         {items.length > 0 ? (
           <>
@@ -58,6 +67,29 @@ export const TodoPanel = memo(function TodoPanel({
       ) : (
         <p className="text-xs text-muted-foreground">처리할 항목 없음</p>
       )}
+
+      {/* 빠른 이동 */}
+      <div className="mt-auto pt-3 border-t border-border/40">
+        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">빠른 이동</span>
+        <div className="flex flex-col gap-1 mt-1.5">
+          {[
+            { href: '/admin/upload', icon: Upload, label: '업로드' },
+            { href: '/admin/members', icon: Users, label: '회원관리' },
+            { href: '/admin/data', icon: Database, label: '데이터' },
+            { href: '/admin/mailmerge', icon: Mail, label: '메일머지' },
+            { href: '/admin/emails', icon: ArrowRight, label: '이메일 이력' },
+          ].map((nav) => (
+            <Link
+              key={nav.href}
+              href={nav.href}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <nav.icon className="h-3 w-3 shrink-0" />
+              <span className="truncate">{nav.label}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
     </div>
   );
 });
