@@ -71,7 +71,7 @@ export default function AdminDashboardPage() {
   }, [months, allSnapshots]);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">관리자 대시보드</h1>
@@ -83,11 +83,11 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* 메인 그리드: 좌 3열 + 우 1열(할 일) */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* 좌측 컨텐츠 */}
-        <div className="lg:col-span-3 flex flex-col gap-3">
+        <div className="lg:col-span-3 flex flex-col gap-4">
           {/* KPI 카드 3장 */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {kpiLoaded ? (
               <>
                 <KpiCard
@@ -132,7 +132,7 @@ export default function AdminDashboardPage() {
           )}
 
           {/* 하단 3열 차트 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <AccessRateChart data={accessRateData} />
             <AvgCommissionChart data={months} />
             <CsoCountChart data={months} />
