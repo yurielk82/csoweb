@@ -202,14 +202,33 @@ export class SupabaseSettlementRepository implements SettlementRepository {
     return (data as { month: string }[]).map(r => r.month).filter(Boolean);
   }
 
-  async getBusinessNumbersForMonth(settlementMonth: string): Promise<string[]> {
-    const { data, error } = await supabase
-      .from('settlements')
-      .select('business_number')
-      .eq('정산월', settlementMonth);
+  async getCSOCompaniesForMonth(settlementMonth: string): Promise<{ business_number: string; company_name: string }[]> {
+    // DB에서 DISTINCT로 직접 조회 — 1000행 제한 문제 원천 제거
+    const allRows = await fetchAllPaginated<{ business_number: string; CSO관리업체: string | null }>(
+      async (page, pageSize) => {
+        const result = await supabase
+          .from('settlements')
+          .select('business_number, CSO관리업체')
+          .eq('정산월', settlementMonth)
+          .not('business_number', 'is', null)
+          .order('CSO관리업체', { ascending: true })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
 
-    if (error || !data) return [];
-    return [...new Set(data.map(d => d.business_number))];
+        return result as { data: { business_number: string; CSO관리업체: string | null }[] | null; error: { message: string } | null };
+      }
+    );
+
+    // 클라이언트에서 business_number 기준 DISTINCT (Supabase JS는 SELECT DISTINCT 미지원)
+    const bnMap = new Map<string, string>();
+    for (const row of allRows) {
+      if (row.business_number && row.CSO관리업체 && !bnMap.has(row.business_number)) {
+        bnMap.set(row.business_number, row.CSO관리업체);
+      }
+    }
+
+    return Array.from(bnMap.entries())
+      .map(([bn, name]) => ({ business_number: bn, company_name: name }))
+      .sort((a, b) => a.company_name.localeCompare(b.company_name));
   }
 
   async getCSOCompanyNamesForMonth(settlementMonth: string): Promise<string[]> {

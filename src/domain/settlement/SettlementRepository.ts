@@ -52,7 +52,8 @@ export interface SettlementRepository {
   getTotals(settlementMonth?: string): Promise<SettlementTotals>;
   /** DB 레벨 합계 — CSO 매칭 기반 */
   getTotalsByCSOMatching(matchedNames: string[], settlementMonth?: string): Promise<SettlementTotals>;
-  getBusinessNumbersForMonth(settlementMonth: string): Promise<string[]>;
+  /** DB DISTINCT — 해당 월의 CSO 업체 목록 (business_number + 회사명) */
+  getCSOCompaniesForMonth(settlementMonth: string): Promise<{ business_number: string; company_name: string }[]>;
   getCSOCompanyNamesForMonth(settlementMonth: string): Promise<string[]>;
   getSummary(businessNumber: string, settlementMonth: string): Promise<SettlementSummary>;
   getSummaryByCSOMatching(matchedNames: string[], settlementMonth: string): Promise<SettlementSummary>;

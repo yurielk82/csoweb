@@ -44,7 +44,7 @@ export function createMockSettlementRepository(): {
     findByCSOMatching: vi.fn(),
     getAvailableMonths: vi.fn(),
     getAvailableMonthsByCSOMatching: vi.fn(),
-    getBusinessNumbersForMonth: vi.fn(),
+    getCSOCompaniesForMonth: vi.fn(),
     getCSOCompanyNamesForMonth: vi.fn(),
     getSummary: vi.fn(),
     getSummaryByCSOMatching: vi.fn(),
