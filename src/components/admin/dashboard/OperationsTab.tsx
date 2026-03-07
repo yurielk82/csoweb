@@ -65,9 +65,6 @@ export const OperationsTab = memo(function OperationsTab({ data }: OperationsTab
 
   // TodoAlerts — 조건값 계산
   const currentMonthUploaded = months.some((m) => m.month === currentMonthKey);
-  const emailNeeded =
-    filteredCsoBusinessNumbers.length > 0 &&
-    (!emailStats || emailStats.total === 0);
 
   return (
     <div className="space-y-6">
@@ -94,7 +91,6 @@ export const OperationsTab = memo(function OperationsTab({ data }: OperationsTab
           currentMonthUploaded={currentMonthUploaded}
           pendingCount={pendingCount}
           unmappedCount={unmappedCount}
-          emailNeeded={emailNeeded}
         />
       )}
 

@@ -2,20 +2,18 @@
 
 import { memo } from 'react';
 import Link from 'next/link';
-import { Upload, Users, Link2, Mail, AlertTriangle } from 'lucide-react';
+import { Upload, Users, Link2, AlertTriangle } from 'lucide-react';
 
 interface TodoAlertsProps {
   currentMonthUploaded: boolean;
   pendingCount: number;
   unmappedCount: number;
-  emailNeeded: boolean;
 }
 
 export const TodoAlerts = memo(function TodoAlerts({
   currentMonthUploaded,
   pendingCount,
   unmappedCount,
-  emailNeeded,
 }: TodoAlertsProps) {
   const items: { href: string; icon: typeof Upload; label: string; iconColor: string }[] = [];
 
@@ -27,9 +25,6 @@ export const TodoAlerts = memo(function TodoAlerts({
   }
   if (unmappedCount > 0) {
     items.push({ href: '/admin/integrity', icon: Link2, label: `CSO 미매칭 ${unmappedCount}건`, iconColor: 'glass-icon-cyan' });
-  }
-  if (emailNeeded) {
-    items.push({ href: '/admin/mailmerge', icon: Mail, label: '이메일 발송 필요', iconColor: 'glass-icon-purple' });
   }
 
   if (items.length === 0) return null;

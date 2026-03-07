@@ -33,8 +33,6 @@ export interface AdminDashboardData {
   badgesLoaded: boolean;
   systemLoaded: boolean;
   selectedMonth: string;
-  handleMonthChange: (month: string) => void;
-  monthOptions: string[];
   months: SettlementMonth[];
   enrichedChartData: EnrichedMonthData[];
   filteredCsoBusinessNumbers: string[];
@@ -266,23 +264,6 @@ export function useAdminDashboard(): AdminDashboardData {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Month change handler
-  const handleMonthChange = useCallback(
-    (monthKey: string) => {
-      setSelectedMonth(monthKey);
-      fetchEmailStats(monthKey);
-      fetchCsoCompanies(monthKey);
-    },
-    [fetchEmailStats, fetchCsoCompanies]
-  );
-
-  // Month options: settlement months + current month (deduplicated)
-  const monthOptions = (() => {
-    const keys = new Set(months.map((m) => m.month));
-    keys.add(currentMonthKey);
-    return Array.from(keys).sort().reverse();
-  })();
-
   const activeProvider = systemStatus.email_provider;
 
   // 빠른 작업 배지 맵
@@ -313,8 +294,6 @@ export function useAdminDashboard(): AdminDashboardData {
     badgesLoaded,
     systemLoaded,
     selectedMonth,
-    handleMonthChange,
-    monthOptions,
     months,
     enrichedChartData,
     filteredCsoBusinessNumbers,
