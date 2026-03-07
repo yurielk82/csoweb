@@ -24,10 +24,13 @@ export interface MonthlyStatData {
   month: string;
   totalAmount?: number;
   totalCommission: number;
-  csoCount: number;
-  /** 접속 업체 수 (optional — admin 전용) */
+  /** CSO 업체 수 (admin 전용) */
+  csoCount?: number;
+  /** 거래처 수 (회원 전용) */
+  clientCount?: number;
+  /** 접속 업체 수 (admin 전용) */
   accessedCount?: number;
-  /** 이메일 발송 수 (optional — admin 전용) */
+  /** 이메일 발송 수 (admin 전용) */
   emailSentCount?: number;
 }
 
@@ -63,6 +66,8 @@ export default function MonthlyStatsChart({ data, compact, title }: MonthlyStats
     }));
   }, [data]);
 
+  const hasCsoData = chartData.some((d) => (d.csoCount ?? 0) > 0);
+  const hasClientData = chartData.some((d) => (d.clientCount ?? 0) > 0);
   const hasAccessedData = chartData.some((d) => d.accessedCount !== undefined);
   const hasEmailData = chartData.some((d) => d.emailSentCount !== undefined);
 
@@ -72,11 +77,19 @@ export default function MonthlyStatsChart({ data, compact, title }: MonthlyStats
         label: '수수료(만원)',
         color: 'var(--chart-1)',
       },
-      csoCount: {
+    };
+    if (hasCsoData) {
+      config.csoCount = {
         label: 'CSO 업체 수',
         color: 'var(--chart-2)',
-      },
-    };
+      };
+    }
+    if (hasClientData) {
+      config.clientCount = {
+        label: '거래처 수',
+        color: 'var(--chart-2)',
+      };
+    }
     if (hasAccessedData) {
       config.accessedCount = {
         label: '접속 업체 수',
@@ -90,7 +103,7 @@ export default function MonthlyStatsChart({ data, compact, title }: MonthlyStats
       };
     }
     return config;
-  }, [hasAccessedData, hasEmailData]);
+  }, [hasCsoData, hasClientData, hasAccessedData, hasEmailData]);
 
   if (chartData.length === 0) {
     return (
@@ -131,19 +144,22 @@ export default function MonthlyStatsChart({ data, compact, title }: MonthlyStats
               tickFormatter={formatManWon}
               width={55}
             />
-            <YAxis
-              yAxisId="count"
-              orientation="right"
-              tick={{ fontSize: 11 }}
-              tickLine={false}
-              axisLine={false}
-              width={30}
-            />
+            {(hasCsoData || hasClientData || hasAccessedData || hasEmailData) && (
+              <YAxis
+                yAxisId="count"
+                orientation="right"
+                tick={{ fontSize: 11 }}
+                tickLine={false}
+                axisLine={false}
+                width={30}
+              />
+            )}
             <ChartTooltip
               content={
                 <ChartTooltipContent
                   formatter={(value, name) => {
                     if (name === 'csoCount') return [value, 'CSO 업체 수'];
+                    if (name === 'clientCount') return [value, '거래처 수'];
                     if (name === 'accessedCount') return [value, '접속 업체 수'];
                     if (name === 'emailSentCount') return [value, '이메일 발송'];
                     return [`${formatManWon(value as number)}만원`, '수수료'];
@@ -160,14 +176,26 @@ export default function MonthlyStatsChart({ data, compact, title }: MonthlyStats
               strokeWidth={2}
               fill="url(#fillCommission)"
             />
-            <Line
-              yAxisId="count"
-              type="monotone"
-              dataKey="csoCount"
-              stroke="var(--color-csoCount)"
-              strokeWidth={2}
-              dot={{ r: 3 }}
-            />
+            {hasCsoData && (
+              <Line
+                yAxisId="count"
+                type="monotone"
+                dataKey="csoCount"
+                stroke="var(--color-csoCount)"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+              />
+            )}
+            {hasClientData && (
+              <Line
+                yAxisId="count"
+                type="monotone"
+                dataKey="clientCount"
+                stroke="var(--color-clientCount)"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+              />
+            )}
             {hasAccessedData && (
               <Line
                 yAxisId="count"
