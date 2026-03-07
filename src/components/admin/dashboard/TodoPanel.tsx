@@ -69,7 +69,7 @@ export const TodoPanel = memo(function TodoPanel({
       )}
 
       {/* 빠른 이동 */}
-      <div className="mt-auto pt-3 border-t border-border/40">
+      <div className="mt-4 pt-3 border-t border-border/40">
         <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">빠른 이동</span>
         <div className="flex flex-col gap-1 mt-1.5">
           {[
