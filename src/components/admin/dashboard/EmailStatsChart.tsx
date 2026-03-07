@@ -61,7 +61,7 @@ export const EmailStatsChart = memo(function EmailStatsChart({
 
   if (chartData.length === 0) {
     return (
-      <div className={`glass-chart-card flex flex-col items-center justify-center ${compact ? 'h-32' : 'h-52'} text-muted-foreground`}>
+      <div className={`tds-card flex flex-col items-center justify-center ${compact ? 'h-32' : 'h-52'} text-muted-foreground`}>
         <Mail className="h-10 w-10 mb-2 opacity-40" />
         <p className="text-sm">이메일 발송 데이터가 없습니다</p>
       </div>
@@ -69,7 +69,7 @@ export const EmailStatsChart = memo(function EmailStatsChart({
   }
 
   return (
-    <div className="glass-chart-card">
+    <div className="tds-card">
       <div className={compact ? 'px-3 pt-3 pb-1' : 'px-5 pt-5 pb-3'}>
         <h3 className={`font-semibold ${compact ? 'text-sm' : 'text-base'}`}>이메일 발송 현황</h3>
         {!compact && (

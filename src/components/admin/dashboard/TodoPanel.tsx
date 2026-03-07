@@ -27,17 +27,17 @@ export const TodoPanel = memo(function TodoPanel({
   const items: { href: string; icon: typeof Upload; label: string; iconColor: string }[] = [];
 
   if (!currentMonthUploaded) {
-    items.push({ href: '/admin/upload', icon: Upload, label: '정산서 업로드 필요', iconColor: 'glass-icon-blue' });
+    items.push({ href: '/admin/upload', icon: Upload, label: '정산서 업로드 필요', iconColor: 'tds-icon-blue' });
   }
   if (pendingCount > 0) {
-    items.push({ href: '/admin/members?filter=pending', icon: Users, label: `승인 대기 ${pendingCount}명`, iconColor: 'glass-icon-green' });
+    items.push({ href: '/admin/members?filter=pending', icon: Users, label: `승인 대기 ${pendingCount}명`, iconColor: 'tds-icon-green' });
   }
   if (unmappedCount > 0) {
-    items.push({ href: '/admin/integrity', icon: Link2, label: `CSO 미매칭 ${unmappedCount}건`, iconColor: 'glass-icon-cyan' });
+    items.push({ href: '/admin/integrity', icon: Link2, label: `CSO 미매칭 ${unmappedCount}건`, iconColor: 'tds-icon-cyan' });
   }
 
   return (
-    <div className="glass-kpi-card flex flex-col h-full">
+    <div className="tds-card flex flex-col h-full">
       <div className="flex items-center gap-1.5 mb-2">
         {items.length > 0 ? (
           <>

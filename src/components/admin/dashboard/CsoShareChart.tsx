@@ -93,7 +93,7 @@ export const CsoShareChart = memo(function CsoShareChart({
 
   if (data.length === 0) {
     return (
-      <div className={`glass-chart-card flex flex-col items-center justify-center ${compact ? 'h-32' : 'h-52'} text-muted-foreground`}>
+      <div className={`tds-card flex flex-col items-center justify-center ${compact ? 'h-32' : 'h-52'} text-muted-foreground`}>
         <PieChartIcon className="h-10 w-10 mb-2 opacity-40" />
         <p className="text-sm">비중 데이터가 없습니다</p>
       </div>
@@ -101,7 +101,7 @@ export const CsoShareChart = memo(function CsoShareChart({
   }
 
   return (
-    <div className="glass-chart-card">
+    <div className="tds-card">
       <div className={compact ? 'px-3 pt-3 pb-1' : 'px-5 pt-5 pb-3'}>
         <h3 className={`font-semibold ${compact ? 'text-sm' : 'text-base'}`}>{title}</h3>
       </div>

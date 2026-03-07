@@ -12,9 +12,9 @@ export function QuickLinks() {
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
       {LINKS.map((link) => (
         <Link key={link.href} href={link.href}>
-          <div className="glass-action-card">
+          <div className="tds-card-interactive">
             <div className="flex items-center gap-3">
-              <div className="glass-icon glass-icon-blue">
+              <div className="tds-icon tds-icon-blue">
                 <link.icon className="h-5 w-5" />
               </div>
               <div className="flex-1">

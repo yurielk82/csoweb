@@ -132,7 +132,7 @@ export default function MonthlyStatsChart({ data, compact, title }: MonthlyStats
 
   if (chartData.length === 0) {
     return (
-      <div className="glass-chart-card flex flex-col items-center justify-center h-52 text-muted-foreground">
+      <div className="tds-card flex flex-col items-center justify-center h-52 text-muted-foreground">
         <BarChart3 className="h-10 w-10 mb-2 opacity-40" />
         <p className="text-sm">아직 통계 데이터가 없습니다</p>
       </div>
@@ -140,7 +140,7 @@ export default function MonthlyStatsChart({ data, compact, title }: MonthlyStats
   }
 
   return (
-    <div className="glass-chart-card">
+    <div className="tds-card">
       {title && <h3 className={`font-semibold mb-1 ${compact ? 'text-sm' : 'text-base'}`}>{title}</h3>}
       <ChartContainer config={chartConfig} className={`${compact ? 'h-44 lg:h-48' : 'h-60 lg:h-64'} w-full`}>
         <ResponsiveContainer width="100%" height="100%">

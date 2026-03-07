@@ -1,119 +1,121 @@
-# Design System
+# csoweb 디자인 시스템 — TDS (토스 기반)
 
-CSO 정산 포털 디자인 토큰 및 색상 시스템 정의.
+> **v0.38.0** — Glass-like → TDS(토스 디자인 시스템) 전면 교체. 로그인만 Liquid Glass 유지.
 
 ## 색상 토큰
 
-### 기본 토큰 (shadcn/ui 기본)
+### 시맨틱 토큰 (CSS 변수)
 
-| 토큰 | CSS 변수 | Tailwind 클래스 | 용도 |
-|------|----------|----------------|------|
-| background | `--background` | `bg-background` | 페이지 배경 |
-| foreground | `--foreground` | `text-foreground` | 기본 텍스트 |
-| primary | `--primary` | `bg-primary`, `text-primary` | 주요 액션, 링크, 정보 강조 |
-| secondary | `--secondary` | `bg-secondary` | 보조 요소 |
-| muted | `--muted` | `bg-muted`, `text-muted-foreground` | 비활성, 중립 배경, auth 페이지 배경 |
-| accent | `--accent` | `bg-accent` | 강조 요소 |
-| destructive | `--destructive` | `bg-destructive`, `text-destructive` | 에러, 삭제, 위험 |
-| border | `--border` | `border-border` | 테두리 |
-| card | `--card` | `bg-card` | 카드 배경 |
+| 토큰 | Light | Dark | 용도 |
+|------|-------|------|------|
+| `--background` | 210 20% 96% | 240 10% 7% | 페이지 배경 |
+| `--foreground` | 215 25% 13% | 210 20% 98% | 본문 텍스트 |
+| `--card` | 0 0% 100% | 240 8% 10% | 카드 배경 |
+| `--primary` | 216 91% 58% | 216 100% 65% | 주 액션 (토스 Blue 500/400) |
+| `--secondary` | 210 20% 96% | 240 11% 13% | 보조 배경 |
+| `--muted` | 210 20% 98% | 240 11% 13% | 비활성 배경 |
+| `--accent` | 212 100% 95% | 240 8% 10% | 강조 배경 |
+| `--destructive` | 355 86% 60% | 0 100% 71% | 삭제/에러 |
+| `--success` | 157 97% 36% | 153 76% 54% | 성공 |
+| `--warning` | 36 100% 50% | 33 100% 65% | 경고 |
+| `--border` | 210 14% 91% | 240 8% 19% | 테두리 |
+| `--input` | 210 10% 84% | 240 8% 25% | 입력 필드 테두리 |
+| `--ring` | 216 91% 58% | 216 100% 65% | 포커스 링 |
 
-### 확장 토큰 (v0.25.1 추가)
+### 사용 규칙
 
-| 토큰 | CSS 변수 | Light 값 (HSL) | Dark 값 (HSL) | 용도 |
-|------|----------|----------------|---------------|------|
-| success | `--success` | `142 76% 36%` | `142 71% 45%` | 성공, 완료, 활성 상태 |
-| success-foreground | `--success-foreground` | `0 0% 100%` | `0 0% 100%` | success 위 텍스트 |
-| warning | `--warning` | `38 92% 50%` | `45 93% 47%` | 경고, 주의, 휴업 상태 |
-| warning-foreground | `--warning-foreground` | `0 0% 100%` | `0 0% 100%` | warning 위 텍스트 |
+- Tailwind: `text-primary`, `bg-muted`, `border-border` (시맨틱 변수만)
+- **금지**: `text-blue-500`, `bg-gray-100` 등 기본 팔레트 직접 사용
+- **금지**: `p-[13px]`, `text-[#333]` 등 Arbitrary values
+- **금지**: `style={{ color: '#fff' }}` 인라인 CSS 색상
 
-## 색상 사용 규칙
-
-### 상태별 패턴
+### 상태별 색상 패턴
 
 | 상태 | 배경 | 텍스트 | 테두리 |
 |------|------|--------|--------|
-| 성공 | `bg-success/10` | `text-success` | `border-success/20` |
-| 경고 | `bg-warning/10` | `text-warning` | `border-warning/20` |
-| 에러 | `bg-destructive/10` | `text-destructive` | `border-destructive/20` |
-| 정보 | `bg-primary/10` | `text-primary` | `border-primary/20` |
+| 성공 | `bg-success/10` | `text-success` | `border-success/30` |
+| 경고 | `bg-warning/10` | `text-warning` | `border-warning/30` |
+| 에러 | `bg-destructive/10` | `text-destructive` | `border-destructive/30` |
+| 정보 | `bg-primary/10` | `text-primary` | `border-primary/30` |
 | 중립 | `bg-muted` | `text-muted-foreground` | `border-border` |
 
-### 금지 사항
+## Elevation (깊이 5단계)
 
-- Tailwind 기본 팔레트 직접 사용 금지 (`text-blue-500`, `bg-gray-100` 등)
-- Arbitrary values 금지 (`text-[10px]`, `p-[13px]`, `shadow-[...]` 등)
-- 인라인 CSS 색상 금지 (`style={{ color: '#fff' }}`)
+| 단계 | Light | Dark | 용도 |
+|------|-------|------|------|
+| xs | `0 1px 2px rgba(0,0,0,0.04)` | `0 0 0 1px rgba(255,255,255,0.04)` | 뱃지, 칩 |
+| sm | `0 2px 8px rgba(0,0,0,0.08)` | `0 0 0 1px rgba(255,255,255,0.06)` | 카드 기본 |
+| md | `0 4px 16px rgba(0,0,0,0.08)` | `0 2px 8px rgba(0,0,0,0.4)` | 카드 hover |
+| lg | `0 8px 32px rgba(0,0,0,0.12)` | `0 4px 16px rgba(0,0,0,0.5)` | 모달 |
+| xl | `0 16px 48px rgba(0,0,0,0.16)` | `0 8px 32px rgba(0,0,0,0.6)` | 시트 |
 
-### auth 페이지 배경
+CSS 변수: `var(--elevation-sm)` 등. 다크모드 자동 전환.
 
-- **로그인**: Liquid Glass — `.login-glass-bg` (animated mesh gradient + frosted glass card). 테마 독립적 다크 그래디언트 배경.
-- **기타 auth 페이지** (회원가입, 비밀번호 찾기): `bg-muted`
+## Radius (4단계)
 
-### Liquid Glass 토큰
+| 단계 | 값 | Tailwind | 용도 |
+|------|-----|---------|------|
+| sm | 8px | `rounded-sm` | 뱃지, 칩, 메뉴 아이템 |
+| md | 12px | `rounded-md` | 버튼, 입력 필드, 셀렉트 |
+| lg | 16px | `rounded-lg` | 카드, 알림 |
+| xl | 20px | `rounded-xl` | 모달, 다이얼로그 |
 
-#### 공통 CSS 변수
+## Typography
 
-| 변수 | 값 | 용도 |
+- **폰트**: Pretendard Variable (CDN)
+- **폴백**: system-ui, -apple-system, sans-serif
+- `letter-spacing: -0.01em`, `word-break: keep-all`
+- 숫자: `font-variant-numeric: tabular-nums` (정산 테이블)
+
+## Motion
+
+| 토큰 | 값 | 용도 |
 |------|-----|------|
-| `--glass-bg` | `oklch(1 0 0 / 75%)` | 글래스 카드 배경 |
-| `--glass-bg-hover` | `oklch(1 0 0 / 80%)` | 호버 시 카드 배경 |
-| `--glass-bg-action` | `oklch(1 0 0 / 70%)` | 액션 카드 배경 (약간 더 투명) |
-| `--glass-border` | `oklch(0 0 0 / 8%)` | 기본 글래스 테두리 |
-| `--glass-border-light` | `oklch(0 0 0 / 6%)` | 연한 글래스 테두리 |
-| `--glass-radius` | `1.25rem` | 글래스 카드 radius |
-| `--glass-blur` | `20px` | Backdrop blur |
-| `--glass-saturate` | `180%` | Backdrop saturate |
-| `--glass-shadow` | `0 8px 32px oklch(0 0 0 / 8%)` | 카드 외부 그림자 |
-| `--glass-shadow-inset` | `inset 0 1px 0 oklch(1 0 0 / 50%)` | 내부 상단 하이라이트 |
-| `--glass-easing` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Spring easing |
-| `--glass-duration` | `200ms` | 트랜지션 시간 |
-| `--glass-gradient` | `linear-gradient(135deg, ...)` | 배경 그래디언트 |
+| `--duration-fast` | 150ms | 호버, 포커스 |
+| `--duration-normal` | 250ms | 카드 전환 |
+| `--duration-slow` | 350ms | 모달 진입 |
+| `--easing-spring` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | 바운스 효과 |
+| `--easing-ease` | `cubic-bezier(0.22, 0.68, 0, 1)` | 부드러운 전환 |
 
-#### 로그인 전용
+## 차트 8색
 
-| 클래스 | 용도 |
+| # | Light | Dark | 용도 |
+|---|-------|------|------|
+| 1 | Blue 500 (#3182F6) | Blue 400 (#4891FF) | 기본/매출 |
+| 2 | Red 500 (#F04452) | Red 300 (#FF6B6B) | 비교/비용 |
+| 3 | Green 500 (#03B26C) | Green 300 (#2DE58F) | 성장/이익 |
+| 4 | Orange 500 (#FE9800) | Orange 300 (#FFB74D) | 경고/주의 |
+| 5 | Purple 500 (#A234C7) | Purple 300 (#C770E4) | 보조 1 |
+| 6 | Teal 500 (#18A5A5) | Teal 300 (#58C7C7) | 보조 2 |
+| 7 | Blue 700 (#1B64DA) | Blue 300 (#64A8FF) | 보조 3 |
+| 8 | Orange 900 (#E45600) | Orange 400 (#FF8A50) | 보조 4 |
+
+Tailwind: `text-chart-1` ~ `text-chart-8`
+
+## TDS 컴포넌트 클래스
+
+| 클래스 | 동작 |
 |--------|------|
-| `.login-glass-bg` | 메시 그래디언트 배경 컨테이너 |
-| `.login-orb-{1,2,3}` | 떠다니는 그래디언트 오브 (Teal/Violet/Green-Teal) |
-| `.glass-card` | Frosted glass 카드 (`backdrop-filter: blur(20px)`) |
-| `.glass-button` | 3D 유리 버튼 (hover scale + spring easing) |
-| `.login-icon-glow` | 아이콘 네온 글로우 + pulse 애니메이션 |
-| `.login-glass-footer` | 반투명 유리 푸터 |
+| `.tds-card` | elevation-sm + radius-lg, hover → elevation-md + translateY(-2px) |
+| `.tds-card-interactive` | tds-card + 클릭 가능, hover → scale(1.02), active → scale(0.98) |
+| `.tds-icon` | 2.5rem 원형 컨테이너 |
+| `.tds-icon-{color}` | 7색: blue, green, cyan, purple, orange, pink, teal |
+| `.tds-dot-ok` | success 색상 상태 dot (0.375rem) |
+| `.tds-dot-fail` | destructive 색상 상태 dot (0.375rem) |
 
-#### 대시보드 전용 (v0.28.1 — Glass-like 카드/버튼)
+## 로그인 — Liquid Glass (별도 유지)
 
-배경은 흰색(`bg-background`) 유지. `backdrop-filter` 대신 멀티레이어 소프트 쉐도우 + 인셋 하이라이트 + oklch 컬러 아이콘으로 Glass-like 시각 품질 확보.
+로그인 페이지만 Liquid Glass 스타일 유지. 나머지 페이지에서 사용 금지.
 
-**CSS 변수** (`:root`)
-
-| 변수 | 값 | 용도 |
-|------|-----|------|
-| `--glass-border` | `oklch(0 0 0 / 8%)` | 카드 테두리 |
-| `--glass-radius` | `1.25rem` | 카드 border-radius |
-| `--glass-shadow` | 멀티레이어 소프트 쉐도우 | 카드 기본 그림자 |
-| `--glass-shadow-hover` | 확대 소프트 쉐도우 | 호버 시 그림자 |
-| `--glass-shadow-inset` | `inset 0 1px 0 oklch(1 0 0 / 70%)` | 상단 인셋 하이라이트 |
-| `--glass-easing` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Spring easing |
-| `--glass-duration` | `200ms` | 트랜지션 시간 |
-
-**클래스**
-
-| 클래스 | 용도 |
-|--------|------|
-| `.glass-kpi-card` | KPI 카드 — 소프트 쉐도우 + 인셋 하이라이트 + hover translateY(-2px) |
-| `.glass-action-card` | Quick Action 카드 — hover translateY(-3px) scale(1.02) + active press |
-| `.glass-icon` | 아이콘 글로우 컨테이너 (2.5rem 원형, Quick Action 전용) |
-| `.glass-icon-{color}` | 아이콘 hue 7색 — blue/green/cyan/purple/orange/pink/teal (oklch) |
-| `.dashboard-status-dot-ok` | 상태 dot 정상 — oklch green + box-shadow glow |
-| `.dashboard-status-dot-fail` | 상태 dot 실패 — oklch red + box-shadow glow |
-
-**KPI 아이콘**: `.glass-icon` 래핑 없이 `h-4 w-4 glass-icon-{color}` 색상만 적용.
-**Quick Action 아이콘**: `.glass-icon glass-icon-{color}` 원형 배경 + 글로우 + `h-5 w-5` 아이콘.
-
-`prefers-reduced-motion: reduce` 시 hover lift/scale 비활성화.
+- `.login-glass-bg` — 메시 그래디언트 배경 + 오브
+- `.glass-card` — 프로스트 유리 카드 (backdrop-filter)
+- `.glass-button` — 유리 효과 버튼
+- `.login-glass-*` — 로그인 전용 타이포, 폼, 링크, 푸터
 
 ## 파일 위치
 
-- CSS 변수 정의: `src/app/globals.css`
-- Tailwind 매핑: `tailwind.config.ts`
+| 파일 | 역할 |
+|------|------|
+| `src/app/globals.css` | CSS 변수 + TDS/Glass 클래스 정의 |
+| `tailwind.config.ts` | 시맨틱 색상 매핑 + radius + chart 확장 |
+| `src/app/layout.tsx` | Pretendard CDN link |

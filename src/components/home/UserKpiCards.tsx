@@ -33,7 +33,7 @@ export function UserKpiCards({
       <KpiItem
         loading={loading}
         latestMonth={latestMonth}
-        icon={<Banknote className="h-4 w-4 glass-icon-orange" />}
+        icon={<Banknote className="h-4 w-4 tds-icon-orange" />}
         label="수수료"
         value={formatManWon(latestCommission)}
         suffix="원"
@@ -42,7 +42,7 @@ export function UserKpiCards({
       <KpiItem
         loading={loading}
         latestMonth={latestMonth}
-        icon={<Building2 className="h-4 w-4 glass-icon-cyan" />}
+        icon={<Building2 className="h-4 w-4 tds-icon-cyan" />}
         label="거래처 수"
         value={latestClientCount.toLocaleString()}
         suffix="곳"
@@ -50,7 +50,7 @@ export function UserKpiCards({
       <KpiItem
         loading={loading}
         latestMonth={latestMonth}
-        icon={<Package className="h-4 w-4 glass-icon-green" />}
+        icon={<Package className="h-4 w-4 tds-icon-green" />}
         label="제품 수"
         value={latestProductCount.toLocaleString()}
         suffix="종"
@@ -71,7 +71,7 @@ interface KpiItemProps {
 
 function KpiItem({ loading, latestMonth, icon, label, value, suffix, emphasis }: KpiItemProps) {
   return (
-    <div className={`glass-kpi-card py-5 px-6 ${emphasis ? 'border-primary/20' : ''}`}>
+    <div className={`tds-card py-5 px-6 ${emphasis ? 'border-primary/20' : ''}`}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           {icon}

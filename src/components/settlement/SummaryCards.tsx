@@ -18,9 +18,9 @@ export const SummaryCards = memo(function SummaryCards({ totals }: SummaryCardsP
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       {/* 제약수수료 합계 카드 — primary 강조 */}
-      <div className="glass-kpi-card border-primary/20">
+      <div className="tds-card border-primary/20">
         <div className="flex items-center gap-2 mb-2">
-          <Calculator className="h-4 w-4 glass-icon-blue" />
+          <Calculator className="h-4 w-4 tds-icon-blue" />
           <span className="text-sm text-muted-foreground">제약수수료 합계</span>
         </div>
         <p className="text-2xl font-bold font-mono tabular-nums text-primary">
@@ -30,9 +30,9 @@ export const SummaryCards = memo(function SummaryCards({ totals }: SummaryCardsP
       </div>
 
       {/* 거래처 수 */}
-      <div className="glass-kpi-card">
+      <div className="tds-card">
         <div className="flex items-center gap-2 mb-2">
-          <Building2 className="h-4 w-4 glass-icon-cyan" />
+          <Building2 className="h-4 w-4 tds-icon-cyan" />
           <span className="text-sm text-muted-foreground">거래처 수</span>
         </div>
         <p className="text-2xl font-bold font-mono tabular-nums">
@@ -41,9 +41,9 @@ export const SummaryCards = memo(function SummaryCards({ totals }: SummaryCardsP
       </div>
 
       {/* 제품 수 */}
-      <div className="glass-kpi-card">
+      <div className="tds-card">
         <div className="flex items-center gap-2 mb-2">
-          <Package className="h-4 w-4 glass-icon-green" />
+          <Package className="h-4 w-4 tds-icon-green" />
           <span className="text-sm text-muted-foreground">제품 수</span>
         </div>
         <p className="text-2xl font-bold font-mono tabular-nums">

@@ -35,7 +35,7 @@ export const AccessRateChart = memo(function AccessRateChart({ data }: AccessRat
 
   if (chartData.length === 0) {
     return (
-      <div className="glass-chart-card flex flex-col items-center justify-center h-32 text-muted-foreground">
+      <div className="tds-card flex flex-col items-center justify-center h-32 text-muted-foreground">
         <Users className="h-10 w-10 mb-2 opacity-40" />
         <p className="text-sm">접속률 데이터가 없습니다</p>
       </div>
@@ -43,7 +43,7 @@ export const AccessRateChart = memo(function AccessRateChart({ data }: AccessRat
   }
 
   return (
-    <div className="glass-chart-card">
+    <div className="tds-card">
       <div className="px-3 pt-3 pb-1">
         <h3 className="text-sm font-semibold">CSO 접속률 추이</h3>
       </div>
