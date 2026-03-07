@@ -9,4 +9,4 @@ afterEach(() => {
 
 // 테스트 환경변수
 process.env.JWT_SECRET = 'test-jwt-secret-key-for-vitest';
-process.env.NODE_ENV = 'test';
+// NODE_ENV는 vitest가 자동 설정하므로 수동 할당 불필요

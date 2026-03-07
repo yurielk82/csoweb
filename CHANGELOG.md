@@ -2,6 +2,19 @@
 
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 
+## [0.33.0] - 2026-03-07
+
+### Added
+- 관리자 대시보드 운영/분석 2탭 분할 (shadcn/ui Tabs)
+- 운영 현황 탭: KPI 카드 4개 (수수료, CSO 업체수, 접속률, 이메일) + 전월 대비 증감 표시 + 할 일 알림
+- 정산 분석 탭: 월별 추이 차트 + 전월 대비 증감 카드 + 월별 수수료 비중 도넛 차트 + 이메일 발송 추이 차트
+- `AdminKpiCards`, `TodoAlerts`, `OperationsTab`, `AnalyticsTab`, `CsoShareChart`, `EmailStatsChart` 컴포넌트
+- `dashboard-utils.ts` — 전월 대비 증감 계산 유틸리티 (calculateDelta, formatDelta, getDeltaColor)
+
+### Refactored
+- `admin/page.tsx` 185줄 → 68줄 (탭 컨테이너)
+- 상태/페칭 로직 `useAdminDashboard` 훅 추출 (260줄)
+
 ## [0.32.1] - 2026-03-07
 
 ### Refactored
