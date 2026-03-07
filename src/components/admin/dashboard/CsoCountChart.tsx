@@ -61,7 +61,7 @@ export const CsoCountChart = memo(function CsoCountChart({
       <div className="px-3 pt-3 pb-1">
         <h3 className="text-sm font-semibold">CSO 업체 수 추이</h3>
       </div>
-      <ChartContainer config={chartConfig} className="h-36 w-full">
+      <ChartContainer config={chartConfig} className="h-44 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             accessibilityLayer

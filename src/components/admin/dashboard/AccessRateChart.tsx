@@ -63,7 +63,7 @@ export const AccessRateChart = memo(function AccessRateChart({
       <div className="px-3 pt-3 pb-1">
         <h3 className="text-sm font-semibold">CSO 접속률 추이</h3>
       </div>
-      <ChartContainer config={chartConfig} className="h-36 w-full">
+      <ChartContainer config={chartConfig} className="h-44 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             accessibilityLayer

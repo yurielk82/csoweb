@@ -126,7 +126,7 @@ export default function AdminDashboardPage() {
 
           {/* 월별 정산 추이 (전폭) */}
           {kpiLoaded ? (
-            <MonthlyStatsChart data={enrichedChartData} title="월별 정산 추이" compact />
+            <MonthlyStatsChart data={enrichedChartData} title="월별 정산 추이" />
           ) : (
             <Skeleton className="h-64 rounded-xl" />
           )}
