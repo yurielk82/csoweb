@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { Loader2, CheckCircle, KeyRound, Mail, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,59 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { API_ROUTES } from '@/constants/api';
+import { useForgotPassword } from '@/hooks/useForgotPassword';
 
 export default function ForgotPasswordPage() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const [formData, setFormData] = useState({
-    business_number: '',
-    email: '',
-  });
-
-  const formatBusinessNumber = (value: string) => {
-    const digits = value.replace(/\D/g, '');
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-    return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5, 10)}`;
-  };
-
-  const handleBusinessNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatBusinessNumber(e.target.value);
-    setFormData({ ...formData, business_number: formatted });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      const response = await fetch(API_ROUTES.AUTH.FORGOT_PASSWORD, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          business_number: formData.business_number,
-          email: formData.email,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!result.success) {
-        setError(result.error || '비밀번호 재설정 요청에 실패했습니다.');
-        return;
-      }
-
-      setSuccess(true);
-    } catch (error) {
-      console.error('비밀번호 찾기 요청 중 오류:', error);
-      setError('비밀번호 재설정 요청 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    loading, error, success, formData, setFormData,
+    handleBusinessNumberChange, handleSubmit, handleRetry,
+  } = useForgotPassword();
 
   if (success) {
     return (
@@ -97,10 +50,7 @@ export default function ForgotPasswordPage() {
             <Button 
               variant="outline" 
               className="w-full"
-              onClick={() => {
-                setSuccess(false);
-                setFormData({ business_number: '', email: '' });
-              }}
+              onClick={handleRetry}
             >
               다시 요청하기
             </Button>

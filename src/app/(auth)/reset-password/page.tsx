@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { Loader2, CheckCircle, XCircle, KeyRound, Lock, Eye, EyeOff, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,130 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { API_ROUTES } from '@/constants/api';
-
-interface TokenInfo {
-  company_name: string;
-  business_number: string;
-  email: string;
-  expires_at: string;
-}
+import { useResetPassword } from '@/hooks/useResetPassword';
 
 function ResetPasswordContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const token = searchParams.get('token');
-  
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [tokenError, setTokenError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    new_password: '',
-    confirm_password: '',
-  });
-
-  // 비밀번호 강도 체크
-  const getPasswordStrength = (password: string) => {
-    if (!password) return { score: 0, label: '', color: '' };
-    
-    let score = 0;
-    if (password.length >= 6) score++;
-    if (password.length >= 8) score++;
-    if (/[A-Z]/.test(password)) score++;
-    if (/[0-9]/.test(password)) score++;
-    if (/[^A-Za-z0-9]/.test(password)) score++;
-    
-    if (score <= 2) return { score, label: '약함', color: 'bg-destructive' };
-    if (score <= 3) return { score, label: '보통', color: 'bg-warning' };
-    if (score <= 4) return { score, label: '강함', color: 'bg-success' };
-    return { score, label: '매우 강함', color: 'bg-success' };
-  };
-
-  const passwordStrength = getPasswordStrength(formData.new_password);
-
-  // 토큰 유효성 검증
-  useEffect(() => {
-    if (!token) {
-      setTokenError('유효하지 않은 접근입니다. 비밀번호 찾기를 다시 시도해주세요.');
-      setLoading(false);
-      return;
-    }
-
-    const verifyToken = async () => {
-      try {
-        const response = await fetch(`${API_ROUTES.AUTH.RESET_PASSWORD_VERIFY}?token=${token}`);
-        const result = await response.json();
-
-        if (!result.success) {
-          setTokenError(result.error || '유효하지 않은 토큰입니다.');
-          return;
-        }
-
-        setTokenInfo(result.data);
-      } catch (error) {
-        console.error('비밀번호 재설정 토큰 검증 중 오류:', error);
-        setTokenError('토큰 검증 중 오류가 발생했습니다.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    verifyToken();
-  }, [token]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    // 유효성 검사
-    if (formData.new_password.length < 6) {
-      setError('비밀번호는 6자 이상이어야 합니다.');
-      return;
-    }
-
-    if (formData.new_password !== formData.confirm_password) {
-      setError('비밀번호가 일치하지 않습니다.');
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      const response = await fetch(API_ROUTES.AUTH.RESET_PASSWORD_VERIFY, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token,
-          new_password: formData.new_password,
-          confirm_password: formData.confirm_password,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!result.success) {
-        setError(result.error || '비밀번호 변경에 실패했습니다.');
-        return;
-      }
-
-      setSuccess(true);
-      
-      // 3초 후 로그인 페이지로 리다이렉트
-      setTimeout(() => {
-        router.push('/login');
-      }, 3000);
-    } catch (error) {
-      console.error('비밀번호 재설정 처리 중 오류:', error);
-      setError('비밀번호 변경 중 오류가 발생했습니다.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const {
+    loading, submitting, error, tokenError, success,
+    tokenInfo, formData, setFormData, passwordStrength,
+    showPassword, showConfirmPassword,
+    toggleShowPassword, toggleShowConfirmPassword, handleSubmit,
+  } = useResetPassword();
 
   // 로딩 상태
   if (loading) {
@@ -275,7 +159,7 @@ function ResetPasswordContent() {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={toggleShowPassword}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -321,7 +205,7 @@ function ResetPasswordContent() {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  onClick={toggleShowConfirmPassword}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

@@ -1,106 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FileSpreadsheet, Loader2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { API_ROUTES } from '@/constants/api';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-
-interface CompanyInfo {
-  company_name: string;
-  ceo_name: string;
-  business_number: string;
-  address: string;
-  phone: string;
-  fax: string;
-  email: string;
-  website: string;
-}
+import { useLogin } from '@/hooks/useLogin';
 
 export default function LoginPage() {
-  const router = useRouter();
-  const { user, setUser } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [formData, setFormData] = useState({
-    business_number: '',
-    password: '',
-  });
-  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
-
-  // 로그인 성공 후 이동할 경로 (상태 반영 후 이동용)
-  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
-
-  // user 상태가 반영된 후에만 페이지 이동
-  useEffect(() => {
-    if (pendingRedirect && user) {
-      router.push(pendingRedirect);
-      setPendingRedirect(null);
-    }
-  }, [user, pendingRedirect, router]);
-
-  useEffect(() => {
-    // 회사 정보 로드
-    fetch(API_ROUTES.SETTINGS.COMPANY)
-      .then(res => res.json())
-      .then(result => {
-        if (result.success && result.data) {
-          setCompanyInfo(result.data);
-        }
-      })
-      .catch(console.error);
-  }, []);
-
-  const formatBusinessNumber = (value: string) => {
-    const digits = value.replace(/\D/g, '');
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-    return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5, 10)}`;
-  };
-
-  const handleBusinessNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatBusinessNumber(e.target.value);
-    setFormData({ ...formData, business_number: formatted });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      const response = await fetch(API_ROUTES.AUTH.LOGIN, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      const result = await response.json();
-
-      if (!result.success) {
-        setError(result.error || '로그인에 실패했습니다.');
-        setLoading(false);
-        return;
-      }
-
-      // 로그인 성공: AuthContext 상태 업데이트 (localStorage도 자동 저장됨)
-      if (result.data.user) {
-        setPendingRedirect(result.data.redirect);
-        setUser(result.data.user);
-        // useEffect에서 user가 반영되면 자동으로 이동
-      }
-      // loading은 이동 완료 전까지 유지 (UX)
-    } catch (error) {
-      console.error('로그인 처리 중 오류:', error);
-      setError('로그인 중 오류가 발생했습니다.');
-      setLoading(false);
-    }
-  };
+  const {
+    loading, error, formData, setFormData, companyInfo,
+    handleBusinessNumberChange, handleSubmit,
+  } = useLogin();
 
   return (
     <div className="login-glass-bg">

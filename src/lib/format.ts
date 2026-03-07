@@ -26,3 +26,37 @@ export function formatBusinessNumber(value: string): string {
   if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
   return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5, 10)}`;
 }
+
+// ── 비밀번호 강도 ──
+
+export interface PasswordStrength {
+  score: number;
+  label: string;
+  color: string;
+}
+
+const STRENGTH_LEVELS: Record<string, PasswordStrength> = {
+  weak: { score: 0, label: '약함', color: 'bg-destructive' },
+  moderate: { score: 0, label: '보통', color: 'bg-warning' },
+  strong: { score: 0, label: '강함', color: 'bg-success' },
+  veryStrong: { score: 0, label: '매우 강함', color: 'bg-success' },
+};
+
+const EMPTY_STRENGTH: PasswordStrength = { score: 0, label: '', color: '' };
+
+/** 비밀번호 강도 측정 (score 0~5) */
+export function getPasswordStrength(password: string): PasswordStrength {
+  if (!password) return EMPTY_STRENGTH;
+
+  let score = 0;
+  if (password.length >= 6) score++;
+  if (password.length >= 8) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  if (score <= 2) return { ...STRENGTH_LEVELS.weak, score };
+  if (score <= 3) return { ...STRENGTH_LEVELS.moderate, score };
+  if (score <= 4) return { ...STRENGTH_LEVELS.strong, score };
+  return { ...STRENGTH_LEVELS.veryStrong, score };
+}
