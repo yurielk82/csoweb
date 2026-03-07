@@ -10,6 +10,8 @@ interface MonthlySummaryResult {
     settlement_month: string;
     summaries: Record<string, number>;
     row_count: number;
+    distinct_clients: number;
+    distinct_products: number;
   }>;
   summary_columns: ColumnSetting[];
   latest_distinct: { clients: number; products: number } | null;
@@ -46,24 +48,29 @@ export async function getMonthlySummary(
     monthlyData = await settlementRepo.getMonthlySummaryByCSOMatching(matchedNames, summaryColumnKeys);
   }
 
-  // 정산월 기준 내림차순 정렬
-  const months = Array.from(monthlyData.entries())
-    .map(([month, data]) => ({
-      settlement_month: month,
-      summaries: data.summaries,
-      row_count: data.count,
-    }))
-    .sort((a, b) => b.settlement_month.localeCompare(a.settlement_month));
+  // 정산월 기준 내림차순 정렬 + 월별 거래처/제품 distinct 병렬 조회
+  const monthEntries = Array.from(monthlyData.entries())
+    .sort(([a], [b]) => b.localeCompare(a));
 
-  // 최신 월의 거래처/제품 distinct 카운트
-  let latestDistinct: { clients: number; products: number } | null = null;
-  if (months.length > 0) {
-    const latestMonth = months[0].settlement_month;
-    const totals = matchedNames
-      ? await settlementRepo.getTotalsByCSOMatching(matchedNames, latestMonth)
-      : await settlementRepo.getTotals(latestMonth);
-    latestDistinct = { clients: totals.거래처수, products: totals.제품수 };
-  }
+  const monthTotals = await Promise.all(
+    monthEntries.map(([month]) =>
+      matchedNames
+        ? settlementRepo.getTotalsByCSOMatching(matchedNames, month)
+        : settlementRepo.getTotals(month)
+    )
+  );
+
+  const months = monthEntries.map(([month, data], i) => ({
+    settlement_month: month,
+    summaries: data.summaries,
+    row_count: data.count,
+    distinct_clients: monthTotals[i].거래처수,
+    distinct_products: monthTotals[i].제품수,
+  }));
+
+  const latestDistinct = months.length > 0
+    ? { clients: months[0].distinct_clients, products: months[0].distinct_products }
+    : null;
 
   return { months, summary_columns: summaryColumns, latest_distinct: latestDistinct };
 }

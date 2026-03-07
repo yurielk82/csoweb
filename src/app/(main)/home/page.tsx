@@ -52,23 +52,25 @@ export default function UserHomePage() {
             settlement_month: string;
             summaries: Record<string, number>;
             row_count: number;
+            distinct_clients: number;
+            distinct_products: number;
           }>;
-          const latestDistinct = json.data.latest_distinct as { clients: number; products: number } | null;
 
           const transformed: MonthlyStatData[] = months.map(m => ({
             month: m.settlement_month,
             totalCommission: m.summaries['제약수수료_합계'] || 0,
+            clientCount: m.distinct_clients,
           }));
 
           setChartData(transformed);
 
-          if (transformed.length > 0) {
-            const sorted = [...transformed].sort((a, b) => b.month.localeCompare(a.month));
+          if (months.length > 0) {
+            const sorted = [...months].sort((a, b) => b.settlement_month.localeCompare(a.settlement_month));
             const latest = sorted[0];
-            setLatestMonth(latest.month);
-            setLatestCommission(latest.totalCommission);
-            setLatestClientCount(latestDistinct?.clients ?? 0);
-            setLatestProductCount(latestDistinct?.products ?? 0);
+            setLatestMonth(latest.settlement_month);
+            setLatestCommission(latest.summaries['제약수수료_합계'] || 0);
+            setLatestClientCount(latest.distinct_clients);
+            setLatestProductCount(latest.distinct_products);
           }
         }
       } catch (error) {
@@ -163,7 +165,7 @@ export default function UserHomePage() {
       {loading ? (
         <Skeleton className="h-64 rounded-xl" />
       ) : (
-        <MonthlyStatsChart data={chartData} title="월별 수수료 추이" />
+        <MonthlyStatsChart data={chartData} title="월별 추이" />
       )}
 
       {/* 바로가기 */}
