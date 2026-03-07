@@ -59,25 +59,14 @@ export default function UserHomePage() {
             distinct_clients?: number;
             distinct_products?: number;
           }>;
-          const summaryColumns = json.data.summary_columns as Array<{
-            column_key: string;
-            column_name: string;
-          }>;
           const latestDistinct = json.data.latest_distinct as { clients: number; products: number } | null;
 
-          // 차트 데이터 변환: 수수료만 표시 (금액 제외)
-          const commissionKeys = summaryColumns
-            .filter(c => c.column_name.includes('수수료'))
-            .map(c => c.column_key);
-
-          const transformed: MonthlyStatData[] = months.map(m => {
-            const totalCommission = commissionKeys.reduce((sum, k) => sum + (m.summaries[k] || 0), 0);
-            return {
-              month: m.settlement_month,
-              totalCommission,
-              csoCount: m.row_count,
-            };
-          });
+          // 차트 데이터 변환: 제약수수료_합계만 표시 (세금계산서 발행 금액)
+          const transformed: MonthlyStatData[] = months.map(m => ({
+            month: m.settlement_month,
+            totalCommission: m.summaries['제약수수료_합계'] || 0,
+            csoCount: m.row_count,
+          }));
 
           setChartData(transformed);
 

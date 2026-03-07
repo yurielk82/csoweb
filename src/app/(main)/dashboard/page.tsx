@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useSettlementData } from '@/hooks/useSettlementData';
+import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SettlementFilters } from '@/components/settlement/SettlementFilters';
 import { NoticeCard } from '@/components/settlement/NoticeCard';
@@ -18,6 +19,8 @@ import { SettlementTable } from '@/components/settlement/SettlementTable';
 import { SettlementPagination } from '@/components/settlement/SettlementPagination';
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.is_admin ?? false;
   const {
     initialLoading, dataLoading, downloading,
     data, columns, yearMonths, selectedMonth, selectedColumns,
@@ -26,7 +29,7 @@ export default function DashboardPage() {
     displayColumns, labelColumnIndex,
     setSelectedMonth, setSearchInput, setPage,
     fetchSettlements, handleSearch, handleKeyDown, toggleColumn, handleExport, replaceNoticeVars,
-  } = useSettlementData();
+  } = useSettlementData(isAdmin);
 
   // 1. 초기 로딩 중 — 셸 + 스켈레톤
   if (initialLoading) {

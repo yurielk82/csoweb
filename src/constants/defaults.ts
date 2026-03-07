@@ -9,6 +9,9 @@ import { DEFAULT_EMAIL_NOTIFICATIONS } from '@/domain/company/types';
 /** 클라이언트 UI 페이지 크기 (대시보드, 마스터 조회, 정산 API) */
 export const DEFAULT_PAGE_SIZE = 50;
 
+/** 일반 회원(CSO) 전체 데이터 조회용 — 페이지네이션 비활성 */
+export const CSO_FULL_PAGE_SIZE = 10000;
+
 /** Supabase 내부 전체 조회용 페이지 크기 (fetchAllPaginated) */
 export const SUPABASE_PAGE_SIZE = 1000;
 

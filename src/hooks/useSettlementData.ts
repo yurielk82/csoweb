@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Settlement, ColumnSetting } from '@/types';
-import { DEFAULT_PAGE_SIZE } from '@/constants/defaults';
+import { DEFAULT_PAGE_SIZE, CSO_FULL_PAGE_SIZE } from '@/constants/defaults';
 
 export interface SettlementResponse {
   settlements: Settlement[];
@@ -29,7 +29,8 @@ export interface NoticeSettings {
 
 export type ErrorType = 'network' | 'auth' | 'no_data' | 'no_matching' | null;
 
-export function useSettlementData() {
+export function useSettlementData(isAdmin: boolean) {
+  const pageSize = isAdmin ? DEFAULT_PAGE_SIZE : CSO_FULL_PAGE_SIZE;
   const [initialLoading, setInitialLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -54,7 +55,7 @@ export function useSettlementData() {
   useEffect(() => {
     const init = async () => {
       try {
-        const res = await fetch(`/api/dashboard/init?page=1&page_size=${DEFAULT_PAGE_SIZE}`);
+        const res = await fetch(`/api/dashboard/init?page=1&page_size=${pageSize}`);
 
         if (res.status === 401) {
           setError('로그인이 필요합니다. 다시 로그인해주세요.');
@@ -139,7 +140,7 @@ export function useSettlementData() {
       const params = new URLSearchParams({
         settlement_month: selectedMonth,
         page: page.toString(),
-        page_size: String(DEFAULT_PAGE_SIZE),
+        page_size: String(pageSize),
       });
       if (searchQuery) params.set('search', searchQuery);
 
