@@ -24,6 +24,7 @@ interface EmailMonthlyStat {
 
 interface EmailStatsChartProps {
   data: EmailMonthlyStat[];
+  compact?: boolean;
 }
 
 const RECENT_MONTHS_COUNT = 12;
@@ -43,6 +44,7 @@ const chartConfig: ChartConfig = {
 
 export const EmailStatsChart = memo(function EmailStatsChart({
   data,
+  compact,
 }: EmailStatsChartProps) {
   const chartData = useMemo(() => {
     const sorted = [...data].sort((a, b) => a.month.localeCompare(b.month));
@@ -59,7 +61,7 @@ export const EmailStatsChart = memo(function EmailStatsChart({
 
   if (chartData.length === 0) {
     return (
-      <div className="glass-chart-card flex flex-col items-center justify-center h-52 text-muted-foreground">
+      <div className={`glass-chart-card flex flex-col items-center justify-center ${compact ? 'h-32' : 'h-52'} text-muted-foreground`}>
         <Mail className="h-10 w-10 mb-2 opacity-40" />
         <p className="text-sm">이메일 발송 데이터가 없습니다</p>
       </div>
@@ -68,13 +70,15 @@ export const EmailStatsChart = memo(function EmailStatsChart({
 
   return (
     <div className="glass-chart-card">
-      <div className="px-5 pt-5 pb-3">
-        <h3 className="text-base font-semibold">이메일 발송 현황</h3>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          총 <span className="font-medium text-foreground">{totalSent.toLocaleString()}건</span> 발송
-        </p>
+      <div className={compact ? 'px-3 pt-3 pb-1' : 'px-5 pt-5 pb-3'}>
+        <h3 className={`font-semibold ${compact ? 'text-sm' : 'text-base'}`}>이메일 발송 현황</h3>
+        {!compact && (
+          <p className="text-sm text-muted-foreground mt-0.5">
+            총 <span className="font-medium text-foreground">{totalSent.toLocaleString()}건</span> 발송
+          </p>
+        )}
       </div>
-      <ChartContainer config={chartConfig} className="h-48 lg:h-52 w-full">
+      <ChartContainer config={chartConfig} className={`${compact ? 'h-24' : 'h-48 lg:h-52'} w-full`}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart accessibilityLayer data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
             <defs>
@@ -86,17 +90,19 @@ export const EmailStatsChart = memo(function EmailStatsChart({
             <CartesianGrid vertical={false} className="stroke-muted" />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: compact ? 10 : 12 }}
               tickLine={false}
-              tickMargin={10}
+              tickMargin={compact ? 4 : 10}
               axisLine={false}
             />
-            <YAxis
-              tick={{ fontSize: 11 }}
-              tickLine={false}
-              axisLine={false}
-              width={40}
-            />
+            {!compact && (
+              <YAxis
+                tick={{ fontSize: 11 }}
+                tickLine={false}
+                axisLine={false}
+                width={40}
+              />
+            )}
             <ChartTooltip
               content={
                 <ChartTooltipContent
@@ -108,7 +114,7 @@ export const EmailStatsChart = memo(function EmailStatsChart({
               dataKey="total"
               fill="url(#fillEmail)"
               radius={[6, 6, 0, 0]}
-              barSize={24}
+              barSize={compact ? 12 : 24}
             />
           </BarChart>
         </ResponsiveContainer>
