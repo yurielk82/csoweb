@@ -2,147 +2,112 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession, hashPassword, verifyPassword } from '@/lib/auth';
 import { getUserRepository } from '@/infrastructure/supabase';
 import { invalidateUserCache } from '@/lib/data-cache';
+import type { User } from '@/domain/user/types';
 
 export const dynamic = 'force-dynamic';
 
-// GET: 현재 사용자 정보 조회
+// ── Helpers ──
+
+const PROFILE_FIELDS = ['company_name', 'ceo_name', 'zipcode', 'address1', 'address2', 'phone1', 'phone2', 'email', 'email2'] as const;
+
+type ProfileField = typeof PROFILE_FIELDS[number];
+
+function buildUpdateData(
+  body: Record<string, string | undefined>,
+  user: User,
+): Record<string, string | undefined> {
+  const updateData: Record<string, string | undefined> = {};
+
+  for (const field of PROFILE_FIELDS) {
+    if (body[field] !== undefined && body[field] !== user[field as ProfileField]) {
+      updateData[field] = body[field];
+    }
+  }
+
+  return updateData;
+}
+
+async function handlePasswordChange(
+  currentPassword: string,
+  newPassword: string,
+  passwordHash: string,
+  businessNumber: string,
+  userRepo: ReturnType<typeof getUserRepository>,
+) {
+  const isValid = await verifyPassword(currentPassword, passwordHash);
+  if (!isValid) {
+    return NextResponse.json({ success: false, error: '현재 비밀번호가 일치하지 않습니다.' }, { status: 400 });
+  }
+
+  const newHash = await hashPassword(newPassword);
+  const success = await userRepo.updatePassword(businessNumber, newHash);
+
+  if (success) {
+    return NextResponse.json({ success: true, message: '비밀번호가 변경되었습니다.' });
+  }
+  return NextResponse.json({ success: false, error: '비밀번호 변경에 실패했습니다.' }, { status: 400 });
+}
+
+// ── Route handlers ──
+
 export async function GET() {
   try {
     const session = await getSession();
-    
     if (!session) {
-      return NextResponse.json(
-        { success: false, error: '로그인이 필요합니다.' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: '로그인이 필요합니다.' }, { status: 401 });
     }
-    
+
     const userRepo = getUserRepository();
     const user = await userRepo.findByBusinessNumber(session.business_number);
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: '사용자를 찾을 수 없습니다.' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: '사용자를 찾을 수 없습니다.' }, { status: 404 });
     }
 
-    // password_hash 제외하고 반환
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password_hash, ...userData } = user;
-    
-    return NextResponse.json({
-      success: true,
-      data: userData,
-    });
+    return NextResponse.json({ success: true, data: userData });
   } catch (error) {
     console.error('Get profile error:', error);
-    return NextResponse.json(
-      { success: false, error: '프로필 조회 중 오류가 발생했습니다.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: '프로필 조회 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
     const session = await getSession();
-    
     if (!session) {
-      return NextResponse.json(
-        { success: false, error: '로그인이 필요합니다.' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: '로그인이 필요합니다.' }, { status: 401 });
     }
-    
-    const { 
-      company_name, 
-      ceo_name,
-      zipcode,
-      address1,
-      address2,
-      phone1,
-      phone2,
-      email, 
-      email2,
-      current_password, 
-      new_password 
-    } = await request.json();
-    
+
+    const body = await request.json();
     const userRepo = getUserRepository();
     const user = await userRepo.findByBusinessNumber(session.business_number);
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: '사용자를 찾을 수 없습니다.' },
-        { status: 404 }
+      return NextResponse.json({ success: false, error: '사용자를 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    // 비밀번호 변경 (별도 처리)
+    if (body.current_password && body.new_password) {
+      return handlePasswordChange(
+        body.current_password, body.new_password,
+        user.password_hash, session.business_number, userRepo,
       );
     }
 
-    // 기본 정보 변경 (업체명, 대표자명, 주소, 연락처 등)
-    const updateData: Record<string, string | undefined> = {};
-    if (company_name !== undefined && company_name !== user.company_name) updateData.company_name = company_name;
-    if (ceo_name !== undefined && ceo_name !== user.ceo_name) updateData.ceo_name = ceo_name;
-    if (zipcode !== undefined && zipcode !== user.zipcode) updateData.zipcode = zipcode;
-    if (address1 !== undefined && address1 !== user.address1) updateData.address1 = address1;
-    if (address2 !== undefined && address2 !== user.address2) updateData.address2 = address2;
-    if (phone1 !== undefined && phone1 !== user.phone1) updateData.phone1 = phone1;
-    if (phone2 !== undefined && phone2 !== user.phone2) updateData.phone2 = phone2;
-    if (email !== undefined && email !== user.email) updateData.email = email;
-    if (email2 !== undefined && email2 !== user.email2) updateData.email2 = email2;
-    
-    // 비밀번호 변경 (별도 처리)
-    if (current_password && new_password) {
-      // 현재 비밀번호 확인
-      const isValid = await verifyPassword(current_password, user.password_hash);
-      if (!isValid) {
-        return NextResponse.json(
-          { success: false, error: '현재 비밀번호가 일치하지 않습니다.' },
-          { status: 400 }
-        );
-      }
-      
-      // 새 비밀번호 해시
-      const newHash = await hashPassword(new_password);
-      const success = await userRepo.updatePassword(session.business_number, newHash);
-      
-      if (success) {
-        return NextResponse.json({
-          success: true,
-          message: '비밀번호가 변경되었습니다.',
-        });
-      } else {
-        return NextResponse.json(
-          { success: false, error: '비밀번호 변경에 실패했습니다.' },
-          { status: 400 }
-        );
-      }
-    }
-    
     // 기본 정보 변경
+    const updateData = buildUpdateData(body, user);
     if (Object.keys(updateData).length > 0) {
       const success = await userRepo.update(session.business_number, updateData);
       if (success) {
         invalidateUserCache();
-        return NextResponse.json({
-          success: true,
-          message: '정보가 변경되었습니다.',
-        });
-      } else {
-        return NextResponse.json(
-          { success: false, error: '정보 변경에 실패했습니다.' },
-          { status: 400 }
-        );
+        return NextResponse.json({ success: true, message: '정보가 변경되었습니다.' });
       }
+      return NextResponse.json({ success: false, error: '정보 변경에 실패했습니다.' }, { status: 400 });
     }
-    
-    return NextResponse.json(
-      { success: false, error: '변경할 항목이 없습니다.' },
-      { status: 400 }
-    );
+
+    return NextResponse.json({ success: false, error: '변경할 항목이 없습니다.' }, { status: 400 });
   } catch (error) {
     console.error('Profile update error:', error);
-    return NextResponse.json(
-      { success: false, error: '프로필 수정 중 오류가 발생했습니다.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: '프로필 수정 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }
