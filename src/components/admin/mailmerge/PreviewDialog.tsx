@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { PreviewData, TestCompany } from '@/hooks/useMailMerge';
+import type { PreviewData, TestCompany } from '@/hooks/mailmerge';
 
 interface PreviewDialogProps {
   open: boolean;

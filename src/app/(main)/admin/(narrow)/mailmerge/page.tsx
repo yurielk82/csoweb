@@ -2,7 +2,7 @@
 
 import { MailPlus, Send, Eye, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useMailMerge } from '@/hooks/useMailMerge';
+import { useMailMerge } from '@/hooks/mailmerge';
 import { RecipientCard, EmailContentCard } from '@/components/admin/mailmerge/MailMergeForm';
 import { PreviewDialog } from '@/components/admin/mailmerge/PreviewDialog';
 import { ProgressPanel } from '@/components/admin/mailmerge/ProgressPanel';

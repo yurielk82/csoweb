@@ -1,88 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { DEFAULT_EMAIL_SEND_DELAY_MS } from '@/constants/defaults';
 import { API_ROUTES } from '@/constants/api';
 
-// ─── 타입 정의 ───────────────────────────────────────────
-
-export type SectionId = 'notice' | 'dashboard' | 'table' | 'body';
-
-export interface EmailSection {
-  id: SectionId;
-  label: string;
-  enabled: boolean;
-}
-
-export interface ProgressEvent {
-  type: 'start' | 'progress' | 'complete';
-  current?: number;
-  total: number;
-  sent?: number;
-  failed?: number;
-  company_name?: string;
-  status?: 'sent' | 'failed' | 'skipped';
-  error?: string;
-  delay?: number;
-  row_count?: number;
-}
-
-export interface SendLog {
-  company_name: string;
-  status: 'sent' | 'failed' | 'skipped';
-  error?: string;
-  row_count?: number;
-}
-
-export interface SendResult {
-  sent: number;
-  failed: number;
-  total: number;
-}
-
-export interface SendProgress {
-  current: number;
-  total: number;
-  sent: number;
-  failed: number;
-  delay: number;
-}
-
-export interface PreviewData {
-  subject: string;
-  contentHtml?: string;
-  hasSettlementData?: boolean;
-}
-
-export interface TestCompany {
-  business_number: string;
-  company_name: string;
-}
-
-// ─── 상수 ───────────────────────────────────────────────
-
-export const AVAILABLE_VARIABLES = [
-  { key: '업체명', description: '업체명' },
-  { key: '사업자번호', description: '사업자번호' },
-  { key: '이메일', description: '이메일 주소' },
-  { key: '대표자명', description: '회사 대표자 이름' },
-  { key: '정산월', description: '정산 년월 (예: 2026년 01월)' },
-  { key: '정산월+1', description: '정산 다음월 (예: 2월)' },
-  { key: '총_금액', description: '총 금액 (= 전체 금액 합계)' },
-  { key: '총_수수료', description: '제약수수료 합계 (= 세금계산서 발행 금액)' },
-  { key: '제약수수료_합계', description: '제약수수료 합계 (상세)' },
-  { key: '담당수수료_합계', description: '담당수수료 합계' },
-  { key: '총_수량', description: '총 수량 합계' },
-  { key: '데이터_건수', description: '정산 데이터 행 개수' },
-] as const;
-
-export const DEFAULT_SECTIONS: EmailSection[] = [
-  { id: 'notice', label: 'Notice (공지사항)', enabled: true },
-  { id: 'dashboard', label: '대시보드 (합계 요약)', enabled: true },
-  { id: 'table', label: '정산서 테이블', enabled: true },
-  { id: 'body', label: '메일 내용', enabled: true },
-];
-
-// ─── 훅 ─────────────────────────────────────────────────
+import type {
+  SectionId,
+  EmailSection,
+  SendLog,
+  SendResult,
+  SendProgress,
+  PreviewData,
+  TestCompany,
+} from './types';
+import { DEFAULT_SECTIONS, formatTime, getSectionsPayload } from './types';
+import { parseSSEStream } from './parseSSE';
 
 export function useMailMerge() {
   const { toast } = useToast();
@@ -122,7 +52,7 @@ export function useMailMerge() {
   const [sendLogs, setSendLogs] = useState<SendLog[]>([]);
   const [result, setResult] = useState<SendResult | null>(null);
 
-  // 정산월 옵션 (DB에서 실제 데이터가 있는 월만)
+  // 정산월 옵션
   const [yearMonthOptions, setYearMonthOptions] = useState<string[]>([]);
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -130,7 +60,6 @@ export function useMailMerge() {
 
   // ─── Effects ──────────────────────────────────────────
 
-  // mount 시 실제 정산 데이터가 있는 월 목록 조회
   useEffect(() => {
     async function fetchAvailableMonths() {
       try {
@@ -146,7 +75,6 @@ export function useMailMerge() {
     fetchAvailableMonths();
   }, []);
 
-  // 수신 대상이 all로 바뀌면 테이블 첨부 해제 + 섹션 초기화
   useEffect(() => {
     if (recipientType !== 'year_month') {
       setIncludeSettlementTable(false);
@@ -202,16 +130,6 @@ export function useMailMerge() {
     setSections(newSections);
   };
 
-  const getSectionsPayload = () =>
-    sections.map(s => ({ id: s.id, enabled: s.enabled }));
-
-  const formatTime = (seconds: number): string => {
-    if (seconds < 60) return `${seconds}초`;
-    const min = Math.floor(seconds / 60);
-    const sec = seconds % 60;
-    return sec > 0 ? `${min}분 ${sec}초` : `${min}분`;
-  };
-
   // ─── 계산값 ───────────────────────────────────────────
 
   const progressPercent = progress ? Math.round((progress.current / progress.total) * 100) : 0;
@@ -221,6 +139,7 @@ export function useMailMerge() {
   // ─── 핸들러 ───────────────────────────────────────────
 
   const fetchPreview = useCallback(async (testBn?: string) => {
+    const sectionsPayload = includeSettlementTable ? getSectionsPayload(sections) : undefined;
     const previewRes = await fetch(API_ROUTES.EMAIL.MAILMERGE, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -229,7 +148,7 @@ export function useMailMerge() {
         body,
         year_month: recipientType === 'year_month' ? selectedYearMonth : undefined,
         include_settlement_table: includeSettlementTable,
-        sections: includeSettlementTable ? getSectionsPayload() : undefined,
+        sections: sectionsPayload,
         test_business_number: testBn && testBn !== '__sample__' ? testBn : undefined,
       }),
     });
@@ -287,6 +206,7 @@ export function useMailMerge() {
   const handleTestSend = async () => {
     setTestSending(true);
     try {
+      const sectionsPayload = includeSettlementTable ? getSectionsPayload(sections) : undefined;
       const response = await fetch(API_ROUTES.EMAIL.MAILMERGE, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -295,7 +215,7 @@ export function useMailMerge() {
           body,
           year_month: recipientType === 'year_month' ? selectedYearMonth : undefined,
           include_settlement_table: includeSettlementTable,
-          sections: includeSettlementTable ? getSectionsPayload() : undefined,
+          sections: sectionsPayload,
           test_business_number: selectedTestBn && selectedTestBn !== '__sample__' ? selectedTestBn : undefined,
         }),
       });
@@ -326,6 +246,7 @@ export function useMailMerge() {
     abortControllerRef.current = abortController;
 
     try {
+      const sectionsPayload = includeSettlementTable ? getSectionsPayload(sections) : undefined;
       const recipientsList = recipientType === 'all'
         ? ['all']
         : [`year_month:${selectedYearMonth}`];
@@ -339,48 +260,15 @@ export function useMailMerge() {
           body,
           year_month: recipientType === 'year_month' ? selectedYearMonth : undefined,
           include_settlement_table: includeSettlementTable,
-          sections: includeSettlementTable ? getSectionsPayload() : undefined,
+          sections: sectionsPayload,
         }),
         signal: abortController.signal,
       });
 
       if (response.headers.get('Content-Type')?.includes('text/event-stream')) {
         const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
         if (!reader) throw new Error('응답 스트림을 읽을 수 없습니다.');
-
-        let buffer = '';
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            const dataMatch = line.match(/^data: (.+)$/m);
-            if (!dataMatch) continue;
-            try {
-              const event: ProgressEvent = JSON.parse(dataMatch[1]);
-              if (event.type === 'start') {
-                setProgress({ current: 0, total: event.total, sent: 0, failed: 0, delay: event.delay || DEFAULT_EMAIL_SEND_DELAY_MS });
-              } else if (event.type === 'progress') {
-                setProgress(prev => ({
-                  current: event.current || 0, total: event.total,
-                  sent: event.sent || 0, failed: event.failed || 0, delay: prev?.delay || DEFAULT_EMAIL_SEND_DELAY_MS,
-                }));
-                if (event.company_name && event.status) {
-                  setSendLogs(prev => [...prev, {
-                    company_name: event.company_name!, status: event.status!,
-                    error: event.error, row_count: event.row_count,
-                  }]);
-                }
-              } else if (event.type === 'complete') {
-                setResult({ sent: event.sent || 0, failed: event.failed || 0, total: event.total });
-              }
-            } catch { /* SSE JSON 파싱: 불완전한 줄은 정상적으로 무시 */ }
-          }
-        }
+        await parseSSEStream(reader, { setProgress, setSendLogs, setResult });
       } else {
         const data = await response.json();
         if (!data.success) {
@@ -405,53 +293,25 @@ export function useMailMerge() {
 
   return {
     // 수신 대상 상태
-    recipientType,
-    setRecipientType,
-    selectedYearMonth,
-    setSelectedYearMonth,
-    includeSettlementTable,
-    setIncludeSettlementTable,
-    sections,
-    yearMonthOptions,
-
+    recipientType, setRecipientType,
+    selectedYearMonth, setSelectedYearMonth,
+    includeSettlementTable, setIncludeSettlementTable,
+    sections, yearMonthOptions,
     // 메일 내용 상태
-    subject,
-    setSubject,
-    body,
-    setBody,
-
+    subject, setSubject,
+    body, setBody,
     // 미리보기 상태
-    preview,
-    previewOpen,
-    setPreviewOpen,
-    testSending,
-    testCompanies,
-    selectedTestBn,
-
+    preview, previewOpen, setPreviewOpen,
+    testSending, testCompanies, selectedTestBn,
     // 수신 대상 수
-    recipientCount,
-    loadingCount,
-
+    recipientCount, loadingCount,
     // 발송 상태
-    sending,
-    progress,
-    sendLogs,
-    result,
-    logsEndRef,
-
+    sending, progress, sendLogs, result, logsEndRef,
     // 계산값
-    progressPercent,
-    remainingTime,
-
+    progressPercent, remainingTime,
     // 핸들러
-    insertVariable,
-    toggleSection,
-    moveSection,
-    handlePreview,
-    handleTestCompanyChange,
-    handleTestSend,
-    handleSend,
-    handleCancel,
-    formatTime,
+    insertVariable, toggleSection, moveSection,
+    handlePreview, handleTestCompanyChange, handleTestSend,
+    handleSend, handleCancel, formatTime,
   };
 }

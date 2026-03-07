@@ -1,5 +1,5 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { SendResult as SendResultType } from '@/hooks/useMailMerge';
+import type { SendResult as SendResultType } from '@/hooks/mailmerge';
 
 interface SendResultProps {
   result: SendResultType;

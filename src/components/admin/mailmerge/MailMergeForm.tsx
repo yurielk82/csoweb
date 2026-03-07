@@ -14,7 +14,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { AVAILABLE_VARIABLES, type EmailSection, type SectionId } from '@/hooks/useMailMerge';
+import { AVAILABLE_VARIABLES, type EmailSection, type SectionId } from '@/hooks/mailmerge';
 
 // ─── Props ──────────────────────────────────────────────
 

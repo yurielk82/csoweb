@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { SendLog, SendProgress, SendResult } from '@/hooks/useMailMerge';
+import type { SendLog, SendProgress, SendResult } from '@/hooks/mailmerge';
 
 interface ProgressPanelProps {
   sending: boolean;

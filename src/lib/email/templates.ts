@@ -1,131 +1,15 @@
 // ============================================
-// Email Service (Dual Provider: Resend + SMTP)
+// Email Templates (HTML)
 // ============================================
 
-import { Resend } from 'resend';
-import nodemailer from 'nodemailer';
-import { getEmailLogRepository, getCompanyRepository } from '@/infrastructure/supabase';
-import type { EmailTemplateType } from '@/types';
-import type { EmailProvider, EmailNotifications } from '@/domain/company/types';
-import { DEFAULT_EMAIL_NOTIFICATIONS } from '@/domain/company/types';
-import {
-  DEFAULT_SMTP_PORT,
-  DEFAULT_EMAIL_SEND_DELAY_MS,
-  EMAIL_CACHE_TTL_MS,
-} from '@/constants/defaults';
-
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null;
+import type { EmailSettings } from './settings';
 
 const DEFAULT_FROM_EMAIL = process.env.EMAIL_FROM || 'onboarding@resend.dev';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@cso-portal.com';
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
-// ============================================
-// 이메일 설정 캐시 (30초 TTL)
-// ============================================
+// ── 발신자 이메일 생성 ──
 
-interface EmailSettings {
-  provider: EmailProvider;
-  smtp_host: string;
-  smtp_port: number;
-  smtp_secure: boolean;
-  smtp_user: string;
-  smtp_password: string;
-  smtp_from_name: string;
-  smtp_from_email: string;
-  resend_from_email: string;
-  test_recipient_email: string;
-  email_send_delay_ms: number;
-  email_notifications: EmailNotifications;
-}
-
-let _cachedSettings: EmailSettings | null = null;
-let _cacheTimestamp = 0;
-const CACHE_TTL_MS = EMAIL_CACHE_TTL_MS;
-
-async function getEmailSettings(): Promise<EmailSettings> {
-  const now = Date.now();
-  if (_cachedSettings && now - _cacheTimestamp < CACHE_TTL_MS) {
-    return _cachedSettings;
-  }
-
-  const info = await getCompanyRepository().get();
-  _cachedSettings = {
-    provider: info.email_provider || 'resend',
-    smtp_host: info.smtp_host || '',
-    smtp_port: info.smtp_port ?? DEFAULT_SMTP_PORT,
-    smtp_secure: info.smtp_secure ?? true,
-    smtp_user: info.smtp_user || '',
-    smtp_password: info.smtp_password || '',
-    smtp_from_name: info.smtp_from_name || '',
-    smtp_from_email: info.smtp_from_email || '',
-    resend_from_email: info.resend_from_email || '',
-    test_recipient_email: info.test_recipient_email || '',
-    email_send_delay_ms: info.email_send_delay_ms ?? DEFAULT_EMAIL_SEND_DELAY_MS,
-    email_notifications: info.email_notifications ?? { ...DEFAULT_EMAIL_NOTIFICATIONS },
-  };
-  _cacheTimestamp = now;
-  return _cachedSettings;
-}
-
-export function invalidateEmailSettingsCache(): void {
-  _cachedSettings = null;
-  _cacheTimestamp = 0;
-}
-
-export async function getEmailSendDelay(): Promise<number> {
-  const settings = await getEmailSettings();
-  return settings.email_send_delay_ms;
-}
-
-export async function getTestRecipientEmail(fallbackEmail: string): Promise<string> {
-  const settings = await getEmailSettings();
-  return settings.test_recipient_email || fallbackEmail;
-}
-
-// ============================================
-// SMTP 전송
-// ============================================
-
-async function sendViaSMTP(
-  settings: EmailSettings,
-  from: string,
-  to: string,
-  subject: string,
-  html: string
-): Promise<void> {
-  const transporter = nodemailer.createTransport({
-    host: settings.smtp_host,
-    port: settings.smtp_port,
-    secure: settings.smtp_secure,
-    auth: {
-      user: settings.smtp_user,
-      pass: settings.smtp_password,
-    },
-    authMethod: 'LOGIN',
-    tls: {
-      rejectUnauthorized: false,
-    },
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 30_000,
-  });
-
-  await transporter.sendMail({
-    from,
-    to,
-    subject,
-    html,
-  });
-}
-
-// ============================================
-// 발신자 이메일 생성
-// ============================================
-
-function getFromEmail(companyName: string, resendFromEmail?: string): string {
+export function getFromEmail(companyName: string, resendFromEmail?: string): string {
   const senderName = companyName || 'CSO 정산서 포털';
   const baseEmail = resendFromEmail || DEFAULT_FROM_EMAIL;
   const emailMatch = baseEmail.match(/<(.+)>/);
@@ -133,17 +17,15 @@ function getFromEmail(companyName: string, resendFromEmail?: string): string {
   return `${senderName} <${emailAddress}>`;
 }
 
-function getSmtpFromEmail(settings: EmailSettings): string {
+export function getSmtpFromEmail(settings: EmailSettings): string {
   const name = settings.smtp_from_name || 'CSO 정산서 포털';
   const email = settings.smtp_from_email || settings.smtp_user;
   return `${name} <${email}>`;
 }
 
-// ============================================
-// 회사 정보 타입
-// ============================================
+// ── 회사 푸터 ──
 
-interface CompanyFooterInfo {
+export interface CompanyFooterInfo {
   company_name: string;
   ceo_name: string;
   business_number: string;
@@ -154,7 +36,6 @@ interface CompanyFooterInfo {
   website: string;
 }
 
-// 공통 이메일 푸터 생성
 function generateEmailFooter(companyInfo: CompanyFooterInfo): string {
   const currentYear = new Date().getFullYear();
 
@@ -213,11 +94,9 @@ function generateEmailFooter(companyInfo: CompanyFooterInfo): string {
   `;
 }
 
-// ============================================
-// Email Templates
-// ============================================
+// ── 템플릿 함수 ──
 
-function getRegistrationRequestEmail(data: {
+export function getRegistrationRequestEmail(data: {
   business_number: string;
   company_name: string;
   email: string;
@@ -300,7 +179,7 @@ function getRegistrationRequestEmail(data: {
   };
 }
 
-function getApprovalCompleteEmail(data: {
+export function getApprovalCompleteEmail(data: {
   company_name: string;
   business_number: string;
 }, companyInfo: CompanyFooterInfo) {
@@ -377,7 +256,7 @@ function getApprovalCompleteEmail(data: {
   };
 }
 
-function getApprovalRejectedEmail(data: {
+export function getApprovalRejectedEmail(data: {
   company_name: string;
   reason?: string;
 }, companyInfo: CompanyFooterInfo) {
@@ -443,7 +322,7 @@ function getApprovalRejectedEmail(data: {
   };
 }
 
-function getSettlementUploadedEmail(data: {
+export function getSettlementUploadedEmail(data: {
   company_name: string;
   year_month: string;
   count: number;
@@ -527,7 +406,7 @@ function getSettlementUploadedEmail(data: {
   };
 }
 
-function getPasswordResetEmail(data: {
+export function getPasswordResetEmail(data: {
   company_name: string;
   business_number: string;
   reset_token: string;
@@ -660,7 +539,7 @@ function getPasswordResetEmail(data: {
   };
 }
 
-function getMailMergeEmail(data: {
+export function getMailMergeEmail(data: {
   subject: string;
   contentHtml: string;
   hasWideContent?: boolean;
@@ -706,306 +585,4 @@ function getMailMergeEmail(data: {
 </html>
     `,
   };
-}
-
-// ============================================
-// 이메일 섹션 빌더 (메일머지에서 사용)
-// ============================================
-
-export type EmailSectionId = 'notice' | 'dashboard' | 'table' | 'body';
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-export function buildBodyHtml(body: string): string {
-  const lines = body.split('\n').map(line =>
-    line.trim() ? `<p style="margin: 0 0 12px;">${escapeHtml(line)}</p>` : '<br>'
-  ).join('');
-  return `<div style="color: #374151; font-size: 14px; line-height: 1.8; padding: 0 20px;">${lines}</div>`;
-}
-
-export function buildNoticeHtml(notice: string): string {
-  if (!notice) return '';
-  return `<div style="margin:16px 20px;padding:12px 16px;border-left:4px solid #f59e0b;background:#fefce8;">
-    <p style="font-weight:bold;font-size:13px;color:#92400e;margin:0 0 8px;">[ Notice ]</p>
-    <div style="font-size:12px;color:#78350f;line-height:1.8;white-space:pre-line;">${escapeHtml(notice)}</div>
-  </div>`;
-}
-
-export function buildDashboardHtml(summary: {
-  총_금액: number;
-  총_수수료: number;
-  데이터_건수: number;
-  총_수량: number;
-}): string {
-  const fmt = (v: number) => v.toLocaleString('ko-KR');
-  return `<div style="margin:16px 20px;padding:16px 20px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
-    <div style="font-size:13px;font-weight:600;color:#334155;">★ 총 수수료 (세금계산서 발행 금액)</div>
-    <div style="font-size:18px;font-weight:700;color:#1e40af;margin-top:6px;">${fmt(summary.총_수수료)}원</div>
-  </div>`;
-}
-
-export function buildDataTableHtml(params: {
-  columns: { key: string; name: string; isNumeric: boolean }[];
-  rows: Record<string, unknown>[];
-  company_name: string;
-  year_month: string;
-}): string {
-  const formatNumber = (val: unknown): string => {
-    if (val === null || val === undefined || val === '') return '';
-    const num = Number(val);
-    if (isNaN(num)) return String(val);
-    return num.toLocaleString('ko-KR');
-  };
-
-  const headerCells = params.columns
-    .map(col => `<th style="border:1px solid #999;padding:4px 8px;background:#e2e8f0;font-size:12px;white-space:nowrap;text-align:center;">${col.name}</th>`)
-    .join('');
-
-  const bodyRows = params.rows.map((row, i) => {
-    const bgColor = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-    const cells = params.columns.map(col => {
-      const val = row[col.key];
-      const align = col.isNumeric ? 'right' : 'left';
-      const display = col.isNumeric ? formatNumber(val) : (val ?? '');
-      return `<td style="border:1px solid #ccc;padding:3px 6px;font-size:11px;white-space:nowrap;text-align:${align};">${display}</td>`;
-    }).join('');
-    return `<tr style="background:${bgColor};">${cells}</tr>`;
-  }).join('');
-
-  return `<div style="margin:16px 0;padding:0 20px;">
-    <p style="font-size:14px;font-weight:bold;color:#1e293b;margin:0 0 8px;">
-      ${params.company_name} - ${params.year_month} 정산서
-    </p>
-    <div style="overflow-x:auto;">
-      <table cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:monospace,sans-serif;">
-        <thead><tr>${headerCells}</tr></thead>
-        <tbody>${bodyRows}</tbody>
-      </table>
-    </div>
-  </div>`;
-}
-
-// ============================================
-// Send email function (프로바이더 스위칭)
-// ============================================
-
-export async function sendEmail(
-  to: string,
-  templateType: EmailTemplateType,
-  data: Record<string, unknown>
-): Promise<{ success: boolean; error?: string }> {
-  // 알림 토글 체크 (mail_merge는 수동 발송이므로 항상 허용)
-  if (templateType !== 'mail_merge') {
-    try {
-      const settings = await getEmailSettings();
-      const key = templateType as keyof EmailNotifications;
-      if (key in settings.email_notifications && !settings.email_notifications[key]) {
-        console.warn(`[Email Skip] ${templateType} 알림이 비활성화되어 발송하지 않습니다.`);
-        return { success: true };
-      }
-    } catch (error) {
-      console.warn('[Email] 알림 설정 조회 실패, 기본값(전부 활성)으로 진행:', error);
-    }
-  }
-
-  // 회사 정보 조회
-  let companyInfo: CompanyFooterInfo;
-  let emailSettings: EmailSettings;
-  try {
-    const info = await getCompanyRepository().get();
-    companyInfo = {
-      company_name: info.company_name,
-      ceo_name: info.ceo_name,
-      business_number: info.business_number,
-      address: info.address,
-      phone: info.phone,
-      fax: info.fax,
-      email: info.email,
-      website: info.website,
-    };
-    emailSettings = await getEmailSettings();
-  } catch (error) {
-    console.warn('[Email] 회사 정보 조회 실패, 기본값으로 진행:', error);
-    companyInfo = {
-      company_name: 'CSO 정산서 포털',
-      ceo_name: '',
-      business_number: '',
-      address: '',
-      phone: '',
-      fax: '',
-      email: '',
-      website: '',
-    };
-    emailSettings = {
-      provider: 'resend',
-      smtp_host: '',
-      smtp_port: DEFAULT_SMTP_PORT,
-      smtp_secure: true,
-      smtp_user: '',
-      smtp_password: '',
-      smtp_from_name: '',
-      smtp_from_email: '',
-      resend_from_email: '',
-      test_recipient_email: '',
-      email_send_delay_ms: DEFAULT_EMAIL_SEND_DELAY_MS,
-      email_notifications: { ...DEFAULT_EMAIL_NOTIFICATIONS },
-    };
-  }
-
-  let emailContent: { subject: string; html: string };
-
-  switch (templateType) {
-    case 'registration_request':
-      emailContent = getRegistrationRequestEmail(
-        data as Parameters<typeof getRegistrationRequestEmail>[0],
-        companyInfo
-      );
-      break;
-    case 'approval_complete':
-      emailContent = getApprovalCompleteEmail(
-        data as Parameters<typeof getApprovalCompleteEmail>[0],
-        companyInfo
-      );
-      break;
-    case 'approval_rejected':
-      emailContent = getApprovalRejectedEmail(
-        data as Parameters<typeof getApprovalRejectedEmail>[0],
-        companyInfo
-      );
-      break;
-    case 'settlement_uploaded':
-      emailContent = getSettlementUploadedEmail(
-        data as Parameters<typeof getSettlementUploadedEmail>[0],
-        companyInfo
-      );
-      break;
-    case 'password_reset':
-      emailContent = getPasswordResetEmail(
-        data as Parameters<typeof getPasswordResetEmail>[0],
-        companyInfo
-      );
-      break;
-    case 'mail_merge':
-      emailContent = getMailMergeEmail(
-        data as Parameters<typeof getMailMergeEmail>[0],
-        companyInfo
-      );
-      break;
-    default:
-      return { success: false, error: 'Unknown template type' };
-  }
-
-  // Create log entry
-  const log = await getEmailLogRepository().create({
-    recipient_email: to,
-    subject: emailContent.subject,
-    template_type: templateType,
-  });
-
-  // 프로바이더별 발송
-  if (emailSettings.provider === 'smtp') {
-    const fromEmail = getSmtpFromEmail(emailSettings);
-
-    if (!emailSettings.smtp_host || !emailSettings.smtp_user) {
-      console.error('[Email Error] SMTP 설정이 불완전합니다.');
-      await getEmailLogRepository().update(log.id, { status: 'failed', error_message: 'SMTP 설정 미완료' });
-      return { success: false, error: 'SMTP 설정이 불완전합니다.' };
-    }
-
-    try {
-      await sendViaSMTP(emailSettings, fromEmail, to, emailContent.subject, emailContent.html);
-      await getEmailLogRepository().update(log.id, { status: 'sent' });
-      return { success: true };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown SMTP error';
-      console.error(`[Email SMTP Error] From: ${fromEmail}, To: ${to}, Error: ${errorMessage}`);
-      await getEmailLogRepository().update(log.id, { status: 'failed', error_message: errorMessage });
-      return { success: false, error: errorMessage };
-    }
-  }
-
-  // Resend 프로바이더
-  const fromEmail = getFromEmail(companyInfo.company_name, emailSettings.resend_from_email);
-
-  if (!resend) {
-    const msg = 'RESEND_API_KEY가 설정되지 않았습니다.';
-    console.error(`[Email Error] ${msg} From: ${fromEmail}, To: ${to}`);
-    await getEmailLogRepository().update(log.id, { status: 'failed', error_message: msg });
-    return { success: false, error: msg };
-  }
-
-  try {
-    const { error: resendError } = await resend.emails.send({
-      from: fromEmail,
-      to,
-      subject: emailContent.subject,
-      html: emailContent.html,
-    });
-
-    if (resendError) {
-      console.error(`[Email Resend Error] From: ${fromEmail}, To: ${to}, Error: ${resendError.message}`);
-      await getEmailLogRepository().update(log.id, {
-        status: 'failed',
-        error_message: resendError.message,
-      });
-      return { success: false, error: resendError.message };
-    }
-
-    await getEmailLogRepository().update(log.id, { status: 'sent' });
-    return { success: true };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[Email Error] From: ${fromEmail}, To: ${to}, Error: ${errorMessage}`);
-    await getEmailLogRepository().update(log.id, {
-      status: 'failed',
-      error_message: errorMessage
-    });
-    return { success: false, error: errorMessage };
-  }
-}
-
-// Send notification to admin
-export async function notifyAdmin(
-  templateType: EmailTemplateType,
-  data: Record<string, unknown>
-): Promise<void> {
-  await sendEmail(ADMIN_EMAIL, templateType, data);
-}
-
-// Bulk send for settlement upload notification
-export async function sendSettlementNotifications(
-  recipients: Array<{ email: string; company_name: string }>,
-  yearMonth: string,
-  counts: Map<string, number>
-): Promise<{ sent: number; failed: number }> {
-  let sent = 0;
-  let failed = 0;
-
-  const delay = await getEmailSendDelay();
-
-  for (const recipient of recipients) {
-    const count = counts.get(recipient.email) || 0;
-    const result = await sendEmail(recipient.email, 'settlement_uploaded', {
-      company_name: recipient.company_name,
-      year_month: yearMonth,
-      count,
-    });
-
-    if (result.success) {
-      sent++;
-    } else {
-      failed++;
-    }
-
-    await new Promise(resolve => setTimeout(resolve, delay));
-  }
-
-  return { sent, failed };
 }
