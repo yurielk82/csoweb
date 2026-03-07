@@ -1,6 +1,6 @@
 import { Loader2, CheckCircle, RefreshCw, ShieldCheck, AlertTriangle, XCircle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { BizVerification, BizVerificationStatus } from '@/hooks/useRegister';
+import type { BizVerification } from '@/hooks/useRegister';
 
 const BIZ_STATUS_CONFIG: Record<string, {
   label: string;
