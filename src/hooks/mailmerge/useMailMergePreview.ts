@@ -16,7 +16,9 @@ interface PreviewDeps {
   toast: ToastFn;
 }
 
-function buildMailPayload(
+// ── Payload builders (shared with useMailMergeSend) ──
+
+export function buildMailPayload(
   subject: string,
   body: string,
   recipientType: 'all' | 'year_month',
@@ -36,7 +38,7 @@ function buildMailPayload(
   };
 }
 
-function buildRecipientParams(
+export function buildRecipientParams(
   recipientType: 'all' | 'year_month',
   selectedYearMonth: string,
 ): URLSearchParams | null {
@@ -52,7 +54,34 @@ function buildRecipientParams(
   return params;
 }
 
-export { buildMailPayload, buildRecipientParams };
+// ── 테스트 발송 (훅 바깥 헬퍼) ──
+
+async function sendTestEmail(deps: PreviewDeps, selectedTestBn: string): Promise<boolean> {
+  const { subject, body, recipientType, selectedYearMonth, includeSettlementTable, sections, toast } = deps;
+  try {
+    const payload = buildMailPayload(subject, body, recipientType, selectedYearMonth, includeSettlementTable, sections, {
+      test_business_number: selectedTestBn && selectedTestBn !== '__sample__' ? selectedTestBn : undefined,
+    });
+    const response = await fetch(API_ROUTES.EMAIL.MAILMERGE, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    if (data.success) {
+      toast({ title: '테스트 발송 완료', description: `${data.data.email}로 "${data.data.company_name}" 데이터가 발송되었습니다.` });
+      return true;
+    }
+    toast({ variant: 'destructive', title: '테스트 발송 실패', description: data.error });
+    return false;
+  } catch (error) {
+    console.error('테스트 발송 오류:', error);
+    toast({ variant: 'destructive', title: '오류', description: '테스트 발송 중 오류가 발생했습니다.' });
+    return false;
+  }
+}
+
+// ── Hook ──
 
 export function useMailMergePreview(deps: PreviewDeps) {
   const { subject, body, recipientType, selectedYearMonth, includeSettlementTable, sections, toast } = deps;
@@ -89,11 +118,8 @@ export function useMailMergePreview(deps: PreviewDeps) {
       ]);
       const listData = await listRes.json();
 
-      if (previewData.success) {
-        setPreviewOpen(true);
-      } else {
-        toast({ variant: 'destructive', title: '미리보기 실패', description: previewData.error });
-      }
+      if (previewData.success) setPreviewOpen(true);
+      else toast({ variant: 'destructive', title: '미리보기 실패', description: previewData.error });
 
       if (listData.success && listData.data.companies) {
         setTestCompanies(listData.data.companies);
@@ -107,36 +133,14 @@ export function useMailMergePreview(deps: PreviewDeps) {
 
   const handleTestCompanyChange = async (bn: string) => {
     setSelectedTestBn(bn);
-    try {
-      await fetchPreview(bn);
-    } catch (error) {
-      console.error('미리보기 갱신 오류:', error);
-    }
+    try { await fetchPreview(bn); }
+    catch (error) { console.error('미리보기 갱신 오류:', error); }
   };
 
   const handleTestSend = async () => {
     setTestSending(true);
-    try {
-      const payload = buildMailPayload(subject, body, recipientType, selectedYearMonth, includeSettlementTable, sections, {
-        test_business_number: selectedTestBn && selectedTestBn !== '__sample__' ? selectedTestBn : undefined,
-      });
-      const response = await fetch(API_ROUTES.EMAIL.MAILMERGE, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
-      if (data.success) {
-        toast({ title: '테스트 발송 완료', description: `${data.data.email}로 "${data.data.company_name}" 데이터가 발송되었습니다.` });
-      } else {
-        toast({ variant: 'destructive', title: '테스트 발송 실패', description: data.error });
-      }
-    } catch (error) {
-      console.error('테스트 발송 오류:', error);
-      toast({ variant: 'destructive', title: '오류', description: '테스트 발송 중 오류가 발생했습니다.' });
-    } finally {
-      setTestSending(false);
-    }
+    try { await sendTestEmail(deps, selectedTestBn); }
+    finally { setTestSending(false); }
   };
 
   return {
