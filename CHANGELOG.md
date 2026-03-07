@@ -2,6 +2,20 @@
 
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 
+## [0.34.0] - 2026-03-07
+
+### Fixed
+- 관리자 대시보드 접속률 분모: `cso-companies` API 교차 필터 → `months[].csoCount` 직접 사용 (API 2개 호출 제거)
+- 로그인 실패 카운트 `incrementFailedLogin` — SELECT/UPDATE 실패 시 에러 로깅 추가
+
+### Added
+- 일반 회원 엑셀 다운로드 일일 5회 제한 (`export_logs` 테이블 + 429 응답 + toast 알림)
+- `MAX_DAILY_EXPORTS` 상수 (`constants/defaults.ts`)
+- 마이그레이션: `20260307_add_export_logs.sql`
+
+### Removed
+- `useAdminDashboard`: `allUsers`, `csoBusinessNumbers`, `filteredCsoBusinessNumbers`, `fetchCsoCompanies` 제거
+
 ## [0.33.0] - 2026-03-07
 
 ### Added

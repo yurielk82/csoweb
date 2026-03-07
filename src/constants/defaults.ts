@@ -48,6 +48,9 @@ export const MAX_FAILED_LOGIN_ATTEMPTS = 15;
 /** bcrypt 해싱 라운드 */
 export const BCRYPT_SALT_ROUNDS = 12;
 
+/** 일반 회원 엑셀 다운로드 일일 제한 횟수 */
+export const MAX_DAILY_EXPORTS = 5;
+
 // ── 정산 ──
 /** 합계/검색/그룹핑에 항상 필요한 컬럼 (DB 쿼리 select에 항상 포함) */
 export const ALWAYS_NEEDED_COLUMNS = [

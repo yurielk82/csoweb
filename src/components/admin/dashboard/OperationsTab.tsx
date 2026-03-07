@@ -45,7 +45,6 @@ export const OperationsTab = memo(function OperationsTab({ data }: OperationsTab
     systemLoaded,
     selectedMonth,
     months,
-    filteredCsoBusinessNumbers,
     emailStats,
     badgeMap,
     pendingCount,
@@ -61,7 +60,7 @@ export const OperationsTab = memo(function OperationsTab({ data }: OperationsTab
     (s) => s.settlement_month === selectedMonth,
   );
   const accessedCount = selectedSnapshot?.accessed_business_numbers?.length ?? 0;
-  const totalCsoCount = filteredCsoBusinessNumbers.length;
+  const totalCsoCount = months.find(m => m.month === selectedMonth)?.csoCount ?? 0;
 
   // TodoAlerts — 조건값 계산
   const currentMonthUploaded = months.some((m) => m.month === currentMonthKey);

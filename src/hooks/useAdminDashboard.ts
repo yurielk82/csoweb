@@ -35,7 +35,6 @@ export interface AdminDashboardData {
   selectedMonth: string;
   months: SettlementMonth[];
   enrichedChartData: EnrichedMonthData[];
-  filteredCsoBusinessNumbers: string[];
   emailStats: EmailStats | null;
   badgeMap: Record<string, { label: string; variant: 'secondary' | 'outline' }>;
   pendingCount: number;
@@ -80,8 +79,6 @@ export function useAdminDashboard(): AdminDashboardData {
 
   // Data sources
   const [months, setMonths] = useState<SettlementMonth[]>([]);
-  const [allUsers, setAllUsers] = useState<{ business_number: string; is_admin: boolean }[]>([]);
-  const [csoBusinessNumbers, setCsoBusinessNumbers] = useState<string[]>([]);
   const [emailStats, setEmailStats] = useState<EmailStats | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [unmappedCount, setUnmappedCount] = useState(0);
@@ -105,14 +102,6 @@ export function useAdminDashboard(): AdminDashboardData {
     deploy_url: null,
     jwt_configured: false,
   });
-
-  // 관리자 business_number를 CSO 업체 목록에서 제외
-  const adminBusinessNumbers = new Set(
-    allUsers.filter(u => u.is_admin).map(u => u.business_number)
-  );
-  const filteredCsoBusinessNumbers = csoBusinessNumbers.filter(
-    bn => !adminBusinessNumbers.has(bn)
-  );
 
   // 차트 데이터: 정산 통계 + 접속업체 + 이메일 발송 병합
   const enrichedChartData = useMemo(() => {
@@ -149,36 +138,12 @@ export function useAdminDashboard(): AdminDashboardData {
     }
   }, []);
 
-  // Fetch CSO business numbers for selected month
-  const fetchCsoCompanies = useCallback(async (monthKey: string) => {
-    try {
-      const res = await fetch(`/api/settlements/cso-companies?month=${monthKey}`);
-      const json = await res.json();
-      if (json.success) {
-        setCsoBusinessNumbers(json.data);
-      } else {
-        setCsoBusinessNumbers([]);
-      }
-    } catch (error) {
-      console.error('Fetch CSO companies error:', error);
-      setCsoBusinessNumbers([]);
-    }
-  }, []);
-
   // Initial load — 독립 그룹별 병렬 페칭
   useEffect(() => {
-    // 그룹 1: KPI 데이터 (stats + cso-companies + users)
-    Promise.all([
-      fetch('/api/settlements/stats'),
-      fetch(`/api/settlements/cso-companies?month=${currentMonthKey}`),
-      fetch('/api/users'),
-    ])
-      .then(async ([statsRes, csoRes, usersRes]) => {
-        const [statsData, csoData, usersData] = await Promise.all([
-          statsRes.json(),
-          csoRes.json(),
-          usersRes.json(),
-        ]);
+    // 그룹 1: KPI 데이터 (stats)
+    fetch('/api/settlements/stats')
+      .then(async (statsRes) => {
+        const statsData = await statsRes.json();
         if (statsData.success && statsData.data?.months) {
           const monthsList: SettlementMonth[] = statsData.data.months;
           setMonths(monthsList);
@@ -190,18 +155,8 @@ export function useAdminDashboard(): AdminDashboardData {
               ? monthsList[0].month
               : currentMonthKey;
           setSelectedMonth(defaultMonth);
-
-          if (defaultMonth !== currentMonthKey) {
-            fetchCsoCompanies(defaultMonth);
-          }
         } else {
           setSelectedMonth(currentMonthKey);
-        }
-        if (csoData.success) {
-          setCsoBusinessNumbers(csoData.data);
-        }
-        if (usersData.success) {
-          setAllUsers(usersData.data);
         }
       })
       .catch((error) => console.error('Fetch KPI error:', error))
@@ -280,7 +235,8 @@ export function useAdminDashboard(): AdminDashboardData {
     if (unmappedCount > 0) {
       badgeMap['/admin/integrity'] = { label: `${unmappedCount}`, variant: 'secondary' };
     }
-    if (filteredCsoBusinessNumbers.length > 0 && (!emailStats || emailStats.total === 0)) {
+    const selectedCsoCount = months.find(m => m.month === selectedMonth)?.csoCount ?? 0;
+    if (selectedCsoCount > 0 && (!emailStats || emailStats.total === 0)) {
       badgeMap['/admin/mailmerge'] = { label: '발송 필요', variant: 'outline' };
     }
   }
@@ -296,7 +252,6 @@ export function useAdminDashboard(): AdminDashboardData {
     selectedMonth,
     months,
     enrichedChartData,
-    filteredCsoBusinessNumbers,
     emailStats,
     badgeMap,
     pendingCount,

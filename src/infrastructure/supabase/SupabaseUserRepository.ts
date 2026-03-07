@@ -233,7 +233,10 @@ export class SupabaseUserRepository implements UserRepository {
       .eq('business_number', businessNumber)
       .single();
 
-    if (fetchError || !user) return 0;
+    if (fetchError || !user) {
+      console.error('[incrementFailedLogin] SELECT 실패:', fetchError?.message ?? 'user not found');
+      return 0;
+    }
 
     const newCount = (user.failed_login_attempts ?? 0) + 1;
 
@@ -245,7 +248,10 @@ export class SupabaseUserRepository implements UserRepository {
       })
       .eq('business_number', businessNumber);
 
-    if (error) return 0;
+    if (error) {
+      console.error('[incrementFailedLogin] UPDATE 실패:', error.message);
+      return 0;
+    }
     return newCount;
   }
 

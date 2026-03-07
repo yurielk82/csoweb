@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Settlement, ColumnSetting } from '@/types';
 import { DEFAULT_PAGE_SIZE, CSO_FULL_PAGE_SIZE } from '@/constants/defaults';
+import { useToast } from '@/hooks/use-toast';
 
 export interface SettlementResponse {
   settlements: Settlement[];
@@ -30,6 +31,7 @@ export interface NoticeSettings {
 export type ErrorType = 'network' | 'auth' | 'no_data' | 'no_matching' | null;
 
 export function useSettlementData(isAdmin: boolean) {
+  const { toast } = useToast();
   const pageSize = isAdmin ? DEFAULT_PAGE_SIZE : CSO_FULL_PAGE_SIZE;
   const [initialLoading, setInitialLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(false);
@@ -223,6 +225,18 @@ export function useSettlementData(isAdmin: boolean) {
         columns: selectedColumns.join(','),
       });
       const res = await fetch(`/api/settlements/export?${params}`);
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        const message = errorData?.error || '엑셀 다운로드 중 오류가 발생했습니다.';
+        toast({
+          variant: 'destructive',
+          title: res.status === 429 ? '다운로드 제한' : '다운로드 오류',
+          description: message,
+        });
+        return;
+      }
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -234,6 +248,11 @@ export function useSettlementData(isAdmin: boolean) {
       document.body.removeChild(a);
     } catch (error) {
       console.error('Export error:', error);
+      toast({
+        variant: 'destructive',
+        title: '다운로드 오류',
+        description: '네트워크 오류가 발생했습니다. 다시 시도해주세요.',
+      });
     } finally {
       setDownloading(false);
     }
