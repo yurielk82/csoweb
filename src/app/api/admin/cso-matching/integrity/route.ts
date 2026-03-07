@@ -105,7 +105,7 @@ function buildResults(
     const csoArray = Array.from(csoNames);
     const { totalCount, lastMonth } = aggregateCsoStats(csoArray, csoStats);
 
-    results.push(buildResultRow(bizNum, user, csoArray, totalCount, lastMonth));
+    results.push(buildResultRow({ bizNum, user, csoArray, totalCount, lastMonth }));
   }
 
   // 매칭 테이블에 없지만 회원인 경우
@@ -142,13 +142,17 @@ function aggregateCsoStats(
   return { totalCount, lastMonth };
 }
 
-function buildResultRow(
-  bizNum: string,
-  user: { company_name: string; is_approved: boolean } | undefined,
-  csoArray: string[],
-  totalCount: number,
-  lastMonth: string | null,
-): IntegrityResultV2 {
+interface BuildResultRowOptions {
+  bizNum: string;
+  user: { company_name: string; is_approved: boolean } | undefined;
+  csoArray: string[];
+  totalCount: number;
+  lastMonth: string | null;
+}
+
+function buildResultRow({
+  bizNum, user, csoArray, totalCount, lastMonth,
+}: BuildResultRowOptions): IntegrityResultV2 {
   if (user) {
     return {
       id: `biz-${bizNum}`, business_number: bizNum,

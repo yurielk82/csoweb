@@ -6,6 +6,25 @@ import { getSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
+/** CSO 매핑 삭제 (회원 삭제 시 연쇄 삭제) */
+async function deleteCSOMatchingByBN(businessNumber: string): Promise<void> {
+  try {
+    const supabase = getSupabase();
+    const { error: matchError } = await supabase
+      .from('cso_matching')
+      .delete()
+      .eq('business_number', businessNumber);
+    if (matchError) {
+      console.error('[Delete User] CSO 매핑 삭제 DB 에러:', matchError.message);
+      return;
+    }
+    invalidateCSOMatchingCache();
+    console.log(`[Delete User] CSO 매핑 삭제 완료: ${businessNumber}`);
+  } catch (error) {
+    console.error('[Delete User] CSO 매핑 삭제 실패:', error);
+  }
+}
+
 // 회원 정보 수정
 export async function PUT(
   request: NextRequest,
@@ -107,35 +126,21 @@ export async function DELETE(
     
     const success = await getUserRepository().delete(businessNumber);
     
-    if (success) {
-      // 해당 사업자번호의 CSO 매핑도 함께 삭제
-      try {
-        const supabase = getSupabase();
-        const { error: matchError } = await supabase
-          .from('cso_matching')
-          .delete()
-          .eq('business_number', businessNumber);
-        if (matchError) {
-          console.error('[Delete User] CSO 매핑 삭제 DB 에러:', matchError.message);
-        } else {
-          invalidateCSOMatchingCache();
-          console.log(`[Delete User] CSO 매핑 삭제 완료: ${businessNumber}`);
-        }
-      } catch (error) {
-        console.error('[Delete User] CSO 매핑 삭제 실패:', error);
-      }
-
-      invalidateUserCache();
-      return NextResponse.json({
-        success: true,
-        message: '회원이 삭제되었습니다.',
-      });
-    } else {
+    if (!success) {
       return NextResponse.json(
         { success: false, error: '회원 삭제에 실패했습니다.' },
         { status: 400 }
       );
     }
+
+    // 해당 사업자번호의 CSO 매핑도 함께 삭제
+    await deleteCSOMatchingByBN(businessNumber);
+
+    invalidateUserCache();
+    return NextResponse.json({
+      success: true,
+      message: '회원이 삭제되었습니다.',
+    });
   } catch (error) {
     console.error('Delete user error:', error);
     return NextResponse.json(

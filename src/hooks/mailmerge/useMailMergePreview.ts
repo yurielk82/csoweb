@@ -18,15 +18,19 @@ interface PreviewDeps {
 
 // ── Payload builders (shared with useMailMergeSend) ──
 
-export function buildMailPayload(
-  subject: string,
-  body: string,
-  recipientType: 'all' | 'year_month',
-  selectedYearMonth: string,
-  includeSettlementTable: boolean,
-  sections: EmailSection[],
-  extra?: Record<string, unknown>,
-) {
+export interface BuildMailPayloadOptions {
+  subject: string;
+  body: string;
+  recipientType: 'all' | 'year_month';
+  selectedYearMonth: string;
+  includeSettlementTable: boolean;
+  sections: EmailSection[];
+  extra?: Record<string, unknown>;
+}
+
+export function buildMailPayload({
+  subject, body, recipientType, selectedYearMonth, includeSettlementTable, sections, extra,
+}: BuildMailPayloadOptions) {
   const sectionsPayload = includeSettlementTable ? getSectionsPayload(sections) : undefined;
   return {
     subject,
@@ -59,8 +63,9 @@ export function buildRecipientParams(
 async function sendTestEmail(deps: PreviewDeps, selectedTestBn: string): Promise<boolean> {
   const { subject, body, recipientType, selectedYearMonth, includeSettlementTable, sections, toast } = deps;
   try {
-    const payload = buildMailPayload(subject, body, recipientType, selectedYearMonth, includeSettlementTable, sections, {
-      test_business_number: selectedTestBn && selectedTestBn !== '__sample__' ? selectedTestBn : undefined,
+    const payload = buildMailPayload({
+      subject, body, recipientType, selectedYearMonth, includeSettlementTable, sections,
+      extra: { test_business_number: selectedTestBn && selectedTestBn !== '__sample__' ? selectedTestBn : undefined },
     });
     const response = await fetch(API_ROUTES.EMAIL.MAILMERGE, {
       method: 'PATCH',
@@ -93,8 +98,9 @@ export function useMailMergePreview(deps: PreviewDeps) {
   const [selectedTestBn, setSelectedTestBn] = useState<string>('');
 
   const fetchPreview = useCallback(async (testBn?: string) => {
-    const payload = buildMailPayload(subject, body, recipientType, selectedYearMonth, includeSettlementTable, sections, {
-      test_business_number: testBn && testBn !== '__sample__' ? testBn : undefined,
+    const payload = buildMailPayload({
+      subject, body, recipientType, selectedYearMonth, includeSettlementTable, sections,
+      extra: { test_business_number: testBn && testBn !== '__sample__' ? testBn : undefined },
     });
     const previewRes = await fetch(API_ROUTES.EMAIL.MAILMERGE, {
       method: 'PUT',

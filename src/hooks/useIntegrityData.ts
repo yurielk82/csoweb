@@ -59,7 +59,7 @@ export function useIntegrityData() {
 
   // ── Computed ──
   const filteredData = useMemo(
-    () => applyFilters(tableData, searchQuery, filterStatus, scope, selectedMonth),
+    () => applyFilters({ tableData, searchQuery, filterStatus, scope, selectedMonth }),
     [tableData, searchQuery, filterStatus, scope, selectedMonth],
   );
 

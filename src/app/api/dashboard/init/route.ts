@@ -15,13 +15,17 @@ export const dynamic = 'force-dynamic';
 
 // ── Helpers ──
 
-function buildEmptyResponse(
-  visibleColumns: { column_key: string; is_visible: boolean }[],
-  notice: { notice_content: string; ceo_name: string },
-  page: number,
-  pageSize: number,
-  extra?: Record<string, unknown>,
-) {
+interface BuildEmptyResponseOptions {
+  visibleColumns: { column_key: string; is_visible: boolean }[];
+  notice: { notice_content: string; ceo_name: string };
+  page: number;
+  pageSize: number;
+  extra?: Record<string, unknown>;
+}
+
+function buildEmptyResponse({
+  visibleColumns, notice, page, pageSize, extra,
+}: BuildEmptyResponseOptions) {
   return NextResponse.json({
     success: true,
     data: {
@@ -89,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     // 일반 회원인데 매칭 없으면 빈 결과
     if (!session.is_admin && (!matchedNames || matchedNames.length === 0)) {
-      return buildEmptyResponse(visibleColumns, notice, page, pageSize, { noMatching: true });
+      return buildEmptyResponse({ visibleColumns, notice, page, pageSize, extra: { noMatching: true } });
     }
 
     // 관리자 + 특정 CSO 선택인데 매칭 없으면

@@ -21,13 +21,17 @@ export function resetRowSaveState(
 
 // ── Filtering ──
 
-export function applyFilters(
-  tableData: IntegrityRow[],
-  searchQuery: string,
-  filterStatus: FilterStatus,
-  scope: 'all' | 'settlement',
-  selectedMonth: string,
-): IntegrityRow[] {
+interface ApplyFiltersOptions {
+  tableData: IntegrityRow[];
+  searchQuery: string;
+  filterStatus: FilterStatus;
+  scope: 'all' | 'settlement';
+  selectedMonth: string;
+}
+
+export function applyFilters({
+  tableData, searchQuery, filterStatus, scope, selectedMonth,
+}: ApplyFiltersOptions): IntegrityRow[] {
   let results = [...tableData];
 
   if (searchQuery.trim()) {

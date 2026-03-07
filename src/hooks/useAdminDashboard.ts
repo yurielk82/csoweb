@@ -50,13 +50,17 @@ const DEFAULT_SYSTEM_STATUS: SystemStatus = {
 
 // ── Fetchers ──
 
-async function fetchKPI(
-  currentMonthKey: string,
-  setMonths: (v: SettlementMonth[]) => void,
-  setSelectedMonth: (v: string) => void,
-  setFetchError: (v: boolean) => void,
-  setKpiLoaded: (v: boolean) => void,
-) {
+interface FetchKPIOptions {
+  currentMonthKey: string;
+  setMonths: (v: SettlementMonth[]) => void;
+  setSelectedMonth: (v: string) => void;
+  setFetchError: (v: boolean) => void;
+  setKpiLoaded: (v: boolean) => void;
+}
+
+async function fetchKPI({
+  currentMonthKey, setMonths, setSelectedMonth, setFetchError, setKpiLoaded,
+}: FetchKPIOptions) {
   try {
     const statsRes = await fetchWithTimeout(API_ROUTES.SETTLEMENTS.STATS);
     const statsData = await statsRes.json();
@@ -136,16 +140,20 @@ async function fetchChartExtras(
   }
 }
 
-function buildBadgeMap(
-  kpiLoaded: boolean,
-  badgesLoaded: boolean,
-  months: SettlementMonth[],
-  currentMonthKey: string,
-  pendingCount: number,
-  unmappedCount: number,
-  selectedMonth: string,
-  emailStats: EmailStats | null,
-): Record<string, { label: string; variant: 'secondary' | 'outline' }> {
+interface BuildBadgeMapOptions {
+  kpiLoaded: boolean;
+  badgesLoaded: boolean;
+  months: SettlementMonth[];
+  currentMonthKey: string;
+  pendingCount: number;
+  unmappedCount: number;
+  selectedMonth: string;
+  emailStats: EmailStats | null;
+}
+
+function buildBadgeMap({
+  kpiLoaded, badgesLoaded, months, currentMonthKey, pendingCount, unmappedCount, selectedMonth, emailStats,
+}: BuildBadgeMapOptions): Record<string, { label: string; variant: 'secondary' | 'outline' }> {
   const badgeMap: Record<string, { label: string; variant: 'secondary' | 'outline' }> = {};
 
   if (kpiLoaded && badgesLoaded) {
@@ -251,7 +259,7 @@ export function useAdminDashboard(): AdminDashboardData {
   }, []);
 
   useEffect(() => {
-    fetchKPI(currentMonthKey, setMonths, setSelectedMonth, setFetchError, setKpiLoaded);
+    fetchKPI({ currentMonthKey, setMonths, setSelectedMonth, setFetchError, setKpiLoaded });
     fetchBadges(setPendingCount, setUnmappedCount, setFetchError, setBadgesLoaded);
     fetchChartExtras(setAllSnapshots, setEmailMonthlyStats, setFetchError);
     fetchEmailStatsForMonth(currentMonthKey);
@@ -259,10 +267,10 @@ export function useAdminDashboard(): AdminDashboardData {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const badgeMap = buildBadgeMap(
+  const badgeMap = buildBadgeMap({
     kpiLoaded, badgesLoaded, months, currentMonthKey,
     pendingCount, unmappedCount, selectedMonth, emailStats,
-  );
+  });
 
   return {
     kpiLoaded, badgesLoaded, systemLoaded, fetchError, selectedMonth,

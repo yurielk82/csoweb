@@ -39,34 +39,20 @@ export async function GET(request: NextRequest) {
     const queryParams = { settlementMonth, selectColumns, page, pageSize, search };
 
     // 캐시된 CSO 매칭 결과 사용
-    let matchedNames: string[] | null = null;
+    const emptyResponse = {
+      success: true,
+      data: {
+        settlements: [],
+        pagination: { page, pageSize, total: 0, totalPages: 0 },
+        totals: { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 거래처수: 0, 제품수: 0 },
+      },
+    };
 
-    if (session.is_admin) {
-      if (filterBusinessNumber) {
-        matchedNames = await getCachedMatchedNames(filterBusinessNumber);
-        if (matchedNames.length === 0) {
-          return NextResponse.json({
-            success: true,
-            data: {
-              settlements: [],
-              pagination: { page, pageSize, total: 0, totalPages: 0 },
-              totals: { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 거래처수: 0, 제품수: 0 },
-            },
-          });
-        }
-      }
-    } else {
-      matchedNames = await getCachedMatchedNames(session.business_number);
-      if (matchedNames.length === 0) {
-        return NextResponse.json({
-          success: true,
-          data: {
-            settlements: [],
-            pagination: { page, pageSize, total: 0, totalPages: 0 },
-            totals: { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 거래처수: 0, 제품수: 0 },
-          },
-        });
-      }
+    const targetBN = session.is_admin ? filterBusinessNumber : session.business_number;
+    const matchedNames = targetBN ? await getCachedMatchedNames(targetBN) : null;
+
+    if (matchedNames && matchedNames.length === 0) {
+      return NextResponse.json(emptyResponse);
     }
 
     const matchedNamesKey = matchedNames ? JSON.stringify(matchedNames) : 'ALL';

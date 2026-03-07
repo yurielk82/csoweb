@@ -27,13 +27,17 @@ function buildUpdateData(
   return updateData;
 }
 
-async function handlePasswordChange(
-  currentPassword: string,
-  newPassword: string,
-  passwordHash: string,
-  businessNumber: string,
-  userRepo: ReturnType<typeof getUserRepository>,
-) {
+interface HandlePasswordChangeOptions {
+  currentPassword: string;
+  newPassword: string;
+  passwordHash: string;
+  businessNumber: string;
+  userRepo: ReturnType<typeof getUserRepository>;
+}
+
+async function handlePasswordChange({
+  currentPassword, newPassword, passwordHash, businessNumber, userRepo,
+}: HandlePasswordChangeOptions) {
   const isValid = await verifyPassword(currentPassword, passwordHash);
   if (!isValid) {
     return NextResponse.json({ success: false, error: '현재 비밀번호가 일치하지 않습니다.' }, { status: 400 });
@@ -88,10 +92,10 @@ export async function PUT(request: NextRequest) {
 
     // 비밀번호 변경 (별도 처리)
     if (body.current_password && body.new_password) {
-      return handlePasswordChange(
-        body.current_password, body.new_password,
-        user.password_hash, session.business_number, userRepo,
-      );
+      return handlePasswordChange({
+        currentPassword: body.current_password, newPassword: body.new_password,
+        passwordHash: user.password_hash, businessNumber: session.business_number, userRepo,
+      });
     }
 
     // 기본 정보 변경

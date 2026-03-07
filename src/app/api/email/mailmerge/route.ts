@@ -101,14 +101,18 @@ const EMPTY_SUMMARY: SettlementSummary = {
   총_금액: 0, 총_수수료: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 데이터_건수: 0, 총_수량: 0,
 };
 
-function buildTemplateVariables(
-  companyName: string,
-  businessNumber: string,
-  email: string,
-  yearMonth: string,
-  ceoName: string,
-  summary: SettlementSummary,
-): Record<string, string | number> {
+interface BuildTemplateVariablesOptions {
+  companyName: string;
+  businessNumber: string;
+  email: string;
+  yearMonth: string;
+  ceoName: string;
+  summary: SettlementSummary;
+}
+
+function buildTemplateVariables({
+  companyName, businessNumber, email, yearMonth, ceoName, summary,
+}: BuildTemplateVariablesOptions): Record<string, string | number> {
   return {
     '업체명': companyName,
     '사업자번호': businessNumber,
@@ -146,15 +150,19 @@ function calcTableSummary(rows: Record<string, unknown>[]) {
   };
 }
 
-function buildSectionHtmls(
-  notice: string,
-  variables: Record<string, string | number>,
-  rows: Record<string, unknown>[],
-  visibleColumns: { key: string; name: string; isNumeric: boolean }[],
-  companyName: string,
-  yearMonth: string,
-  bodyHtml: string,
-): { sectionHtmlMap: Record<EmailSectionId, string>; hasWideContent: boolean } {
+interface BuildSectionHtmlsOptions {
+  notice: string;
+  variables: Record<string, string | number>;
+  rows: Record<string, unknown>[];
+  visibleColumns: { key: string; name: string; isNumeric: boolean }[];
+  companyName: string;
+  yearMonth: string;
+  bodyHtml: string;
+}
+
+function buildSectionHtmls({
+  notice, variables, rows, visibleColumns, companyName, yearMonth, bodyHtml,
+}: BuildSectionHtmlsOptions): { sectionHtmlMap: Record<EmailSectionId, string>; hasWideContent: boolean } {
   const sectionHtmlMap: Record<EmailSectionId, string> = {
     notice: '', dashboard: '', table: '', body: bodyHtml,
   };
@@ -291,15 +299,18 @@ async function prepareSSEContext(yearMonth: string | undefined, includeTable: bo
   return { companyInfo, allMatches, visibleColumns, notice, allSettlements };
 }
 
-function buildSSEMailContent(
-  bn: string,
-  ctx: Awaited<ReturnType<typeof prepareSSEContext>>,
-  yearMonth: string | undefined,
-  includeTable: boolean | undefined,
-  _summary: SettlementSummary,
-  variables: Record<string, string | number>,
-  personalizedBody: string,
-) {
+interface BuildSSEMailContentOptions {
+  bn: string;
+  ctx: Awaited<ReturnType<typeof prepareSSEContext>>;
+  yearMonth: string | undefined;
+  includeTable: boolean | undefined;
+  variables: Record<string, string | number>;
+  personalizedBody: string;
+}
+
+function buildSSEMailContent({
+  bn, ctx, yearMonth, includeTable, variables, personalizedBody,
+}: BuildSSEMailContentOptions) {
   const bodyHtml = buildBodyHtml(personalizedBody);
   if (!includeTable || !yearMonth || ctx.visibleColumns.length === 0) {
     return {
@@ -325,10 +336,10 @@ function buildSSEMailContent(
     };
   }
 
-  const { sectionHtmlMap, hasWideContent } = buildSectionHtmls(
-    ctx.notice, variables, rows, ctx.visibleColumns,
-    variables['업체명'] as string, yearMonth, bodyHtml,
-  );
+  const { sectionHtmlMap, hasWideContent } = buildSectionHtmls({
+    notice: ctx.notice, variables, rows, visibleColumns: ctx.visibleColumns,
+    companyName: variables['업체명'] as string, yearMonth, bodyHtml,
+  });
   return { sectionHtmlMap, hasWideContent, rowCount: rows.length };
 }
 
@@ -366,10 +377,10 @@ export async function POST(request: NextRequest) {
         let failed = 0;
 
         for (let i = 0; i < targetBusinessNumbers.length; i++) {
-          const result = await processOneRecipient(
-            targetBusinessNumbers[i], ctx, year_month, include_settlement_table,
+          const result = await processOneRecipient({
+            bn: targetBusinessNumbers[i], ctx, yearMonth: year_month, includeTable: include_settlement_table,
             subject, body, orderedSections,
-          );
+          });
 
           if (result.skipped) { failed++; }
           else if (result.success) { sent++; }
@@ -401,15 +412,19 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function processOneRecipient(
-  bn: string,
-  ctx: Awaited<ReturnType<typeof prepareSSEContext>>,
-  yearMonth: string | undefined,
-  includeTable: boolean | undefined,
-  subject: string,
-  body: string,
-  orderedSections: SectionConfig[],
-) {
+interface ProcessOneRecipientOptions {
+  bn: string;
+  ctx: Awaited<ReturnType<typeof prepareSSEContext>>;
+  yearMonth: string | undefined;
+  includeTable: boolean | undefined;
+  subject: string;
+  body: string;
+  orderedSections: SectionConfig[];
+}
+
+async function processOneRecipient({
+  bn, ctx, yearMonth, includeTable, subject, body, orderedSections,
+}: ProcessOneRecipientOptions) {
   const user = await getUserRepository().findByBusinessNumber(bn);
   if (!user || !user.is_approved) {
     return { skipped: true, success: false, companyName: bn, error: undefined, rowCount: 0 };
@@ -423,17 +438,17 @@ async function processOneRecipient(
     }
   }
 
-  const variables = buildTemplateVariables(
-    user.company_name, user.business_number, user.email,
-    yearMonth || '', ctx.companyInfo.ceo_name || '', summary,
-  );
+  const variables = buildTemplateVariables({
+    companyName: user.company_name, businessNumber: user.business_number, email: user.email,
+    yearMonth: yearMonth || '', ceoName: ctx.companyInfo.ceo_name || '', summary,
+  });
 
   const personalizedSubject = replaceVariables(subject, variables);
   const personalizedBody = replaceVariables(body, variables);
 
-  const { sectionHtmlMap, hasWideContent, rowCount } = buildSSEMailContent(
-    bn, ctx, yearMonth, includeTable, summary, variables, personalizedBody,
-  );
+  const { sectionHtmlMap, hasWideContent, rowCount } = buildSSEMailContent({
+    bn, ctx, yearMonth, includeTable, variables, personalizedBody,
+  });
 
   const contentHtml = buildContentHtml(orderedSections, sectionHtmlMap);
   const result = await sendEmail(user.email, 'mail_merge', { subject: personalizedSubject, contentHtml, hasWideContent });
@@ -458,17 +473,17 @@ export async function PATCH(request: NextRequest) {
 
     const companyInfo = await getCompanyRepository().get();
     const { companyName, businessNumber, summary } = await resolveTestTarget(test_business_number, year_month);
-    const variables = buildTemplateVariables(
-      companyName, businessNumber, session!.email, year_month || '', companyInfo.ceo_name || '', summary,
-    );
+    const variables = buildTemplateVariables({
+      companyName, businessNumber, email: session!.email, yearMonth: year_month || '', ceoName: companyInfo.ceo_name || '', summary,
+    });
 
     const testSubject = '[테스트] ' + replaceVariables(subject, variables);
     const testBody = replaceVariables(body, variables);
 
-    const { sectionHtmlMap, hasWideContent } = await buildTestSectionHtmls(
-      include_settlement_table, year_month, test_business_number, businessNumber,
-      companyName, companyInfo.notice_content || '', variables, testBody,
-    );
+    const { sectionHtmlMap, hasWideContent } = await buildTestSectionHtmls({
+      includeTable: include_settlement_table, yearMonth: year_month, testBn: test_business_number, businessNumber,
+      companyName, notice: companyInfo.notice_content || '', variables, bodyText: testBody,
+    });
 
     const contentHtml = buildContentHtml(orderedSections, sectionHtmlMap);
     const testRecipient = await getTestRecipientEmail(session!.email);
@@ -500,16 +515,20 @@ async function resolveTestTarget(testBn: string | undefined, yearMonth: string |
   return { companyName: targetUser.company_name, businessNumber: targetUser.business_number, summary };
 }
 
-async function buildTestSectionHtmls(
-  includeTable: boolean | undefined,
-  yearMonth: string | undefined,
-  testBn: string | undefined,
-  businessNumber: string,
-  companyName: string,
-  notice: string,
-  variables: Record<string, string | number>,
-  bodyText: string,
-) {
+interface BuildTestSectionHtmlsOptions {
+  includeTable: boolean | undefined;
+  yearMonth: string | undefined;
+  testBn: string | undefined;
+  businessNumber: string;
+  companyName: string;
+  notice: string;
+  variables: Record<string, string | number>;
+  bodyText: string;
+}
+
+async function buildTestSectionHtmls({
+  includeTable, yearMonth, testBn, businessNumber, companyName, notice, variables, bodyText,
+}: BuildTestSectionHtmlsOptions) {
   const bodyHtml = buildBodyHtml(bodyText);
   const defaultMap: Record<EmailSectionId, string> = { notice: '', dashboard: '', table: '', body: bodyHtml };
 
@@ -519,7 +538,7 @@ async function buildTestSectionHtmls(
 
   if (testBn) {
     const rows = await getSettlementRows(yearMonth, visibleColumns, await getMatchedCSONames(businessNumber));
-    return buildSectionHtmls(notice, variables, rows, visibleColumns, companyName, yearMonth, bodyHtml);
+    return buildSectionHtmls({ notice, variables, rows, visibleColumns, companyName, yearMonth, bodyHtml });
   }
 
   // 샘플 데이터
@@ -529,7 +548,7 @@ async function buildTestSectionHtmls(
   if (!firstCSO) return { sectionHtmlMap: defaultMap, hasWideContent: false };
 
   const sampleRows = allData.filter(s => s.CSO관리업체 === firstCSO).slice(0, 20);
-  return buildSectionHtmls(notice, variables, sampleRows, visibleColumns, companyName, yearMonth, bodyHtml);
+  return buildSectionHtmls({ notice, variables, rows: sampleRows, visibleColumns, companyName, yearMonth, bodyHtml });
 }
 
 // ── Preview (PUT) ──
@@ -546,17 +565,17 @@ export async function PUT(request: NextRequest) {
     const { companyName, businessNumber, email, summary, useRealData } = await resolvePreviewTarget(test_business_number, year_month);
 
     const sampleYm = year_month || '2026-01';
-    const previewVariables = buildTemplateVariables(
-      companyName, businessNumber, email, sampleYm, '홍길동', summary,
-    );
+    const previewVariables = buildTemplateVariables({
+      companyName, businessNumber, email, yearMonth: sampleYm, ceoName: '홍길동', summary,
+    });
 
     const previewSubject = replaceVariables(subject || '', previewVariables);
     const previewBody = replaceVariables(body || '', previewVariables);
 
-    const { sectionHtmlMap, hasWideContent } = await buildPreviewSectionHtmls(
-      include_settlement_table, year_month, useRealData, businessNumber,
-      companyName, previewVariables, previewBody,
-    );
+    const { sectionHtmlMap, hasWideContent } = await buildPreviewSectionHtmls({
+      includeTable: include_settlement_table, yearMonth: year_month, useRealData, businessNumber,
+      companyName, variables: previewVariables, bodyText: previewBody,
+    });
 
     const contentHtml = buildContentHtml(orderedSections, sectionHtmlMap);
 
@@ -608,15 +627,19 @@ async function resolvePreviewTarget(testBn: string | undefined, yearMonth: strin
   };
 }
 
-async function buildPreviewSectionHtmls(
-  includeTable: boolean | undefined,
-  yearMonth: string | undefined,
-  useRealData: boolean,
-  businessNumber: string,
-  companyName: string,
-  variables: Record<string, string | number>,
-  bodyText: string,
-) {
+interface BuildPreviewSectionHtmlsOptions {
+  includeTable: boolean | undefined;
+  yearMonth: string | undefined;
+  useRealData: boolean;
+  businessNumber: string;
+  companyName: string;
+  variables: Record<string, string | number>;
+  bodyText: string;
+}
+
+async function buildPreviewSectionHtmls({
+  includeTable, yearMonth, useRealData, businessNumber, companyName, variables, bodyText,
+}: BuildPreviewSectionHtmlsOptions) {
   const bodyHtml = buildBodyHtml(bodyText);
   const defaultMap: Record<EmailSectionId, string> = { notice: '', dashboard: '', table: '', body: bodyHtml };
 
@@ -634,7 +657,7 @@ async function buildPreviewSectionHtmls(
     const rows = matchedNames.length > 0
       ? allData.filter(s => matchedNames.includes((s.CSO관리업체 as string) || ''))
       : [];
-    return buildSectionHtmls(notice, variables, rows, visibleColumns, companyName, yearMonth, bodyHtml);
+    return buildSectionHtmls({ notice, variables, rows, visibleColumns, companyName, yearMonth, bodyHtml });
   }
 
   // 샘플 데이터
@@ -642,5 +665,5 @@ async function buildPreviewSectionHtmls(
   if (!firstCSO) return { sectionHtmlMap: defaultMap, hasWideContent: false };
 
   const sampleRows = allData.filter(s => s.CSO관리업체 === firstCSO).slice(0, 20);
-  return buildSectionHtmls(notice, variables, sampleRows, visibleColumns, companyName, yearMonth, bodyHtml);
+  return buildSectionHtmls({ notice, variables, rows: sampleRows, visibleColumns, companyName, yearMonth, bodyHtml });
 }

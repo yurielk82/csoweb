@@ -43,8 +43,9 @@ export function useMailMergeSend(deps: SendDeps) {
 
     try {
       const recipientsList = recipientType === 'all' ? ['all'] : [`year_month:${selectedYearMonth}`];
-      const payload = buildMailPayload(subject, body, recipientType, selectedYearMonth, includeSettlementTable, sections, {
-        recipients: recipientsList,
+      const payload = buildMailPayload({
+        subject, body, recipientType, selectedYearMonth, includeSettlementTable, sections,
+        extra: { recipients: recipientsList },
       });
       const response = await fetch(API_ROUTES.EMAIL.MAILMERGE, {
         method: 'POST',

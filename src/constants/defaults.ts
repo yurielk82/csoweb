@@ -55,6 +55,44 @@ export const BCRYPT_SALT_ROUNDS = 12;
 /** 일반 회원 엑셀 다운로드 일일 제한 횟수 */
 export const MAX_DAILY_EXPORTS = 5;
 
+// ── 파일 크기 ──
+/** 1 KB = 1024 바이트 */
+export const BYTES_PER_KB = 1024;
+
+/** 엑셀 업로드 최대 크기 (MB) */
+export const MAX_UPLOAD_SIZE_MB = 10;
+
+// ── 단위 환산 ──
+/** 만 단위 변환 (원 → 만원) */
+export const WAN_UNIT = 10_000;
+
+/** 밀리초 → 초 변환 */
+export const MS_PER_SECOND = 1000;
+
+// ── UI ──
+/** 토스트 알림 표시 시간 (ms) */
+export const TOAST_DURATION_MS = 3000;
+
+/** 헤더 스크롤 감지 임계값 (px) */
+export const HEADER_SCROLL_THRESHOLD = 150;
+
+// ── 매칭 점수 ──
+/** 컬럼 매칭 유사도 최소 임계값 */
+export const SIMILARITY_THRESHOLD = 0.6;
+
+/** 부분 문자열 매칭 점수 */
+export const SUBSTRING_MATCH_SCORE = 0.9;
+
+/** 매칭 '높음' 판정 임계값 */
+export const HIGH_MATCH_SCORE = 0.7;
+
+/** 매칭 점수 비교용 곱 계수 */
+export const MATCH_OPACITY_HALF = 0.5;
+
+// ── 비밀번호 ──
+/** 최근 비밀번호 변경 기준일 (일) — 음수 */
+export const PASSWORD_RECENT_DAYS = -5;
+
 // ── 정산 ──
 /** 합계/검색/그룹핑에 항상 필요한 컬럼 (DB 쿼리 select에 항상 포함) */
 export const ALWAYS_NEEDED_COLUMNS = [

@@ -32,13 +32,15 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@cso-portal.com';
 
 // ── SMTP 전송 ──
 
-async function sendViaSMTP(
-  settings: EmailSettings,
-  from: string,
-  to: string,
-  subject: string,
-  html: string
-): Promise<void> {
+interface SendViaSMTPOptions {
+  settings: EmailSettings;
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+}
+
+async function sendViaSMTP({ settings, from, to, subject, html }: SendViaSMTPOptions): Promise<void> {
   const transporter = nodemailer.createTransport({
     host: settings.smtp_host,
     port: settings.smtp_port,
@@ -182,7 +184,7 @@ export async function sendEmail(
       result = { success: false, error: 'SMTP 설정이 불완전합니다.' };
     } else {
       try {
-        await sendViaSMTP(emailSettings, fromEmail, to, emailContent.subject, emailContent.html);
+        await sendViaSMTP({ settings: emailSettings, from: fromEmail, to, subject: emailContent.subject, html: emailContent.html });
         result = { success: true };
       } catch (error) {
         const msg = error instanceof Error ? error.message : 'Unknown SMTP error';

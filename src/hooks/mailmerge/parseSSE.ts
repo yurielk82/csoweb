@@ -11,6 +11,42 @@ export interface SSECallbacks {
   setResult: (result: SendResult) => void;
 }
 
+function handleSSEEvent(event: ProgressEvent, callbacks: SSECallbacks): void {
+  if (event.type === 'start') {
+    callbacks.setProgress({
+      current: 0, total: event.total,
+      sent: 0, failed: 0,
+      delay: event.delay || DEFAULT_EMAIL_SEND_DELAY_MS,
+    });
+    return;
+  }
+
+  if (event.type === 'progress') {
+    callbacks.setProgress(prev => ({
+      current: event.current || 0, total: event.total,
+      sent: event.sent || 0, failed: event.failed || 0,
+      delay: prev?.delay || DEFAULT_EMAIL_SEND_DELAY_MS,
+    }));
+    if (event.company_name && event.status) {
+      callbacks.setSendLogs(prev => [...prev, {
+        company_name: event.company_name!,
+        status: event.status!,
+        error: event.error,
+        row_count: event.row_count,
+      }]);
+    }
+    return;
+  }
+
+  if (event.type === 'complete') {
+    callbacks.setResult({
+      sent: event.sent || 0,
+      failed: event.failed || 0,
+      total: event.total,
+    });
+  }
+}
+
 export async function parseSSEStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   callbacks: SSECallbacks
@@ -30,33 +66,7 @@ export async function parseSSEStream(
       if (!dataMatch) continue;
       try {
         const event: ProgressEvent = JSON.parse(dataMatch[1]);
-        if (event.type === 'start') {
-          callbacks.setProgress({
-            current: 0, total: event.total,
-            sent: 0, failed: 0,
-            delay: event.delay || DEFAULT_EMAIL_SEND_DELAY_MS,
-          });
-        } else if (event.type === 'progress') {
-          callbacks.setProgress(prev => ({
-            current: event.current || 0, total: event.total,
-            sent: event.sent || 0, failed: event.failed || 0,
-            delay: prev?.delay || DEFAULT_EMAIL_SEND_DELAY_MS,
-          }));
-          if (event.company_name && event.status) {
-            callbacks.setSendLogs(prev => [...prev, {
-              company_name: event.company_name!,
-              status: event.status!,
-              error: event.error,
-              row_count: event.row_count,
-            }]);
-          }
-        } else if (event.type === 'complete') {
-          callbacks.setResult({
-            sent: event.sent || 0,
-            failed: event.failed || 0,
-            total: event.total,
-          });
-        }
+        handleSSEEvent(event, callbacks);
       } catch { /* SSE JSON 파싱: 불완전한 줄은 정상적으로 무시 */ }
     }
   }

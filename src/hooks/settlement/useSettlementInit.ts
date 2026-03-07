@@ -64,7 +64,7 @@ export function useSettlementInit(pageSize: number) {
       }
     };
     init();
-  }, []);
+  }, [pageSize]);
 
   return {
     initialLoading, initDataLoaded, setInitDataLoaded,
