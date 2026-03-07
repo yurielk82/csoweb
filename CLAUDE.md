@@ -1,5 +1,3 @@
-@../claude-dotfiles/CLAUDE.md
-
 # csoweb
 
 CSO 정산 포털 — B2B 제약 정산 수수료 조회 시스템
