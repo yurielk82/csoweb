@@ -68,19 +68,11 @@ export default function MonthlySummaryPage() {
     if (!data?.months || !data?.summary_columns) return [];
 
     // 1. 모든 월에서 값이 0인 컬럼 제거
-    const nonZeroColumns = data.summary_columns.filter(col => {
+    const filtered = data.summary_columns.filter(col => {
       return data.months.some(month => (month.summaries[col.column_key] || 0) !== 0);
     });
 
-    // 2. '제약수수료 합계'가 '제약수수료'와 중복되면 합계 컬럼 제거
-    const hasFeeColumn = nonZeroColumns.some(col =>
-      col.column_name.includes('제약수수료') && !col.column_name.includes('합계')
-    );
-    const filtered = hasFeeColumn
-      ? nonZeroColumns.filter(col => !(col.column_name.includes('제약수수료') && col.column_name.includes('합계')))
-      : nonZeroColumns;
-
-    // 3. 우선순위 기반 정렬: 수량 → 금액 → 수수료(합계 아닌것) → 합계
+    // 2. 우선순위 기반 정렬: 수량 → 금액 → 수수료 → 합계
     const getOrder = (name: string): number => {
       if (name.includes('수량')) return 1;
       if (name.includes('금액')) return 2;
