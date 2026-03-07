@@ -15,6 +15,7 @@ import {
 interface CsoShareChartProps {
   data: { name: string; value: number }[];
   title?: string;
+  compact?: boolean;
 }
 
 const MAX_SLICES = 6;
@@ -41,6 +42,7 @@ function formatManWon(value: number): string {
 export const CsoShareChart = memo(function CsoShareChart({
   data,
   title = '월별 수수료 비중',
+  compact,
 }: CsoShareChartProps) {
   // 상위 5개 + 나머지를 '기타'로 그룹핑
   const chartData = useMemo(() => {
@@ -71,7 +73,7 @@ export const CsoShareChart = memo(function CsoShareChart({
 
   if (data.length === 0) {
     return (
-      <div className="glass-chart-card flex flex-col items-center justify-center h-52 text-muted-foreground">
+      <div className={`glass-chart-card flex flex-col items-center justify-center ${compact ? 'h-32' : 'h-52'} text-muted-foreground`}>
         <PieChartIcon className="h-10 w-10 mb-2 opacity-40" />
         <p className="text-sm">비중 데이터가 없습니다</p>
       </div>
@@ -80,10 +82,10 @@ export const CsoShareChart = memo(function CsoShareChart({
 
   return (
     <div className="glass-chart-card">
-      <div className="px-5 pt-5 pb-3">
-        <h3 className="text-base font-semibold">{title}</h3>
+      <div className={compact ? 'px-3 pt-3 pb-1' : 'px-5 pt-5 pb-3'}>
+        <h3 className={`font-semibold ${compact ? 'text-sm' : 'text-base'}`}>{title}</h3>
       </div>
-      <ChartContainer config={chartConfig} className="h-52 lg:h-56 w-full">
+      <ChartContainer config={chartConfig} className={`${compact ? 'h-28' : 'h-52 lg:h-56'} w-full`}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart accessibilityLayer>
             <ChartTooltip
@@ -96,9 +98,9 @@ export const CsoShareChart = memo(function CsoShareChart({
             <Pie
               data={chartData}
               cx="50%"
-              cy="45%"
-              innerRadius={45}
-              outerRadius={75}
+              cy={compact ? '50%' : '45%'}
+              innerRadius={compact ? 30 : 45}
+              outerRadius={compact ? 50 : 75}
               paddingAngle={2}
               dataKey="value"
               nameKey="name"
@@ -128,7 +130,7 @@ export const CsoShareChart = memo(function CsoShareChart({
                 }}
               />
             </Pie>
-            <ChartLegend content={<ChartLegendContent />} />
+            {!compact && <ChartLegend content={<ChartLegendContent />} />}
           </PieChart>
         </ResponsiveContainer>
       </ChartContainer>

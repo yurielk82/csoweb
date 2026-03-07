@@ -33,6 +33,8 @@ export interface MonthlyStatData {
 
 interface MonthlyStatsChartProps {
   data: MonthlyStatData[];
+  compact?: boolean;
+  title?: string;
 }
 
 // 만원 단위 포맷
@@ -52,7 +54,7 @@ function toMonthLabel(monthKey: string): string {
 
 const RECENT_MONTHS = 12;
 
-export default function MonthlyStatsChart({ data }: MonthlyStatsChartProps) {
+export default function MonthlyStatsChart({ data, compact, title }: MonthlyStatsChartProps) {
   const chartData = useMemo(() => {
     const sorted = [...data].sort((a, b) => a.month.localeCompare(b.month));
     return sorted.slice(-RECENT_MONTHS).map((d) => ({
@@ -101,7 +103,10 @@ export default function MonthlyStatsChart({ data }: MonthlyStatsChartProps) {
 
   return (
     <div className="glass-chart-card">
-      <ChartContainer config={chartConfig} className="h-60 lg:h-64 w-full">
+      {title && (
+        <h3 className={`font-semibold mb-1 ${compact ? 'text-sm' : 'text-base'}`}>{title}</h3>
+      )}
+      <ChartContainer config={chartConfig} className={`${compact ? 'h-44 lg:h-48' : 'h-60 lg:h-64'} w-full`}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart accessibilityLayer data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
