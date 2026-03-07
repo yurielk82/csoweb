@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
             data: {
               settlements: [],
               pagination: { page, pageSize, total: 0, totalPages: 0 },
-              totals: { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0 },
+              totals: { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 거래처수: 0, 제품수: 0 },
             },
           });
         }
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
           data: {
             settlements: [],
             pagination: { page, pageSize, total: 0, totalPages: 0 },
-            totals: { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0 },
+            totals: { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 거래처수: 0, 제품수: 0 },
           },
         });
       }
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
         : settlementRepo.findAllPaginated(queryParams),
       settlementMonth
         ? getCachedTotals(matchedNamesKey, settlementMonth)
-        : Promise.resolve({ 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0 }),
+        : Promise.resolve({ 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 거래처수: 0, 제품수: 0 }),
     ]);
 
     return NextResponse.json({

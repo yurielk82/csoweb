@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
 
     const visibleColumns = columns.filter(c => c.is_visible);
     const notice = { notice_content: companyInfo.notice_content, ceo_name: companyInfo.ceo_name };
-    const emptyTotals = { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0 };
+    const emptyTotals = { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 거래처수: 0, 제품수: 0 };
 
     // 일반 회원인데 매칭 없으면 빈 결과
     if (!session.is_admin && (!matchedNames || matchedNames.length === 0)) {

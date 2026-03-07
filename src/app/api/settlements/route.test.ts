@@ -41,6 +41,8 @@ const mockTotals = {
   금액: 350000,
   제약수수료_합계: 35000,
   담당수수료_합계: 3500,
+  거래처수: 12,
+  제품수: 8,
 };
 
 function createGetRequest(params: Record<string, string> = {}): NextRequest {

@@ -9,7 +9,8 @@ import {
   Calculator,
   User,
   ArrowRight,
-  Hash,
+  Building2,
+  Package,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
@@ -41,8 +42,8 @@ export default function UserHomePage() {
   const [chartData, setChartData] = useState<MonthlyStatData[]>([]);
   const [latestMonth, setLatestMonth] = useState('');
   const [latestCommission, setLatestCommission] = useState(0);
-  const [latestAmount, setLatestAmount] = useState(0);
-  const [latestRowCount, setLatestRowCount] = useState(0);
+  const [latestClientCount, setLatestClientCount] = useState(0);
+  const [latestProductCount, setLatestProductCount] = useState(0);
 
   useEffect(() => {
     async function fetchData() {
@@ -55,27 +56,24 @@ export default function UserHomePage() {
             settlement_month: string;
             summaries: Record<string, number>;
             row_count: number;
+            distinct_clients?: number;
+            distinct_products?: number;
           }>;
           const summaryColumns = json.data.summary_columns as Array<{
             column_key: string;
             column_name: string;
           }>;
+          const latestDistinct = json.data.latest_distinct as { clients: number; products: number } | null;
 
-          // 차트 데이터 변환: summaries에서 '금액' 관련 / '수수료' 관련 컬럼 합산
-          // 컬럼명에 '수수료' 포함 → commission, '금액' 포함 → amount
+          // 차트 데이터 변환: 수수료만 표시 (금액 제외)
           const commissionKeys = summaryColumns
             .filter(c => c.column_name.includes('수수료'))
-            .map(c => c.column_key);
-          const amountKeys = summaryColumns
-            .filter(c => c.column_name.includes('금액'))
             .map(c => c.column_key);
 
           const transformed: MonthlyStatData[] = months.map(m => {
             const totalCommission = commissionKeys.reduce((sum, k) => sum + (m.summaries[k] || 0), 0);
-            const totalAmount = amountKeys.reduce((sum, k) => sum + (m.summaries[k] || 0), 0);
             return {
               month: m.settlement_month,
-              totalAmount,
               totalCommission,
               csoCount: m.row_count,
             };
@@ -89,8 +87,8 @@ export default function UserHomePage() {
             const latest = sorted[0];
             setLatestMonth(latest.month);
             setLatestCommission(latest.totalCommission);
-            setLatestAmount(latest.totalAmount);
-            setLatestRowCount(latest.csoCount);
+            setLatestClientCount(latestDistinct?.clients ?? 0);
+            setLatestProductCount(latestDistinct?.products ?? 0);
           }
         }
       } catch (error) {
@@ -121,7 +119,7 @@ export default function UserHomePage() {
       {/* 요약 카드 3개 */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* 최신 수수료 */}
-        <div className="glass-kpi-card">
+        <div className="glass-kpi-card border-primary/20">
           <div className="flex items-center justify-between pb-2">
             <span className="text-sm font-medium">수수료</span>
             <Banknote className="h-4 w-4 glass-icon-orange" />
@@ -133,7 +131,7 @@ export default function UserHomePage() {
             </>
           ) : latestMonth ? (
             <>
-              <div className="text-2xl font-bold">{formatManWon(latestCommission)}</div>
+              <div className="text-2xl font-bold text-primary">{formatManWon(latestCommission)}</div>
               <p className="text-xs text-muted-foreground">{monthKeyToLabel(latestMonth)}</p>
             </>
           ) : (
@@ -144,35 +142,11 @@ export default function UserHomePage() {
           )}
         </div>
 
-        {/* 최신 금액 */}
+        {/* 거래처 수 */}
         <div className="glass-kpi-card">
           <div className="flex items-center justify-between pb-2">
-            <span className="text-sm font-medium">금액</span>
-            <Banknote className="h-4 w-4 glass-icon-teal" />
-          </div>
-          {loading ? (
-            <>
-              <Skeleton className="h-8 w-20 mb-1" />
-              <Skeleton className="h-3 w-24" />
-            </>
-          ) : latestMonth ? (
-            <>
-              <div className="text-2xl font-bold">{formatManWon(latestAmount)}</div>
-              <p className="text-xs text-muted-foreground">{monthKeyToLabel(latestMonth)}</p>
-            </>
-          ) : (
-            <>
-              <div className="text-2xl font-bold text-muted-foreground">&mdash;</div>
-              <p className="text-xs text-muted-foreground">데이터 없음</p>
-            </>
-          )}
-        </div>
-
-        {/* 최신 데이터 건수 */}
-        <div className="glass-kpi-card">
-          <div className="flex items-center justify-between pb-2">
-            <span className="text-sm font-medium">데이터 건수</span>
-            <Hash className="h-4 w-4 glass-icon-purple" />
+            <span className="text-sm font-medium">거래처 수</span>
+            <Building2 className="h-4 w-4 glass-icon-cyan" />
           </div>
           {loading ? (
             <>
@@ -181,7 +155,31 @@ export default function UserHomePage() {
             </>
           ) : latestMonth ? (
             <>
-              <div className="text-2xl font-bold">{latestRowCount.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{latestClientCount.toLocaleString()}<span className="text-base font-normal ml-0.5">곳</span></div>
+              <p className="text-xs text-muted-foreground">{monthKeyToLabel(latestMonth)}</p>
+            </>
+          ) : (
+            <>
+              <div className="text-2xl font-bold text-muted-foreground">&mdash;</div>
+              <p className="text-xs text-muted-foreground">데이터 없음</p>
+            </>
+          )}
+        </div>
+
+        {/* 제품 수 */}
+        <div className="glass-kpi-card">
+          <div className="flex items-center justify-between pb-2">
+            <span className="text-sm font-medium">제품 수</span>
+            <Package className="h-4 w-4 glass-icon-green" />
+          </div>
+          {loading ? (
+            <>
+              <Skeleton className="h-8 w-16 mb-1" />
+              <Skeleton className="h-3 w-24" />
+            </>
+          ) : latestMonth ? (
+            <>
+              <div className="text-2xl font-bold">{latestProductCount.toLocaleString()}<span className="text-base font-normal ml-0.5">종</span></div>
               <p className="text-xs text-muted-foreground">{monthKeyToLabel(latestMonth)}</p>
             </>
           ) : (

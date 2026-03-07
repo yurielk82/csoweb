@@ -33,6 +33,7 @@ export async function GET() {
           column_name: c.column_name,
           display_order: c.display_order,
         })),
+        latest_distinct: result.latest_distinct,
       },
     });
   } catch (error) {

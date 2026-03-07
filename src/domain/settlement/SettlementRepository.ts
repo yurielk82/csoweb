@@ -23,6 +23,8 @@ export interface SettlementTotals {
   금액: number;
   제약수수료_합계: number;
   담당수수료_합계: number;
+  거래처수: number;
+  제품수: number;
 }
 
 /** 페이지네이션 + 검색 파라미터 */

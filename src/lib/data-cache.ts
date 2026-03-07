@@ -76,7 +76,7 @@ export const getCachedTotals = unstable_cache(
     const matchedNames: string[] = JSON.parse(matchedNamesKey);
     return repo.getTotalsByCSOMatching(matchedNames, settlementMonth);
   },
-  ['settlement-totals-data'],
+  ['settlement-totals-data-v2'],
   { tags: ['settlement-data'] }
 );
 

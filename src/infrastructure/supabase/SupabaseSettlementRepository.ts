@@ -439,25 +439,63 @@ export class SupabaseSettlementRepository implements SettlementRepository {
   }
 
   private async totalsQuery(matchedNames: string[] | null, settlementMonth?: string): Promise<SettlementTotals> {
-    // RPC: DB에서 SUM 직접 계산 (전체 행 로드 제거)
-    const { data, error } = await supabase.rpc('get_settlement_totals', {
-      p_settlement_month: settlementMonth || null,
-      p_matched_names: matchedNames || null,
-      p_search: null,
-    });
+    const emptyTotals: SettlementTotals = { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 거래처수: 0, 제품수: 0 };
 
-    if (error || !data || (data as unknown[]).length === 0) {
-      console.error('totalsQuery RPC error:', error);
-      return { 수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0 };
+    // RPC(SUM) + DISTINCT 카운트 병렬 실행
+    const [rpcResult, distinctCounts] = await Promise.all([
+      supabase.rpc('get_settlement_totals', {
+        p_settlement_month: settlementMonth || null,
+        p_matched_names: matchedNames || null,
+        p_search: null,
+      }),
+      this.distinctCountsQuery(matchedNames, settlementMonth),
+    ]);
+
+    if (rpcResult.error || !rpcResult.data || (rpcResult.data as unknown[]).length === 0) {
+      console.error('totalsQuery RPC error:', rpcResult.error);
+      return emptyTotals;
     }
 
-    const row = (data as Record<string, string | number>[])[0];
+    const row = (rpcResult.data as Record<string, string | number>[])[0];
     return {
       수량: Number(row['total_수량']) || 0,
       금액: Number(row['total_금액']) || 0,
       제약수수료_합계: Number(row['total_제약수수료_합계']) || 0,
       담당수수료_합계: Number(row['total_담당수수료_합계']) || 0,
+      거래처수: distinctCounts.거래처수,
+      제품수: distinctCounts.제품수,
     };
+  }
+
+  /** 거래처명·제품명 DISTINCT 카운트 (JS 클라이언트에서 COUNT DISTINCT 미지원) */
+  private async distinctCountsQuery(
+    matchedNames: string[] | null,
+    settlementMonth?: string,
+  ): Promise<{ 거래처수: number; 제품수: number }> {
+    const pageSize = SUPABASE_PAGE_SIZE;
+    const clients = new Set<string>();
+    const products = new Set<string>();
+    let page = 0;
+
+    while (true) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      let query = supabase.from('settlements').select('거래처명, 제품명');
+      if (settlementMonth) query = query.eq('정산월', settlementMonth);
+      if (matchedNames && matchedNames.length > 0) query = query.in('CSO관리업체', matchedNames);
+      const { data, error } = await query.range(from, to);
+
+      if (error || !data || data.length === 0) break;
+      const rows = data as unknown as Array<{ 거래처명: string | null; 제품명: string | null }>;
+      for (const row of rows) {
+        if (row.거래처명) clients.add(row.거래처명);
+        if (row.제품명) products.add(row.제품명);
+      }
+      if (data.length < pageSize) break;
+      page++;
+    }
+
+    return { 거래처수: clients.size, 제품수: products.size };
   }
 
   // ============================================

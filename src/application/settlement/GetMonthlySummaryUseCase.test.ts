@@ -20,8 +20,14 @@ const { getMonthlySummary } = await import('./GetMonthlySummaryUseCase');
 
 const summaryColumns = mockColumnSettings.filter(c => c.is_summary);
 
+const mockTotals = {
+  수량: 0, 금액: 0, 제약수수료_합계: 0, 담당수수료_합계: 0, 거래처수: 5, 제품수: 3,
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
+  mockSettlementRepo.getTotals.mockResolvedValue(mockTotals);
+  mockSettlementRepo.getTotalsByCSOMatching.mockResolvedValue(mockTotals);
 });
 
 describe('getMonthlySummary', () => {

@@ -22,7 +22,7 @@ import {
 
 export interface MonthlyStatData {
   month: string;
-  totalAmount: number;
+  totalAmount?: number;
   totalCommission: number;
   csoCount: number;
   /** 접속 업체 수 (optional — admin 전용) */
@@ -60,24 +60,26 @@ export default function MonthlyStatsChart({ data }: MonthlyStatsChartProps) {
     }));
   }, [data]);
 
-  // 접속업체/이메일 데이터가 하나라도 있는지 확인
+  // 시리즈별 데이터 유무 확인
+  const hasTotalAmountData = chartData.some((d) => (d.totalAmount ?? 0) > 0);
   const hasAccessedData = chartData.some((d) => d.accessedCount !== undefined);
   const hasEmailData = chartData.some((d) => d.emailSentCount !== undefined);
 
   const chartConfig = useMemo(() => {
-    const config: ChartConfig = {
-      totalAmount: {
+    const config: ChartConfig = {};
+    if (hasTotalAmountData) {
+      config.totalAmount = {
         label: '금액(만원)',
         color: 'hsl(var(--chart-1))',
-      },
-      totalCommission: {
-        label: '수수료(만원)',
-        color: 'hsl(var(--chart-2))',
-      },
-      csoCount: {
-        label: 'CSO 업체 수',
-        color: 'hsl(var(--chart-3))',
-      },
+      };
+    }
+    config.totalCommission = {
+      label: '수수료(만원)',
+      color: 'hsl(var(--chart-2))',
+    };
+    config.csoCount = {
+      label: 'CSO 업체 수',
+      color: 'hsl(var(--chart-3))',
     };
     if (hasAccessedData) {
       config.accessedCount = {
@@ -92,7 +94,7 @@ export default function MonthlyStatsChart({ data }: MonthlyStatsChartProps) {
       };
     }
     return config;
-  }, [hasAccessedData, hasEmailData]);
+  }, [hasTotalAmountData, hasAccessedData, hasEmailData]);
 
   if (chartData.length === 0) {
     return (
@@ -144,13 +146,15 @@ export default function MonthlyStatsChart({ data }: MonthlyStatsChartProps) {
               }
             />
             <ChartLegend content={<ChartLegendContent />} />
-            <Bar
-              yAxisId="amount"
-              dataKey="totalAmount"
-              fill="var(--color-totalAmount)"
-              radius={[4, 4, 0, 0]}
-              barSize={20}
-            />
+            {hasTotalAmountData && (
+              <Bar
+                yAxisId="amount"
+                dataKey="totalAmount"
+                fill="var(--color-totalAmount)"
+                radius={[4, 4, 0, 0]}
+                barSize={20}
+              />
+            )}
             <Bar
               yAxisId="amount"
               dataKey="totalCommission"

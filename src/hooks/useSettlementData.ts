@@ -17,6 +17,8 @@ export interface SettlementResponse {
     금액: number;
     제약수수료_합계: number;
     담당수수료_합계: number;
+    거래처수: number;
+    제품수: number;
   };
 }
 
