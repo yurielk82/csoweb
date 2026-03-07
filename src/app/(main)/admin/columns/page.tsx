@@ -25,6 +25,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { API_ROUTES } from '@/constants/api';
 import type { ColumnSetting } from '@/types';
 import { NUMERIC_COLUMN_KEYS } from '@/types';
 
@@ -158,7 +159,7 @@ export default function ColumnsPage() {
   const fetchColumns = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/columns');
+      const response = await fetch(API_ROUTES.COLUMNS);
       const result = await response.json();
       
       if (result.success) {
@@ -253,7 +254,7 @@ export default function ColumnsPage() {
 
   const resetDefaults = async () => {
     try {
-      const response = await fetch('/api/columns', { method: 'DELETE' });
+      const response = await fetch(API_ROUTES.COLUMNS, { method: 'DELETE' });
       const result = await response.json();
       
       if (result.success) {
@@ -277,7 +278,7 @@ export default function ColumnsPage() {
   const saveChanges = async () => {
     setSaving(true);
     try {
-      const response = await fetch('/api/columns', {
+      const response = await fetch(API_ROUTES.COLUMNS, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ columns }),

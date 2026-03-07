@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { SystemStatus } from '@/types';
 import type { SettlementUpload } from '@/domain/settlement/types';
 import type { EmailMonthlyStat } from '@/domain/email/types';
+import { API_ROUTES } from '@/constants/api';
+import { fetchWithTimeout } from '@/lib/fetch';
 
 // ── Types ──
 
@@ -32,6 +34,7 @@ export interface AdminDashboardData {
   kpiLoaded: boolean;
   badgesLoaded: boolean;
   systemLoaded: boolean;
+  fetchError: boolean;
   selectedMonth: string;
   months: SettlementMonth[];
   enrichedChartData: EnrichedMonthData[];
@@ -75,6 +78,7 @@ export function useAdminDashboard(): AdminDashboardData {
   const [kpiLoaded, setKpiLoaded] = useState(false);
   const [badgesLoaded, setBadgesLoaded] = useState(false);
   const [systemLoaded, setSystemLoaded] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState('');
 
   // Data sources
@@ -123,8 +127,8 @@ export function useAdminDashboard(): AdminDashboardData {
   const fetchEmailStats = useCallback(async (monthKey: string) => {
     try {
       const { startDate, endDate } = getMonthDateRange(monthKey);
-      const res = await fetch(
-        `/api/email/logs?start_date=${startDate}&end_date=${endDate}&limit=1`
+      const res = await fetchWithTimeout(
+        `${API_ROUTES.EMAIL.LOGS}?start_date=${startDate}&end_date=${endDate}&limit=1`
       );
       const json = await res.json();
       if (json.success && json.data?.stats) {
@@ -141,7 +145,7 @@ export function useAdminDashboard(): AdminDashboardData {
   // Initial load — 독립 그룹별 병렬 페칭
   useEffect(() => {
     // 그룹 1: KPI 데이터 (stats)
-    fetch('/api/settlements/stats')
+    fetchWithTimeout(API_ROUTES.SETTLEMENTS.STATS)
       .then(async (statsRes) => {
         const statsData = await statsRes.json();
         if (statsData.success && statsData.data?.months) {
@@ -159,13 +163,13 @@ export function useAdminDashboard(): AdminDashboardData {
           setSelectedMonth(currentMonthKey);
         }
       })
-      .catch((error) => console.error('Fetch KPI error:', error))
+      .catch((error) => { console.error('Fetch KPI error:', error); setFetchError(true); })
       .finally(() => setKpiLoaded(true));
 
     // 그룹 2: 배지 데이터 (pending + integrity)
     Promise.all([
-      fetch('/api/users?pending=true'),
-      fetch('/api/admin/cso-matching/integrity'),
+      fetchWithTimeout(`${API_ROUTES.USERS.LIST}?pending=true`),
+      fetchWithTimeout(API_ROUTES.ADMIN.CSO_MATCHING.INTEGRITY),
     ])
       .then(async ([pendingRes, integrityRes]) => {
         const [pendingData, integrityData] = await Promise.all([
@@ -180,18 +184,18 @@ export function useAdminDashboard(): AdminDashboardData {
           setUnmappedCount(count);
         }
       })
-      .catch((error) => console.error('Fetch badges error:', error))
+      .catch((error) => { console.error('Fetch badges error:', error); setFetchError(true); })
       .finally(() => setBadgesLoaded(true));
 
     // 그룹 3: 시스템 상태
-    fetch('/api/system/status')
+    fetchWithTimeout(API_ROUTES.SYSTEM.STATUS)
       .then(async (res) => {
         const data = await res.json();
         if (data.success) {
           setSystemStatus(data.data);
         }
       })
-      .catch((error) => console.error('Fetch system status error:', error))
+      .catch((error) => { console.error('Fetch system status error:', error); setFetchError(true); })
       .finally(() => setSystemLoaded(true));
 
     // 그룹 4: 이메일 배지용
@@ -199,8 +203,8 @@ export function useAdminDashboard(): AdminDashboardData {
 
     // 그룹 5: 차트용 추가 데이터 (전체 스냅샷 + 이메일 월별 통계)
     Promise.all([
-      fetch('/api/settlements/uploads'),
-      fetch('/api/email/monthly-stats'),
+      fetchWithTimeout(API_ROUTES.SETTLEMENTS.UPLOADS),
+      fetchWithTimeout(API_ROUTES.EMAIL.MONTHLY_STATS),
     ])
       .then(async ([snapshotsRes, emailMonthlyRes]) => {
         const [snapshotsData, emailMonthlyData] = await Promise.all([
@@ -214,7 +218,7 @@ export function useAdminDashboard(): AdminDashboardData {
           setEmailMonthlyStats(emailMonthlyData.data);
         }
       })
-      .catch((error) => console.error('Fetch chart extra data error:', error));
+      .catch((error) => { console.error('Fetch chart extra data error:', error); setFetchError(true); });
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -249,6 +253,7 @@ export function useAdminDashboard(): AdminDashboardData {
     kpiLoaded,
     badgesLoaded,
     systemLoaded,
+    fetchError,
     selectedMonth,
     months,
     enrichedChartData,

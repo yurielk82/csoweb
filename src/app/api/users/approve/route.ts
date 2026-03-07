@@ -46,17 +46,14 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Send approval notification email
-    console.log(`[Approve] Sending email to: ${user.email}, company: ${user.company_name}`);
+    // 승인 알림 이메일 발송
     const emailResult = await sendEmail(user.email, 'approval_complete', {
       company_name: user.company_name,
       business_number: user.business_number,
     });
-    
+
     if (!emailResult.success) {
-      console.error(`[Approve] Email failed for ${user.email}: ${emailResult.error}`);
-    } else {
-      console.log(`[Approve] Email sent successfully to: ${user.email}`);
+      console.error(`[Approve] Email failed for BN ${business_number}: ${emailResult.error}`);
     }
     
     // CSO 매핑 자동 등록: 회사명 → 사업자번호 (승인 시 보장)
@@ -76,7 +73,6 @@ export async function POST(request: NextRequest) {
         console.error('[Approve] CSO 매핑 자동 등록 DB 에러:', matchError.message);
       } else {
         invalidateCSOMatchingCache();
-        console.log(`[Approve] CSO 매핑 자동 등록: ${user.company_name} → ${user.business_number}`);
       }
     } catch (error) {
       console.error('[Approve] CSO 매핑 자동 등록 실패 (승인은 정상 처리됨):', error);

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_ROUTES } from '@/constants/api';
 import type { MonthlyStatData } from '@/components/shared/MonthlyStatsChart';
 
 const MonthlyStatsChart = dynamic(
@@ -44,7 +45,7 @@ export default function UserHomePage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch('/api/settlements/monthly-summary');
+        const res = await fetch(API_ROUTES.SETTLEMENTS.MONTHLY_SUMMARY);
         const json = await res.json();
 
         if (json.success && json.data?.months) {

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { FileSpreadsheet, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_ROUTES } from '@/constants/api';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -45,7 +46,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     // 회사 정보 로드
-    fetch('/api/settings/company')
+    fetch(API_ROUTES.SETTINGS.COMPANY)
       .then(res => res.json())
       .then(result => {
         if (result.success && result.data) {
@@ -73,7 +74,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(API_ROUTES.AUTH.LOGIN, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

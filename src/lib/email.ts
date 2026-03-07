@@ -807,7 +807,7 @@ export async function sendEmail(
       const settings = await getEmailSettings();
       const key = templateType as keyof EmailNotifications;
       if (key in settings.email_notifications && !settings.email_notifications[key]) {
-        console.log(`[Email Skip] ${templateType} 알림이 비활성화되어 발송하지 않습니다.`);
+        console.warn(`[Email Skip] ${templateType} 알림이 비활성화되어 발송하지 않습니다.`);
         return { success: true };
       }
     } catch (error) {

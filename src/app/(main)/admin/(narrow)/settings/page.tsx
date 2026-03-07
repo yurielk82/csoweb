@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { DEFAULT_COMPANY_INFO } from '@/constants/defaults';
+import { API_ROUTES } from '@/constants/api';
 import type { CompanyInfo } from '@/domain/company/types';
 
 export default function SettingsPage() {
@@ -20,7 +21,7 @@ export default function SettingsPage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => {
-    fetch('/api/settings/company', { cache: 'no-store' })
+    fetch(API_ROUTES.SETTINGS.COMPANY, { cache: 'no-store' })
       .then(r => r.json())
       .then((companyResult) => {
         if (companyResult.success && companyResult.data) {
@@ -41,7 +42,7 @@ export default function SettingsPage() {
   const patchFields = async (fields: Partial<CompanyInfo>) => {
     setSaveStatus('saving');
     try {
-      const res = await fetch('/api/settings/company', {
+      const res = await fetch(API_ROUTES.SETTINGS.COMPANY, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(fields),
@@ -76,7 +77,7 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch('/api/settings/company', {
+      const res = await fetch(API_ROUTES.SETTINGS.COMPANY, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

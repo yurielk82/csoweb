@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { API_ROUTES } from '@/constants/api';
 
 interface User {
   id: string;
@@ -177,7 +178,7 @@ export default function MembersPage() {
   const handleApprove = async (user: User) => {
     setProcessing(user.business_number);
     try {
-      const response = await fetch('/api/users/approve', {
+      const response = await fetch(API_ROUTES.USERS.APPROVE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ business_number: user.business_number }),
@@ -213,7 +214,7 @@ export default function MembersPage() {
     }
     setBatchProcessing(true);
     try {
-      const response = await fetch('/api/users/approve-batch', {
+      const response = await fetch(API_ROUTES.USERS.APPROVE_BATCH, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ business_numbers: Array.from(selectedUsers) }),
@@ -244,7 +245,7 @@ export default function MembersPage() {
     const user = rejectDialog.user;
     setProcessing(user.business_number);
     try {
-      const response = await fetch('/api/users/reject', {
+      const response = await fetch(API_ROUTES.USERS.REJECT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -272,7 +273,7 @@ export default function MembersPage() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/users');
+      const res = await fetch(API_ROUTES.USERS.LIST);
       const result = await res.json();
       if (result.success) {
         setUsers(result.data);
@@ -310,7 +311,7 @@ export default function MembersPage() {
     
     setSaving(true);
     try {
-      const res = await fetch(`/api/users/${editUser.business_number}`, {
+      const res = await fetch(API_ROUTES.USERS.byBusinessNumber(editUser.business_number), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm),
@@ -415,7 +416,7 @@ export default function MembersPage() {
     
     setDeleting(true);
     try {
-      const res = await fetch(`/api/users/${deleteUser.business_number}`, {
+      const res = await fetch(API_ROUTES.USERS.byBusinessNumber(deleteUser.business_number), {
         method: 'DELETE',
       });
       
@@ -453,7 +454,7 @@ export default function MembersPage() {
     
     setResetting(true);
     try {
-      const res = await fetch('/api/users/reset-password', {
+      const res = await fetch(API_ROUTES.USERS.RESET_PASSWORD, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ business_number: resetUser.business_number }),

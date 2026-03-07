@@ -50,6 +50,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Settlement, ColumnSetting } from '@/types';
 import { getSettlementValue } from '@/types';
 import { DEFAULT_PAGE_SIZE, DEFAULT_NOTICE_CONTENT } from '@/constants/defaults';
+import { API_ROUTES } from '@/constants/api';
 
 interface SettlementResponse {
   settlements: Settlement[];
@@ -131,7 +132,7 @@ export default function AdminMasterPage() {
   useEffect(() => {
     const init = async () => {
       try {
-        const res = await fetch('/api/dashboard/init?include_settlements=false');
+        const res = await fetch(`${API_ROUTES.DASHBOARD.INIT}?include_settlements=false`);
         const initRes = await res.json();
 
         if (initRes.success) {
@@ -187,7 +188,7 @@ export default function AdminMasterPage() {
     if (!month) return;
     setCsoLoading(true);
     try {
-      const res = await fetch(`/api/settlements/cso-companies?month=${encodeURIComponent(month)}`);
+      const res = await fetch(API_ROUTES.SETTLEMENTS.csoCompanies(month));
       const result = await res.json();
       if (result.success) {
         setCsoList(result.data);
@@ -224,7 +225,7 @@ export default function AdminMasterPage() {
         params.set('business_number', selectedCSO.business_number);
       }
 
-      const res = await fetch(`/api/settlements?${params}`);
+      const res = await fetch(`${API_ROUTES.SETTLEMENTS.LIST}?${params}`);
       const result = await res.json();
 
       if (result.success) {
@@ -305,7 +306,7 @@ export default function AdminMasterPage() {
         params.set('business_number', selectedCSO.business_number);
       }
 
-      const res = await fetch(`/api/settlements/export?${params}`);
+      const res = await fetch(`${API_ROUTES.SETTLEMENTS.EXPORT}?${params}`);
       const blob = await res.blob();
 
       const url = window.URL.createObjectURL(blob);
@@ -357,7 +358,7 @@ export default function AdminMasterPage() {
   const handleNoticeSave = async () => {
     setNoticeSaving(true);
     try {
-      const res = await fetch('/api/settings/company', {
+      const res = await fetch(API_ROUTES.SETTINGS.COMPANY, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notice_content: noticeEditContent }),

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { API_ROUTES } from '@/constants/api';
 
 interface TokenInfo {
   company_name: string;
@@ -64,7 +65,7 @@ function ResetPasswordContent() {
 
     const verifyToken = async () => {
       try {
-        const response = await fetch(`/api/auth/reset-password-verify?token=${token}`);
+        const response = await fetch(`${API_ROUTES.AUTH.RESET_PASSWORD_VERIFY}?token=${token}`);
         const result = await response.json();
 
         if (!result.success) {
@@ -102,7 +103,7 @@ function ResetPasswordContent() {
     setSubmitting(true);
 
     try {
-      const response = await fetch('/api/auth/reset-password-verify', {
+      const response = await fetch(API_ROUTES.AUTH.RESET_PASSWORD_VERIFY, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

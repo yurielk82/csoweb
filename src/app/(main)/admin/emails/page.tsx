@@ -23,6 +23,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { EmailLog, EmailTemplateType, EmailStatus } from '@/types';
+import { API_ROUTES } from '@/constants/api';
 
 const TEMPLATE_LABELS: Record<EmailTemplateType, string> = {
   registration_request: '회원가입 신청',
@@ -141,7 +142,7 @@ export default function EmailLogsPage() {
       if (filterStatus !== 'all') params.set('status', filterStatus);
       if (startDate) params.set('start_date', startDate);
 
-      const response = await fetch(`/api/email/logs?${params}`);
+      const response = await fetch(`${API_ROUTES.EMAIL.LOGS}?${params}`);
       const result = await response.json();
 
       if (result.success) {

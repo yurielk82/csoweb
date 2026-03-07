@@ -36,6 +36,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { API_ROUTES } from '@/constants/api';
 import type { LucideIcon } from 'lucide-react';
 
 /* ─── 메뉴 타입 ─── */
@@ -283,7 +284,7 @@ export function Header() {
   const handleLogout = async () => {
     try {
       clearUser();
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch(API_ROUTES.AUTH.LOGOUT, { method: 'POST' });
       router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);

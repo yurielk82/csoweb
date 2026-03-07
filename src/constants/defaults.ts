@@ -5,6 +5,10 @@
 import type { CompanyInfo } from '@/domain/company/types';
 import { DEFAULT_EMAIL_NOTIFICATIONS } from '@/domain/company/types';
 
+// ── 네트워크 ──
+/** 클라이언트 fetch 기본 타임아웃 (ms) — AbortController 미설정 시 사용 */
+export const DEFAULT_FETCH_TIMEOUT_MS = 60_000;
+
 // ── 페이지네이션 ──
 /** 클라이언트 UI 페이지 크기 (대시보드, 마스터 조회, 정산 API) */
 export const DEFAULT_PAGE_SIZE = 50;

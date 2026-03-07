@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { API_ROUTES } from '@/constants/api';
 
 // 다음 주소 검색 타입 선언
 declare global {
@@ -75,7 +76,7 @@ export default function CompleteProfilePage() {
     async function init() {
       try {
         // 1. 세션 확인
-        const sessionRes = await fetch('/api/auth/session');
+        const sessionRes = await fetch(API_ROUTES.AUTH.SESSION);
         const sessionResult = await sessionRes.json();
 
         if (!sessionResult.success || !sessionResult.data) {
@@ -98,7 +99,7 @@ export default function CompleteProfilePage() {
         setSession(sessionResult.data);
 
         // 2. DB에서 실제 프로필 조회하여 기존 데이터 프리필
-        const profileRes = await fetch('/api/users/profile');
+        const profileRes = await fetch(API_ROUTES.USERS.PROFILE);
         const profileResult = await profileRes.json();
 
         if (profileResult.success && profileResult.data) {
@@ -202,7 +203,7 @@ export default function CompleteProfilePage() {
     setSaving(true);
 
     try {
-      const response = await fetch('/api/auth/complete-profile', {
+      const response = await fetch(API_ROUTES.AUTH.COMPLETE_PROFILE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

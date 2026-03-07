@@ -18,13 +18,14 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { SystemStatus } from '@/types';
+import { API_ROUTES } from '@/constants/api';
 
 export default function SystemInfoPage() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<SystemStatus | null>(null);
 
   useEffect(() => {
-    fetch('/api/system/status')
+    fetch(API_ROUTES.SYSTEM.STATUS)
       .then((r) => r.json())
       .then((result) => {
         if (result.success) {

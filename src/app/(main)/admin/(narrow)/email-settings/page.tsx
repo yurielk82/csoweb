@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { DEFAULT_SMTP_PORT, DEFAULT_COMPANY_INFO } from '@/constants/defaults';
+import { API_ROUTES } from '@/constants/api';
 import type { CompanyInfo } from '@/domain/company/types';
 
 type EmailFields = Pick<CompanyInfo,
@@ -62,7 +63,7 @@ export default function EmailSettingsPage() {
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
-    fetch('/api/settings/company', { cache: 'no-store' })
+    fetch(API_ROUTES.SETTINGS.COMPANY, { cache: 'no-store' })
       .then(r => r.json())
       .then((result) => {
         if (result.success && result.data) {
@@ -95,7 +96,7 @@ export default function EmailSettingsPage() {
   const patchFields = async (fields: Partial<CompanyInfo>) => {
     setSaveStatus('saving');
     try {
-      const res = await fetch('/api/settings/company', {
+      const res = await fetch(API_ROUTES.SETTINGS.COMPANY, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(fields),
@@ -133,7 +134,7 @@ export default function EmailSettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch('/api/settings/company', {
+      const res = await fetch(API_ROUTES.SETTINGS.COMPANY, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -172,7 +173,7 @@ export default function EmailSettingsPage() {
         emailFields.resend_from_email = formData.resend_from_email;
       }
 
-      const saveRes = await fetch('/api/settings/company', {
+      const saveRes = await fetch(API_ROUTES.SETTINGS.COMPANY, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(emailFields),
@@ -188,7 +189,7 @@ export default function EmailSettingsPage() {
       }
       initialDataRef.current = { ...initialDataRef.current, ...emailFields } as EmailFields;
 
-      const res = await fetch('/api/settings/email-test', {
+      const res = await fetch(API_ROUTES.SETTINGS.EMAIL_TEST, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { API_ROUTES } from '@/constants/api';
 
 // 다음 주소 검색 타입 선언
 declare global {
@@ -113,7 +114,7 @@ export default function RegisterPage() {
     });
 
     try {
-      const response = await fetch('/api/verify-biz', {
+      const response = await fetch(API_ROUTES.VERIFY_BIZ, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ b_no: bizNumber }),
@@ -266,7 +267,7 @@ export default function RegisterPage() {
     }
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch(API_ROUTES.AUTH.REGISTER, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

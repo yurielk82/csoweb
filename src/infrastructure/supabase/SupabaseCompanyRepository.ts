@@ -35,7 +35,7 @@ export class SupabaseCompanyRepository implements CompanyRepository {
       .limit(1);
 
     if (error) {
-      console.log('getCompanyInfo error:', error.message, error.code);
+      console.error('getCompanyInfo error:', error.message, error.code);
     }
 
     const data = rows && rows.length > 0 ? rows[0] : null;

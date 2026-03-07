@@ -48,6 +48,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { API_ROUTES } from '@/constants/api';
 
 // ===========================================
 // Types
@@ -416,7 +417,7 @@ export default function SettlementIntegrityManager() {
     setLoading(true);
     try {
       // 전체 데이터를 가져오고, 정산월 필터링은 클라이언트에서 처리
-      const res = await fetch('/api/admin/cso-matching/integrity');
+      const res = await fetch(API_ROUTES.ADMIN.CSO_MATCHING.INTEGRITY);
       const result = await res.json();
 
       if (result.success) {
@@ -607,7 +608,7 @@ export default function SettlementIntegrityManager() {
     );
 
     try {
-      const res = await fetch('/api/admin/cso-matching/upsert', {
+      const res = await fetch(API_ROUTES.ADMIN.CSO_MATCHING.UPSERT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -685,14 +686,14 @@ export default function SettlementIntegrityManager() {
 
     try {
       // 기존 삭제
-      await fetch('/api/admin/cso-matching/upsert', {
+      await fetch(API_ROUTES.ADMIN.CSO_MATCHING.UPSERT, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cso_company_name: oldName }),
       });
 
       // 새로 추가
-      const res = await fetch('/api/admin/cso-matching/upsert', {
+      const res = await fetch(API_ROUTES.ADMIN.CSO_MATCHING.UPSERT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -761,7 +762,7 @@ export default function SettlementIntegrityManager() {
     );
 
     try {
-      const res = await fetch('/api/admin/cso-matching/upsert', {
+      const res = await fetch(API_ROUTES.ADMIN.CSO_MATCHING.UPSERT, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cso_company_name: csoName }),
@@ -819,7 +820,7 @@ export default function SettlementIntegrityManager() {
     try {
       // 해당 사업자번호의 모든 CSO 매칭 삭제
       for (const csoName of deleteTarget.cso_company_names) {
-        await fetch('/api/admin/cso-matching/upsert', {
+        await fetch(API_ROUTES.ADMIN.CSO_MATCHING.UPSERT, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ cso_company_name: csoName }),
@@ -870,7 +871,7 @@ export default function SettlementIntegrityManager() {
 
     setAddingRow(true);
     try {
-      const res = await fetch('/api/admin/cso-matching/upsert', {
+      const res = await fetch(API_ROUTES.ADMIN.CSO_MATCHING.UPSERT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1013,7 +1014,7 @@ export default function SettlementIntegrityManager() {
         setUploadProgress((prev) => Math.min(prev + 10, 90));
       }, 200);
 
-      const res = await fetch('/api/admin/cso-matching/upsert', {
+      const res = await fetch(API_ROUTES.ADMIN.CSO_MATCHING.UPSERT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: uploadPreview }),

@@ -148,7 +148,7 @@ export async function parseExcelFile(
       errors.push(`... 외 다수의 사업자번호 오류`);
     }
     
-    console.log(`Excel parsed: ${data.length} valid rows from ${rowCount - 1} total rows`);
+    // 파싱 통계는 호출자에게 data.length로 전달됨 (운영 로그 불필요)
     
     return { data, errors };
   } catch (error) {

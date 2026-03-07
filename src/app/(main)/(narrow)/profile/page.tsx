@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { API_ROUTES } from '@/constants/api';
 
 interface DaumPostcodeData {
   address: string;
@@ -57,7 +58,7 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
-    fetch('/api/users/profile')
+    fetch(API_ROUTES.USERS.PROFILE)
       .then(res => res.json())
       .then(result => {
         if (result.success && result.data) {
@@ -130,7 +131,7 @@ export default function ProfilePage() {
 
     setSaving(true);
     try {
-      const res = await fetch('/api/users/profile', {
+      const res = await fetch(API_ROUTES.USERS.PROFILE, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(changes),
@@ -183,7 +184,7 @@ export default function ProfilePage() {
     
     setSaving(true);
     try {
-      const res = await fetch('/api/users/profile', {
+      const res = await fetch(API_ROUTES.USERS.PROFILE, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { DEFAULT_EMAIL_SEND_DELAY_MS } from '@/constants/defaults';
+import { API_ROUTES } from '@/constants/api';
 
 // ─── 타입 정의 ───────────────────────────────────────────
 
@@ -133,7 +134,7 @@ export function useMailMerge() {
   useEffect(() => {
     async function fetchAvailableMonths() {
       try {
-        const res = await fetch('/api/email/mailmerge?type=available_months');
+        const res = await fetch(`${API_ROUTES.EMAIL.MAILMERGE}?type=available_months`);
         const data = await res.json();
         if (data.success && Array.isArray(data.data.months)) {
           setYearMonthOptions(data.data.months);
@@ -167,7 +168,7 @@ export function useMailMerge() {
         setLoadingCount(false);
         return;
       }
-      const res = await fetch(`/api/email/mailmerge?${params.toString()}`);
+      const res = await fetch(`${API_ROUTES.EMAIL.MAILMERGE}?${params.toString()}`);
       const data = await res.json();
       if (data.success) setRecipientCount(data.data.count);
     } catch (error) {
@@ -220,7 +221,7 @@ export function useMailMerge() {
   // ─── 핸들러 ───────────────────────────────────────────
 
   const fetchPreview = useCallback(async (testBn?: string) => {
-    const previewRes = await fetch('/api/email/mailmerge', {
+    const previewRes = await fetch(API_ROUTES.EMAIL.MAILMERGE, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -253,7 +254,7 @@ export function useMailMerge() {
 
       const [previewData, listRes] = await Promise.all([
         fetchPreview(),
-        fetch(`/api/email/mailmerge?${params.toString()}`),
+        fetch(`${API_ROUTES.EMAIL.MAILMERGE}?${params.toString()}`),
       ]);
 
       const listData = await listRes.json();
@@ -286,7 +287,7 @@ export function useMailMerge() {
   const handleTestSend = async () => {
     setTestSending(true);
     try {
-      const response = await fetch('/api/email/mailmerge', {
+      const response = await fetch(API_ROUTES.EMAIL.MAILMERGE, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -329,7 +330,7 @@ export function useMailMerge() {
         ? ['all']
         : [`year_month:${selectedYearMonth}`];
 
-      const response = await fetch('/api/email/mailmerge', {
+      const response = await fetch(API_ROUTES.EMAIL.MAILMERGE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

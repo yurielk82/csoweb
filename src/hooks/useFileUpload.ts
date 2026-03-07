@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { API_ROUTES } from '@/constants/api';
 
 export interface UploadResult {
   success: boolean;
@@ -64,7 +65,7 @@ export function useFileUpload() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/upload/preview', {
+      const response = await fetch(API_ROUTES.UPLOAD.PREVIEW, {
         method: 'POST',
         body: formData,
       });
@@ -112,9 +113,10 @@ export function useFileUpload() {
     setResult(null);
     setShowMappingDialog(false);
 
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
+
     try {
-      // Simulate progress
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setProgress(prev => Math.min(prev + 10, 90));
       }, 200);
 
@@ -132,12 +134,11 @@ export function useFileUpload() {
         formData.append('customMapping', JSON.stringify(customMapping));
       }
 
-      const response = await fetch('/api/upload', {
+      const response = await fetch(API_ROUTES.UPLOAD.SUBMIT, {
         method: 'POST',
         body: formData,
       });
 
-      clearInterval(progressInterval);
       setProgress(100);
 
       const data = await response.json();
@@ -147,8 +148,6 @@ export function useFileUpload() {
         setFile(null);
         setPreviewData(null);
         setMappings([]);
-        // 업로드 성공 시 이메일 발송 여부 묻기 - 주석 처리
-        // setShowEmailDialog(true);
       }
     } catch (error) {
       console.error('파일 업로드 오류:', error);
@@ -157,6 +156,7 @@ export function useFileUpload() {
         error: '업로드 중 오류가 발생했습니다.',
       });
     } finally {
+      if (progressInterval) clearInterval(progressInterval);
       setUploading(false);
     }
   };
@@ -168,7 +168,7 @@ export function useFileUpload() {
     try {
       const settlementMonth = result.data.settlementMonths[0];
 
-      const res = await fetch('/api/email/mailmerge', {
+      const res = await fetch(API_ROUTES.EMAIL.MAILMERGE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

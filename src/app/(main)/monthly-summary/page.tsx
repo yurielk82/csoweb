@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loading } from '@/components/shared/loading';
 import { Badge } from '@/components/ui/badge';
+import { API_ROUTES } from '@/constants/api';
 
 interface SummaryColumn {
   column_key: string;
@@ -37,7 +38,7 @@ export default function MonthlySummaryPage() {
     setError(null);
     
     try {
-      const res = await fetch('/api/settlements/monthly-summary');
+      const res = await fetch(API_ROUTES.SETTLEMENTS.MONTHLY_SUMMARY);
       const result = await res.json();
       
       if (result.success) {

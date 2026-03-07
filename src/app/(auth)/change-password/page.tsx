@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { API_ROUTES } from '@/constants/api';
 
 interface SessionData {
   business_number: string;
@@ -33,7 +34,7 @@ export default function ChangePasswordPage() {
   useEffect(() => {
     async function init() {
       try {
-        const sessionRes = await fetch('/api/auth/session');
+        const sessionRes = await fetch(API_ROUTES.AUTH.SESSION);
         const sessionResult = await sessionRes.json();
 
         if (!sessionResult.success || !sessionResult.data) {
@@ -91,7 +92,7 @@ export default function ChangePasswordPage() {
     setSaving(true);
 
     try {
-      const response = await fetch('/api/auth/change-password', {
+      const response = await fetch(API_ROUTES.AUTH.CHANGE_PASSWORD, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ new_password: formData.new_password }),

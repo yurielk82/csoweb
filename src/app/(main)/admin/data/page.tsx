@@ -27,6 +27,7 @@ import {
   AlertTitle,
 } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { API_ROUTES } from '@/constants/api';
 
 interface SettlementMonthData {
   month: string;
@@ -51,7 +52,7 @@ export default function DataManagementPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/settlements/stats');
+      const res = await fetch(API_ROUTES.SETTLEMENTS.STATS);
       const result = await res.json();
       if (result.success) {
         setData(result.data.months);
@@ -77,7 +78,7 @@ export default function DataManagementPage() {
     
     setDeleting(true);
     try {
-      const res = await fetch(`/api/settlements/month/${encodeURIComponent(deleteMonth)}`, {
+      const res = await fetch(API_ROUTES.SETTLEMENTS.byMonth(deleteMonth), {
         method: 'DELETE',
       });
       

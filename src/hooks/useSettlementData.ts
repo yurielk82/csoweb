@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Settlement, ColumnSetting } from '@/types';
 import { DEFAULT_PAGE_SIZE, CSO_FULL_PAGE_SIZE } from '@/constants/defaults';
+import { API_ROUTES } from '@/constants/api';
+import { fetchWithTimeout } from '@/lib/fetch';
 import { useToast } from '@/hooks/use-toast';
 
 export interface SettlementResponse {
@@ -57,7 +59,7 @@ export function useSettlementData(isAdmin: boolean) {
   useEffect(() => {
     const init = async () => {
       try {
-        const res = await fetch(`/api/dashboard/init?page=1&page_size=${pageSize}`);
+        const res = await fetchWithTimeout(`${API_ROUTES.DASHBOARD.INIT}?page=1&page_size=${pageSize}`);
 
         if (res.status === 401) {
           setError('로그인이 필요합니다. 다시 로그인해주세요.');
@@ -146,7 +148,7 @@ export function useSettlementData(isAdmin: boolean) {
       });
       if (searchQuery) params.set('search', searchQuery);
 
-      const res = await fetch(`/api/settlements?${params}`);
+      const res = await fetchWithTimeout(`${API_ROUTES.SETTLEMENTS.LIST}?${params}`);
 
       if (res.status === 401) {
         setError('세션이 만료되었습니다. 다시 로그인해주세요.');
@@ -224,7 +226,7 @@ export function useSettlementData(isAdmin: boolean) {
         settlement_month: selectedMonth,
         columns: selectedColumns.join(','),
       });
-      const res = await fetch(`/api/settlements/export?${params}`);
+      const res = await fetchWithTimeout(`${API_ROUTES.SETTLEMENTS.EXPORT}?${params}`);
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => null);
