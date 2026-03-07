@@ -70,6 +70,12 @@ src/
 - `useMailMerge` — 상태 + SSE 연결 + 발송 로직
 - `MailMergeForm` / `PreviewDialog` / `ProgressPanel` / `SendResult`
 
+## 도메인: business_number 의미 구분
+
+- `settlements.business_number` = **거래처**(약국) 사업자번호 (CSO BN이 아님!)
+- `cso_matching.business_number` = **CSO 회원**의 사업자번호
+- CSO BN 조회 경로: `settlements.CSO관리업체` → `cso_matching.cso_company_name`(JOIN) → `cso_matching.business_number`
+
 ## 알려진 예외
 
 - `Settlement` 타입의 `[key: string]` 인덱스 시그니처: 47개 동적 한글 컬럼 접근에 필요. `getSettlementValue()` 유틸로 타입 안전한 접근 권장

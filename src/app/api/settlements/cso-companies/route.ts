@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getSettlementRepository } from '@/infrastructure/supabase';
+import { getCachedCSOMatchingList } from '@/lib/data-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,8 +25,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // DB에서 DISTINCT 직접 조회 — cso_matching 경유 불필요
-    const companies = await getSettlementRepository().getCSOCompaniesForMonth(month);
+    // Step 1: 해당 월의 DISTINCT CSO관리업체 이름 조회 (pagination 적용)
+    const csoNames = await getSettlementRepository().getCSOCompanyNamesForMonth(month);
+
+    // Step 2: cso_matching 전체 조회 (캐시)
+    const matchingList = await getCachedCSOMatchingList();
+
+    // Step 3: CSO 이름 기준 JOIN → { business_number(CSO BN), company_name }
+    const matchingMap = new Map<string, string>();
+    for (const m of matchingList) {
+      if (m.cso_company_name && m.business_number) {
+        matchingMap.set(m.cso_company_name, m.business_number);
+      }
+    }
+
+    const companies = csoNames
+      .filter(name => matchingMap.has(name))
+      .map(name => ({
+        business_number: matchingMap.get(name)!,
+        company_name: name,
+      }))
+      .sort((a, b) => a.company_name.localeCompare(b.company_name));
 
     return NextResponse.json({
       success: true,
