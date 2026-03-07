@@ -178,7 +178,7 @@ export const SettlementTable = memo(function SettlementTable({
   const tableRows = renderGroupedRows(groupedData, displayColumns, labelColumnIndex);
 
   return (
-    <div className="tds-card overflow-hidden p-0">
+    <div className="glass-chart-card overflow-hidden p-0">
       <div className="px-5 pt-5 pb-3">
         <h3 className="text-base font-semibold">정산 상세 내역</h3>
         <p className="text-sm text-muted-foreground mt-0.5">거래처명별 소계 및 CSO관리업체 총합계 포함</p>

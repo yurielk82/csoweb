@@ -58,7 +58,7 @@ export const EmailSystemBar = memo(function EmailSystemBar({
         {systemLoaded ? (
           checks.map(({ label, ok }) => (
             <span key={label} className="flex items-center gap-1">
-              <span className={ok ? 'tds-dot-ok' : 'tds-dot-fail'} />
+              <span className={ok ? 'dashboard-status-dot-ok' : 'dashboard-status-dot-fail'} />
               <span className={ok ? '' : 'text-destructive'}>{label}</span>
             </span>
           ))

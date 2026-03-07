@@ -43,7 +43,7 @@ export function AdminKpiSection({
         value={commissionLabel}
         suffix="원"
         icon={Calculator}
-        iconColor="tds-icon-blue"
+        iconColor="glass-icon-blue"
         delta={commissionDelta}
         emphasis
       />
@@ -52,7 +52,7 @@ export function AdminKpiSection({
         value={csoCount}
         suffix="개"
         icon={Building2}
-        iconColor="tds-icon-cyan"
+        iconColor="glass-icon-cyan"
         delta={csoDelta}
       />
       <KpiCard
@@ -60,7 +60,7 @@ export function AdminKpiSection({
         value={`${accessRate}`}
         suffix="%"
         icon={Activity}
-        iconColor="tds-icon-green"
+        iconColor="glass-icon-green"
         delta={null}
         sub={`${accessedCount} / ${totalCsoCount}`}
       />

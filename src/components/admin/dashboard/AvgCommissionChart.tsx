@@ -40,7 +40,7 @@ export const AvgCommissionChart = memo(function AvgCommissionChart({ data }: Avg
 
   if (chartData.length === 0) {
     return (
-      <div className="tds-card flex flex-col items-center justify-center h-32 text-muted-foreground">
+      <div className="glass-chart-card flex flex-col items-center justify-center h-32 text-muted-foreground">
         <Calculator className="h-10 w-10 mb-2 opacity-40" />
         <p className="text-sm">평균 수수료 데이터가 없습니다</p>
       </div>
@@ -48,7 +48,7 @@ export const AvgCommissionChart = memo(function AvgCommissionChart({ data }: Avg
   }
 
   return (
-    <div className="tds-card">
+    <div className="glass-chart-card">
       <div className="px-3 pt-3 pb-1">
         <h3 className="text-sm font-semibold">업체당 평균 수수료</h3>
       </div>

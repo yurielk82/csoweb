@@ -2,26 +2,6 @@
 
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 
-## [0.38.0] - 2026-03-08
-
-### Changed
-- 디자인 시스템을 토스(TDS) 기반으로 전면 교체
-- Inter → Pretendard Variable 폰트 교체
-- Glass-like 카드 → Elevation 5단계 시스템
-- Radius 단일 → 4단계 (8/12/16/20px)
-- 차트 5색 → 8색 확장
-- shadcn/ui dialog → rounded-xl, card → rounded-lg, badge → rounded-sm
-- tailwindcss-animate require() → ESM import
-- 로그인 Liquid Glass 유지
-
-## [0.37.0] - 2026-03-08
-
-### Added
-- 관리자 대시보드 운영 현황/정산 분석 2탭 분할 (shadcn/ui Tabs)
-- OperationsTab: KPI 카드 + 월별 추이 + 할 일 + 시스템 상태
-- AnalyticsTab: 월별 추이 + 미니 차트 3종 + CSO 수수료 비중(도넛) + 이메일 발송 추이(바)
-- page.tsx를 ~40줄 탭 컨테이너로 축소
-
 ## [0.36.1] - 2026-03-07
 
 ### Refactored

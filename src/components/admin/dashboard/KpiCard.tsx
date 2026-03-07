@@ -29,7 +29,7 @@ export const KpiCard = memo(function KpiCard({
   subColor,
 }: KpiCardProps) {
   return (
-    <div className={`tds-card py-5 px-6 ${emphasis ? 'border-primary/20' : ''}`}>
+    <div className={`glass-kpi-card py-5 px-6 ${emphasis ? 'border-primary/20' : ''}`}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <Icon className={`h-4 w-4 ${iconColor}`} />

@@ -10,7 +10,7 @@ import {
 
 function SummaryCardSkeleton({ accent = false }: { accent?: boolean }) {
   return (
-    <div className={`tds-card${accent ? ' border-primary/20' : ''}`}>
+    <div className={`glass-kpi-card${accent ? ' border-primary/20' : ''}`}>
       <div className="flex items-center gap-2 mb-2">
         <Skeleton className="h-4 w-4 rounded-full" />
         <Skeleton className="h-4 w-16" />
@@ -32,7 +32,7 @@ export function SettlementSkeleton() {
       </div>
 
       {/* 테이블 스켈레톤 */}
-      <div className="tds-card overflow-hidden p-0">
+      <div className="glass-chart-card overflow-hidden p-0">
         <div className="px-5 pt-5 pb-3">
           <Skeleton className="h-5 w-32" />
           <Skeleton className="h-4 w-56 mt-1.5" />
