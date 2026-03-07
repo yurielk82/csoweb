@@ -2,25 +2,20 @@
 
 import { memo } from 'react';
 import Link from 'next/link';
-import {
-  Upload,
-  Users,
-  Link2,
-  ListTodo,
-  CheckCircle2,
-  Database,
-  Mail,
-  ArrowRight,
-} from 'lucide-react';
+import { ListTodo, CheckCircle2, Upload, UserCog, Link2 } from 'lucide-react';
+import { ADMIN_NAV, isGroup } from '@/constants/navigation';
+import type { MenuItem } from '@/constants/navigation';
 
-interface TodoItem {
-  href: string;
-  icon: typeof Upload;
-  label: string;
+interface TodoItem extends MenuItem {
   iconColor: string;
   count?: number;
   suffix?: string;
 }
+
+/** ADMIN_NAV 그룹 구조를 flat한 MenuItem[] 목록으로 변환 (대시보드 제외) */
+const QUICK_NAV_ITEMS: MenuItem[] = ADMIN_NAV
+  .flatMap((entry) => (isGroup(entry) ? entry.items : [entry]))
+  .filter((item) => item.href !== '/admin');
 
 interface TodoPanelProps {
   currentMonthUploaded: boolean;
@@ -39,7 +34,7 @@ export const TodoPanel = memo(function TodoPanel({
     items.push({ href: '/admin/upload', icon: Upload, label: '정산서 업로드 필요', iconColor: 'glass-icon-blue' });
   }
   if (pendingCount > 0) {
-    items.push({ href: '/admin/members?filter=pending', icon: Users, label: '승인 대기', iconColor: 'glass-icon-green', count: pendingCount, suffix: '명' });
+    items.push({ href: '/admin/members?filter=pending', icon: UserCog, label: '승인 대기', iconColor: 'glass-icon-green', count: pendingCount, suffix: '명' });
   }
   if (unmappedCount > 0) {
     items.push({ href: '/admin/integrity', icon: Link2, label: 'CSO 미매칭', iconColor: 'glass-icon-cyan', count: unmappedCount, suffix: '건' });
@@ -86,13 +81,7 @@ export const TodoPanel = memo(function TodoPanel({
       <div className="mt-4 pt-3 border-t border-border/40">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">빠른 이동</span>
         <div className="flex flex-col gap-1 mt-2">
-          {[
-            { href: '/admin/upload', icon: Upload, label: '업로드' },
-            { href: '/admin/members', icon: Users, label: '회원관리' },
-            { href: '/admin/data', icon: Database, label: '데이터' },
-            { href: '/admin/mailmerge', icon: Mail, label: '메일머지' },
-            { href: '/admin/emails', icon: ArrowRight, label: '이메일 이력' },
-          ].map((nav) => (
+          {QUICK_NAV_ITEMS.map((nav) => (
             <Link
               key={nav.href}
               href={nav.href}
