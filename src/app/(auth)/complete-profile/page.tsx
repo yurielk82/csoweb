@@ -2,11 +2,10 @@
 
 import { UserCheck, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCompleteProfile } from '@/hooks/useCompleteProfile';
+import { CompanyInfoFields } from '@/components/auth/CompanyInfoFields';
 import { AddressFormSection } from '@/components/auth/AddressFormSection';
 import { ContactFormSection } from '@/components/auth/ContactFormSection';
 
@@ -47,35 +46,13 @@ export default function CompleteProfilePage() {
               </Alert>
             )}
 
-            {/* 업체명 */}
-            <div className="space-y-2">
-              <Label htmlFor="company_name">업체명 *</Label>
-              <Input
-                id="company_name"
-                type="text"
-                placeholder="업체명을 입력하세요"
-                value={d.formData.company_name}
-                onChange={(e) => d.setFormData({ ...d.formData, company_name: e.target.value })}
-                required
-                disabled={d.saving}
-                autoComplete="organization"
-              />
-            </div>
-
-            {/* 대표자명 */}
-            <div className="space-y-2">
-              <Label htmlFor="ceo_name">대표자명 *</Label>
-              <Input
-                id="ceo_name"
-                type="text"
-                placeholder="대표자명을 입력하세요"
-                value={d.formData.ceo_name}
-                onChange={(e) => d.setFormData({ ...d.formData, ceo_name: e.target.value })}
-                required
-                disabled={d.saving}
-                autoComplete="name"
-              />
-            </div>
+            <CompanyInfoFields
+              companyName={d.formData.company_name}
+              ceoName={d.formData.ceo_name}
+              onCompanyNameChange={(v) => d.setFormData({ ...d.formData, company_name: v })}
+              onCeoNameChange={(v) => d.setFormData({ ...d.formData, ceo_name: v })}
+              disabled={d.saving}
+            />
 
             <AddressFormSection
               zipcode={d.formData.zipcode}

@@ -2,16 +2,13 @@
 
 import { useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Calculator, Building2, Activity } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAdminDashboard } from '@/hooks/useAdminDashboard';
 import { calculateDelta } from '@/lib/dashboard-utils';
-import { KpiCard } from '@/components/admin/dashboard/KpiCard';
+import { AdminKpiSection } from '@/components/admin/dashboard/AdminKpiSection';
 import { TodoPanel } from '@/components/admin/dashboard/TodoPanel';
 import { EmailSystemBar } from '@/components/admin/dashboard/EmailSystemBar';
-import { AccessRateChart } from '@/components/admin/dashboard/AccessRateChart';
-import { AvgCommissionChart } from '@/components/admin/dashboard/AvgCommissionChart';
-import { CsoCountChart } from '@/components/admin/dashboard/CsoCountChart';
+import { BottomCharts } from '@/components/admin/dashboard/BottomCharts';
 
 const MonthlyStatsChart = dynamic(
   () => import('@/components/shared/MonthlyStatsChart'),
@@ -27,18 +24,9 @@ function formatManWon(value: number): string {
 export default function AdminDashboardPage() {
   const data = useAdminDashboard();
   const {
-    kpiLoaded,
-    systemLoaded,
-    selectedMonth,
-    months,
-    enrichedChartData,
-    emailStats,
-    pendingCount,
-    unmappedCount,
-    allSnapshots,
-    systemStatus,
-    activeProvider,
-    currentMonthKey,
+    kpiLoaded, systemLoaded, selectedMonth, months,
+    enrichedChartData, emailStats, pendingCount, unmappedCount,
+    allSnapshots, systemStatus, activeProvider, currentMonthKey,
   } = data;
 
   const sortedMonths = useMemo(
@@ -84,62 +72,24 @@ export default function AdminDashboardPage() {
 
       {/* 메인 그리드: 좌 3열 + 우 1열(할 일) */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {/* 좌측 컨텐츠 */}
         <div className="lg:col-span-3 flex flex-col gap-4">
-          {/* KPI 카드 3장 */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {kpiLoaded ? (
-              <>
-                <KpiCard
-                  title="수수료 총액"
-                  value={currentMonth ? formatManWon(currentMonth.totalCommission) : '-'}
-                  suffix="원"
-                  icon={Calculator}
-                  iconColor="glass-icon-blue"
-                  delta={commissionDelta}
-                  emphasis
-                />
-                <KpiCard
-                  title="CSO 업체"
-                  value={currentMonth ? currentMonth.csoCount.toLocaleString() : '-'}
-                  suffix="개"
-                  icon={Building2}
-                  iconColor="glass-icon-cyan"
-                  delta={csoDelta}
-                />
-                <KpiCard
-                  title="접속률"
-                  value={`${accessRate}`}
-                  suffix="%"
-                  icon={Activity}
-                  iconColor="glass-icon-green"
-                  delta={null}
-                  sub={`${accessedCount} / ${totalCsoCount}`}
-                />
-              </>
-            ) : (
-              Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-24 rounded-xl" />
-              ))
-            )}
-          </div>
-
-          {/* 월별 정산 추이 (전폭) */}
+          <AdminKpiSection
+            loaded={kpiLoaded}
+            commissionLabel={currentMonth ? formatManWon(currentMonth.totalCommission) : '-'}
+            commissionDelta={commissionDelta}
+            csoCount={currentMonth ? currentMonth.csoCount.toLocaleString() : '-'}
+            csoDelta={csoDelta}
+            accessRate={accessRate}
+            accessedCount={accessedCount}
+            totalCsoCount={totalCsoCount}
+          />
           {kpiLoaded ? (
             <MonthlyStatsChart data={enrichedChartData} title="월별 정산 추이" />
           ) : (
             <Skeleton className="h-64 rounded-xl" />
           )}
-
-          {/* 하단 3열 차트 */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <AccessRateChart data={accessRateData} />
-            <AvgCommissionChart data={months} />
-            <CsoCountChart data={months} />
-          </div>
+          <BottomCharts accessRateData={accessRateData} months={months} />
         </div>
-
-        {/* 우측: 할 일 + 빠른 이동 */}
         <TodoPanel
           currentMonthUploaded={currentMonthUploaded}
           pendingCount={pendingCount}
@@ -147,7 +97,6 @@ export default function AdminDashboardPage() {
         />
       </div>
 
-      {/* 이메일 + 시스템 상태 바 (최하단) */}
       <EmailSystemBar
         emailStats={emailStats}
         systemLoaded={systemLoaded}

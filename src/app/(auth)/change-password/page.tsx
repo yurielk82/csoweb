@@ -2,11 +2,10 @@
 
 import { Lock, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useChangePassword } from '@/hooks/useChangePassword';
+import { NewPasswordFields } from '@/components/auth/NewPasswordFields';
 
 export default function ChangePasswordPage() {
   const d = useChangePassword();
@@ -52,34 +51,13 @@ export default function ChangePasswordPage() {
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="new_password">새 비밀번호</Label>
-              <Input
-                id="new_password"
-                type="password"
-                placeholder="영문+숫자 조합 8자 이상"
-                value={d.formData.new_password}
-                onChange={(e) => d.setFormData({ ...d.formData, new_password: e.target.value })}
-                required
-                disabled={d.saving}
-                minLength={6}
-                autoComplete="new-password"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm_password">새 비밀번호 확인</Label>
-              <Input
-                id="confirm_password"
-                type="password"
-                placeholder="비밀번호 확인"
-                value={d.formData.confirm_password}
-                onChange={(e) => d.setFormData({ ...d.formData, confirm_password: e.target.value })}
-                required
-                disabled={d.saving}
-                minLength={6}
-                autoComplete="new-password"
-              />
-            </div>
+            <NewPasswordFields
+              newPassword={d.formData.new_password}
+              confirmPassword={d.formData.confirm_password}
+              onNewPasswordChange={(v) => d.setFormData({ ...d.formData, new_password: v })}
+              onConfirmPasswordChange={(v) => d.setFormData({ ...d.formData, confirm_password: v })}
+              disabled={d.saving}
+            />
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full" disabled={d.saving}>

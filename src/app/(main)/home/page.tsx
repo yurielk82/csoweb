@@ -1,37 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import {
-  Banknote,
-  FileSpreadsheet,
-  Calculator,
-  User,
-  ArrowRight,
-  Building2,
-  Package,
-} from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ROUTES } from '@/constants/api';
+import { UserKpiCards } from '@/components/home/UserKpiCards';
+import { QuickLinks } from '@/components/home/QuickLinks';
 import type { MonthlyStatData } from '@/components/shared/MonthlyStatsChart';
 
 const MonthlyStatsChart = dynamic(
   () => import('@/components/shared/MonthlyStatsChart'),
   { ssr: false, loading: () => <Skeleton className="h-[300px] rounded-xl" /> }
 );
-
-function formatManWon(value: number): string {
-  const man = Math.round(value / 10000);
-  if (man >= 10000) return `${(man / 10000).toFixed(1)}억`;
-  return `${man.toLocaleString()}만`;
-}
-
-function monthKeyToLabel(monthKey: string): string {
-  const [year, mm] = monthKey.split('-');
-  return `${year}년 ${parseInt(mm, 10)}월`;
-}
 
 export default function UserHomePage() {
   const { user } = useAuth();
@@ -94,73 +75,13 @@ export default function UserHomePage() {
       </div>
 
       {/* KPI 카드 3장 */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="glass-kpi-card py-5 px-6 border-primary/20">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Banknote className="h-4 w-4 glass-icon-orange" />
-              <span className="text-sm text-muted-foreground">수수료</span>
-            </div>
-          </div>
-          {loading ? (
-            <Skeleton className="h-9 w-24" />
-          ) : latestMonth ? (
-            <>
-              <p className="text-3xl font-bold font-mono tabular-nums text-primary">
-                {formatManWon(latestCommission)}
-                <span className="text-base font-normal ml-0.5">원</span>
-              </p>
-              <p className="text-sm mt-1 text-muted-foreground">{monthKeyToLabel(latestMonth)}</p>
-            </>
-          ) : (
-            <p className="text-3xl font-bold text-muted-foreground">&mdash;</p>
-          )}
-        </div>
-
-        <div className="glass-kpi-card py-5 px-6">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 glass-icon-cyan" />
-              <span className="text-sm text-muted-foreground">거래처 수</span>
-            </div>
-          </div>
-          {loading ? (
-            <Skeleton className="h-9 w-20" />
-          ) : latestMonth ? (
-            <>
-              <p className="text-3xl font-bold font-mono tabular-nums">
-                {latestClientCount.toLocaleString()}
-                <span className="text-base font-normal ml-0.5">곳</span>
-              </p>
-              <p className="text-sm mt-1 text-muted-foreground">{monthKeyToLabel(latestMonth)}</p>
-            </>
-          ) : (
-            <p className="text-3xl font-bold text-muted-foreground">&mdash;</p>
-          )}
-        </div>
-
-        <div className="glass-kpi-card py-5 px-6">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Package className="h-4 w-4 glass-icon-green" />
-              <span className="text-sm text-muted-foreground">제품 수</span>
-            </div>
-          </div>
-          {loading ? (
-            <Skeleton className="h-9 w-20" />
-          ) : latestMonth ? (
-            <>
-              <p className="text-3xl font-bold font-mono tabular-nums">
-                {latestProductCount.toLocaleString()}
-                <span className="text-base font-normal ml-0.5">종</span>
-              </p>
-              <p className="text-sm mt-1 text-muted-foreground">{monthKeyToLabel(latestMonth)}</p>
-            </>
-          ) : (
-            <p className="text-3xl font-bold text-muted-foreground">&mdash;</p>
-          )}
-        </div>
-      </div>
+      <UserKpiCards
+        loading={loading}
+        latestMonth={latestMonth}
+        latestCommission={latestCommission}
+        latestClientCount={latestClientCount}
+        latestProductCount={latestProductCount}
+      />
 
       {/* 수수료 추이 차트 */}
       {loading ? (
@@ -170,28 +91,7 @@ export default function UserHomePage() {
       )}
 
       {/* 바로가기 */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {[
-          { href: '/dashboard', icon: FileSpreadsheet, label: '정산서 조회', description: '정산 데이터 상세 조회' },
-          { href: '/monthly-summary', icon: Calculator, label: '월별 합계', description: '월별 수수료 합계표' },
-          { href: '/profile', icon: User, label: '내 정보', description: '회원 정보 수정' },
-        ].map((link) => (
-          <Link key={link.href} href={link.href}>
-            <div className="glass-action-card">
-              <div className="flex items-center gap-3">
-                <div className="glass-icon glass-icon-blue">
-                  <link.icon className="h-5 w-5" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">{link.label}</p>
-                  <p className="text-xs text-muted-foreground">{link.description}</p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
+      <QuickLinks />
     </div>
   );
 }
