@@ -2,6 +2,15 @@
 
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 
+## [0.36.0] - 2026-03-07
+
+### Refactored
+- 어드민 대시보드 Command Center 레이아웃 전면 재설계
+- KPI 3장 + 할 일 패널을 같은 행에 배치 (정보 중복 제거)
+- 이메일 + 시스템 상태를 슬림 바로 통합
+- 차트 3개를 60/40 2열 compact 배치 — 반페이지 수용
+- 구 컴포넌트 4개 삭제 (OperationsTab, AnalyticsTab, AdminKpiCards, TodoAlerts)
+
 ## [0.35.2] - 2026-03-07
 
 ### Fixed
