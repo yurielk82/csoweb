@@ -1,31 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+import { DndContext, closestCenter } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Columns, GripVertical, Save, RotateCcw, Loader2, Calculator, AlertCircle } from 'lucide-react';
+import { Columns, GripVertical, Save, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { API_ROUTES } from '@/constants/api';
+import { useColumnSettings } from '@/hooks/useColumnSettings';
+import { ColumnStatsBar, SummaryInfoCard, BatchActionsCard } from '@/components/admin/columns/ColumnInfoCards';
 import type { ColumnSetting } from '@/types';
 import { NUMERIC_COLUMN_KEYS } from '@/types';
 
@@ -37,398 +22,68 @@ interface SortableColumnProps {
   onChangeName: (key: string, name: string) => void;
 }
 
-function SortableColumn({ 
-  column, 
-  onToggleVisible, 
-  onToggleRequired, 
-  onToggleSummary,
-  onChangeName 
-}: SortableColumnProps) {
-  const isNumericColumn = NUMERIC_COLUMN_KEYS.includes(column.column_key);
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: column.column_key });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
+function SortableColumn({ column, onToggleVisible, onToggleRequired, onToggleSummary, onChangeName }: SortableColumnProps) {
+  const isNumeric = NUMERIC_COLUMN_KEYS.includes(column.column_key);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: column.column_key });
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`
-        flex items-center gap-4 p-3 bg-white border rounded-lg
-        ${isDragging ? 'shadow-lg ring-2 ring-primary' : ''}
-        ${!column.is_visible ? 'opacity-60' : ''}
-      `}
-    >
-      {/* Drag Handle */}
-      <button
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
-      >
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }} className={`flex items-center gap-4 p-3 bg-white border rounded-lg ${isDragging ? 'shadow-lg ring-2 ring-primary' : ''} ${!column.is_visible ? 'opacity-60' : ''}`}>
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded">
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </button>
-
-      {/* Order Number */}
-      <span className="w-6 text-sm text-muted-foreground text-center">
-        {column.display_order}
-      </span>
-
-      {/* Visible Checkbox */}
-      <Checkbox
-        checked={column.is_visible}
-        onCheckedChange={() => onToggleVisible(column.column_key)}
-      />
-
-      {/* Column Key */}
-      <span className="w-32 text-sm font-mono text-muted-foreground truncate">
-        {column.column_key}
-      </span>
-
-      {/* Display Name Input */}
-      <Input
-        value={column.column_name}
-        onChange={(e) => onChangeName(column.column_key, e.target.value)}
-        className="flex-1 max-w-xs"
-        placeholder="표시명"
-      />
-
-      {/* Required Checkbox */}
+      <span className="w-6 text-sm text-muted-foreground text-center">{column.display_order}</span>
+      <Checkbox checked={column.is_visible} onCheckedChange={() => onToggleVisible(column.column_key)} />
+      <span className="w-32 text-sm font-mono text-muted-foreground truncate">{column.column_key}</span>
+      <Input value={column.column_name} onChange={(e) => onChangeName(column.column_key, e.target.value)} className="flex-1 max-w-xs" placeholder="표시명" />
       <div className="flex items-center gap-2">
-        <Checkbox
-          id={`required-${column.column_key}`}
-          checked={column.is_required}
-          onCheckedChange={() => onToggleRequired(column.column_key)}
-          disabled={!column.is_visible}
-        />
-        <Label 
-          htmlFor={`required-${column.column_key}`}
-          className="text-sm text-muted-foreground"
-        >
-          필수
-        </Label>
+        <Checkbox id={`required-${column.column_key}`} checked={column.is_required} onCheckedChange={() => onToggleRequired(column.column_key)} disabled={!column.is_visible} />
+        <Label htmlFor={`required-${column.column_key}`} className="text-sm text-muted-foreground">필수</Label>
       </div>
-
-      {/* Summary Checkbox (숫자형 컬럼만) */}
       <div className="flex items-center gap-2">
-        <Checkbox
-          id={`summary-${column.column_key}`}
-          checked={column.is_summary || false}
-          onCheckedChange={() => onToggleSummary(column.column_key)}
-          disabled={!isNumericColumn}
-        />
-        <Label 
-          htmlFor={`summary-${column.column_key}`}
-          className={`text-sm ${isNumericColumn ? 'text-blue-600' : 'text-muted-foreground'}`}
-        >
-          합계
-        </Label>
+        <Checkbox id={`summary-${column.column_key}`} checked={column.is_summary || false} onCheckedChange={() => onToggleSummary(column.column_key)} disabled={!isNumeric} />
+        <Label htmlFor={`summary-${column.column_key}`} className={`text-sm ${isNumeric ? 'text-blue-600' : 'text-muted-foreground'}`}>합계</Label>
       </div>
     </div>
   );
 }
 
 export default function ColumnsPage() {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [columns, setColumns] = useState<ColumnSetting[]>([]);
-  const [hasChanges, setHasChanges] = useState(false);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  useEffect(() => {
-    fetchColumns();
-  }, []);
-
-  const fetchColumns = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(API_ROUTES.COLUMNS);
-      const result = await response.json();
-      
-      if (result.success) {
-        setColumns(result.data);
-      }
-    } catch (error) {
-      console.error('Fetch columns error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      setColumns((items) => {
-        const oldIndex = items.findIndex((i) => i.column_key === active.id);
-        const newIndex = items.findIndex((i) => i.column_key === over.id);
-        
-        const newItems = arrayMove(items, oldIndex, newIndex);
-        // Update display_order
-        return newItems.map((item, index) => ({
-          ...item,
-          display_order: index + 1,
-        }));
-      });
-      setHasChanges(true);
-    }
-  };
-
-  const toggleVisible = (key: string) => {
-    setColumns(prev => prev.map(col => {
-      if (col.column_key === key) {
-        return {
-          ...col,
-          is_visible: !col.is_visible,
-          is_required: !col.is_visible ? col.is_required : false,
-        };
-      }
-      return col;
-    }));
-    setHasChanges(true);
-  };
-
-  const toggleRequired = (key: string) => {
-    setColumns(prev => prev.map(col => {
-      if (col.column_key === key && col.is_visible) {
-        return { ...col, is_required: !col.is_required };
-      }
-      return col;
-    }));
-    setHasChanges(true);
-  };
-
-  const toggleSummary = (key: string) => {
-    // 숫자형 컬럼만 합계 설정 가능
-    if (!NUMERIC_COLUMN_KEYS.includes(key)) return;
-    
-    setColumns(prev => prev.map(col => {
-      if (col.column_key === key) {
-        return { ...col, is_summary: !col.is_summary };
-      }
-      return col;
-    }));
-    setHasChanges(true);
-  };
-
-  const changeName = (key: string, name: string) => {
-    setColumns(prev => prev.map(col => {
-      if (col.column_key === key) {
-        return { ...col, column_name: name };
-      }
-      return col;
-    }));
-    setHasChanges(true);
-  };
-
-  const showAll = () => {
-    setColumns(prev => prev.map(col => ({ ...col, is_visible: true })));
-    setHasChanges(true);
-  };
-
-  const hideAll = () => {
-    setColumns(prev => prev.map(col => ({ 
-      ...col, 
-      is_visible: false,
-      is_required: false,
-    })));
-    setHasChanges(true);
-  };
-
-  const resetDefaults = async () => {
-    try {
-      const response = await fetch(API_ROUTES.COLUMNS, { method: 'DELETE' });
-      const result = await response.json();
-      
-      if (result.success) {
-        await fetchColumns();
-        setHasChanges(false);
-        toast({
-          title: '초기화 완료',
-          description: '컬럼 설정이 기본값으로 초기화되었습니다.',
-        });
-      }
-    } catch (error) {
-      console.error('컬럼 초기화 오류:', error);
-      toast({
-        variant: 'destructive',
-        title: '오류',
-        description: '초기화 중 오류가 발생했습니다.',
-      });
-    }
-  };
-
-  const saveChanges = async () => {
-    setSaving(true);
-    try {
-      const response = await fetch(API_ROUTES.COLUMNS, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ columns }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setHasChanges(false);
-        toast({
-          title: '저장 완료',
-          description: '컬럼 설정이 저장되었습니다.',
-        });
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      console.error('컬럼 설정 저장 오류:', error);
-      toast({
-        variant: 'destructive',
-        title: '저장 실패',
-        description: '컬럼 설정 저장 중 오류가 발생했습니다.',
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const visibleCount = columns.filter(c => c.is_visible).length;
-  const requiredCount = columns.filter(c => c.is_required).length;
-  const summaryCount = columns.filter(c => c.is_summary).length;
+  const c = useColumnSettings();
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Columns className="h-6 w-6" />
-            컬럼 설정
-            {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            <Columns className="h-6 w-6" />컬럼 설정
+            {c.loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           </h1>
           <p className="text-muted-foreground">업체에게 보여줄 컬럼을 설정합니다.</p>
         </div>
-        <Button 
-          onClick={saveChanges} 
-          disabled={!hasChanges || saving}
-        >
-          {saving ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4 mr-2" />
-          )}
-          저장
+        <Button onClick={c.saveChanges} disabled={!c.hasChanges || c.saving}>
+          {c.saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}저장
         </Button>
       </div>
-
-      {/* Stats */}
-      <div className="flex gap-4 text-sm">
-        <span className="text-muted-foreground">
-          전체: <strong>{columns.length}</strong>개
-        </span>
-        <span className="text-muted-foreground">
-          표시: <strong>{visibleCount}</strong>개
-        </span>
-        <span className="text-muted-foreground">
-          필수: <strong>{requiredCount}</strong>개
-        </span>
-        <span className="text-blue-600">
-          합계: <strong>{summaryCount}</strong>개
-        </span>
-      </div>
-
-      {/* Summary Info */}
-      <Card className="border-blue-200 bg-blue-50">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2 text-blue-700">
-            <Calculator className="h-4 w-4" />
-            월별 합계 설정
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-blue-600">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-            <p>
-              <strong>합계</strong> 체크된 컬럼은 사용자의 &quot;월별 합계&quot; 페이지에서 정산월 별로 합산되어 표시됩니다.
-              숫자형 컬럼(수량, 금액, 수수료 등)만 합계 설정이 가능합니다.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">일괄 작업</CardTitle>
-          <CardDescription>드래그로 순서 변경, 체크박스로 표시 여부 설정</CardDescription>
-        </CardHeader>
-        <CardContent className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={showAll}>
-            전체 표시
-          </Button>
-          <Button variant="outline" size="sm" onClick={hideAll}>
-            전체 숨김
-          </Button>
-          <Button variant="outline" size="sm" onClick={resetDefaults}>
-            <RotateCcw className="h-4 w-4 mr-2" />
-            기본값 복원
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Column List */}
+      <ColumnStatsBar total={c.columns.length} visible={c.visibleCount} required={c.requiredCount} summary={c.summaryCount} />
+      <SummaryInfoCard />
+      <BatchActionsCard onShowAll={c.showAll} onHideAll={c.hideAll} onReset={c.resetDefaults} />
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
-            <span className="w-6"></span>
-            <span className="w-6">#</span>
-            <span className="w-6">표시</span>
-            <span className="w-32">컬럼 키</span>
-            <span className="flex-1 max-w-xs">표시명</span>
-            <span>필수</span>
-            <span className="text-blue-600">합계</span>
+            <span className="w-6"></span><span className="w-6">#</span><span className="w-6">표시</span>
+            <span className="w-32">컬럼 키</span><span className="flex-1 max-w-xs">표시명</span><span>필수</span><span className="text-blue-600">합계</span>
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={columns.map(c => c.column_key)}
-              strategy={verticalListSortingStrategy}
-            >
-              {loading && columns.length === 0 && (
+          <DndContext sensors={c.sensors} collisionDetection={closestCenter} onDragEnd={c.handleDragEnd}>
+            <SortableContext items={c.columns.map(col => col.column_key)} strategy={verticalListSortingStrategy}>
+              {c.loading && c.columns.length === 0 && (
                 <div className="flex items-center justify-center py-8 text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                  컬럼 설정을 불러오는 중...
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />컬럼 설정을 불러오는 중...
                 </div>
               )}
-              {columns.map((column) => (
-                <SortableColumn
-                  key={column.column_key}
-                  column={column}
-                  onToggleVisible={toggleVisible}
-                  onToggleRequired={toggleRequired}
-                  onToggleSummary={toggleSummary}
-                  onChangeName={changeName}
-                />
+              {c.columns.map(column => (
+                <SortableColumn key={column.column_key} column={column} onToggleVisible={c.toggleVisible} onToggleRequired={c.toggleRequired} onToggleSummary={c.toggleSummary} onChangeName={c.changeName} />
               ))}
             </SortableContext>
           </DndContext>
