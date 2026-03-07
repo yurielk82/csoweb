@@ -2,7 +2,7 @@
 
 import { memo, useMemo } from 'react';
 import { PieChart as PieChartIcon } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Label, ResponsiveContainer } from 'recharts';
 import {
   type ChartConfig,
   ChartContainer,
@@ -21,12 +21,12 @@ const MAX_SLICES = 6;
 const TOP_SLICE_COUNT = 5;
 
 const CHART_COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-  'hsl(var(--muted))',
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
+  'var(--muted-foreground)',
 ];
 
 // 만원 단위 포맷
@@ -52,6 +52,11 @@ export const CsoShareChart = memo(function CsoShareChart({
     const otherSum = others.reduce((sum, item) => sum + item.value, 0);
     return [...top5, { name: '기타', value: otherSum }];
   }, [data]);
+
+  const grandTotal = useMemo(
+    () => chartData.reduce((sum, item) => sum + item.value, 0),
+    [chartData],
+  );
 
   const chartConfig = useMemo(() => {
     const config: ChartConfig = {};
@@ -80,7 +85,7 @@ export const CsoShareChart = memo(function CsoShareChart({
       </div>
       <ChartContainer config={chartConfig} className="h-[280px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
+          <PieChart accessibilityLayer>
             <ChartTooltip
               content={
                 <ChartTooltipContent
@@ -97,6 +102,7 @@ export const CsoShareChart = memo(function CsoShareChart({
               paddingAngle={2}
               dataKey="value"
               nameKey="name"
+              strokeWidth={0}
             >
               {chartData.map((entry, index) => (
                 <Cell
@@ -104,6 +110,23 @@ export const CsoShareChart = memo(function CsoShareChart({
                   fill={CHART_COLORS[index % CHART_COLORS.length]}
                 />
               ))}
+              <Label
+                content={({ viewBox }) => {
+                  if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
+                    return (
+                      <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+                        <tspan x={viewBox.cx} y={(viewBox.cy ?? 0) - 8} className="fill-foreground text-lg font-bold">
+                          {formatManWon(grandTotal)}
+                        </tspan>
+                        <tspan x={viewBox.cx} y={(viewBox.cy ?? 0) + 12} className="fill-muted-foreground text-xs">
+                          총 수수료
+                        </tspan>
+                      </text>
+                    );
+                  }
+                  return null;
+                }}
+              />
             </Pie>
             <ChartLegend content={<ChartLegendContent />} />
           </PieChart>

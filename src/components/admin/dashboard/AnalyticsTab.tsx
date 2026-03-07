@@ -13,7 +13,7 @@ import type { LucideIcon } from 'lucide-react';
 
 const MonthlyStatsChart = dynamic(
   () => import('@/components/shared/MonthlyStatsChart'),
-  { ssr: false, loading: () => <Skeleton className="h-[300px] rounded-xl" /> },
+  { ssr: false, loading: () => <Skeleton className="h-[350px] rounded-xl" /> },
 );
 
 // ── Types ──
@@ -116,17 +116,7 @@ export const AnalyticsTab = memo(function AnalyticsTab({ data }: AnalyticsTabPro
 
   return (
     <div className="space-y-6">
-      {/* 월별 추이 차트 */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">월별 정산 추이</h2>
-        {kpiLoaded ? (
-          <MonthlyStatsChart data={enrichedChartData} />
-        ) : (
-          <Skeleton className="h-[300px] rounded-xl" />
-        )}
-      </div>
-
-      {/* 전월 대비 증감 */}
+      {/* 전월 대비 증감 카드 */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {deltaCards.map((card) => (
           <div key={card.title} className="glass-kpi-card">
@@ -146,6 +136,16 @@ export const AnalyticsTab = memo(function AnalyticsTab({ data }: AnalyticsTabPro
             </p>
           </div>
         ))}
+      </div>
+
+      {/* 월별 정산 추이 (Gradient Area + Line) */}
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold">월별 정산 추이</h2>
+        {kpiLoaded ? (
+          <MonthlyStatsChart data={enrichedChartData} />
+        ) : (
+          <Skeleton className="h-[350px] rounded-xl" />
+        )}
       </div>
 
       {/* 하단 차트 2열 */}

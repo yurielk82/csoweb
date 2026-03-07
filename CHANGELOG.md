@@ -2,6 +2,17 @@
 
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 
+## [0.35.0] - 2026-03-07
+
+### Refactored
+- 차트 색상 토큰 oklch 기반 재정의 — glass 디자인 시스템 톤 통일 (blue→cyan→green→purple→orange)
+- `MonthlyStatsChart` — Bar+Line 혼합 → Gradient Area + Clean Line 구성
+- `CsoShareChart` — 도넛 중앙에 총 수수료 레이블 추가, `strokeWidth={0}` 깔끔한 분리
+- `EmailStatsChart` — Gradient Bar + 총 발송건수 헤더 + 높이 통일
+- `AnalyticsTab` — 증감 카드를 상단으로 이동, 차트 레이아웃 재배치
+- 전 차트 `accessibilityLayer`, `vertical={false}` 적용
+- `hsl(var(--chart-N))` → `var(--chart-N)` 통일 (oklch 직접 참조)
+
 ## [0.34.0] - 2026-03-07
 
 ### Fixed

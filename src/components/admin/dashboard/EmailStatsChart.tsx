@@ -37,7 +37,7 @@ function toMonthLabel(monthKey: string): string {
 const chartConfig: ChartConfig = {
   total: {
     label: '발송 건수',
-    color: 'hsl(var(--chart-5))',
+    color: 'var(--chart-4)',
   },
 };
 
@@ -52,6 +52,11 @@ export const EmailStatsChart = memo(function EmailStatsChart({
     }));
   }, [data]);
 
+  const totalSent = useMemo(
+    () => chartData.reduce((sum, d) => sum + d.total, 0),
+    [chartData],
+  );
+
   if (chartData.length === 0) {
     return (
       <div className="glass-chart-card flex flex-col items-center justify-center h-[300px] text-muted-foreground">
@@ -65,16 +70,25 @@ export const EmailStatsChart = memo(function EmailStatsChart({
     <div className="glass-chart-card">
       <div className="px-5 pt-5 pb-3">
         <h3 className="text-base font-semibold">이메일 발송 현황</h3>
-        <p className="text-sm text-muted-foreground mt-0.5">월별 이메일 발송 건수</p>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          총 <span className="font-medium text-foreground">{totalSent.toLocaleString()}건</span> 발송
+        </p>
       </div>
-      <ChartContainer config={chartConfig} className="h-[250px] w-full">
+      <ChartContainer config={chartConfig} className="h-[230px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+          <BarChart accessibilityLayer data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="fillEmail" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--color-total)" stopOpacity={0.9} />
+                <stop offset="95%" stopColor="var(--color-total)" stopOpacity={0.4} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} className="stroke-muted" />
             <XAxis
               dataKey="label"
               tick={{ fontSize: 12 }}
               tickLine={false}
+              tickMargin={10}
               axisLine={false}
             />
             <YAxis
@@ -92,8 +106,8 @@ export const EmailStatsChart = memo(function EmailStatsChart({
             />
             <Bar
               dataKey="total"
-              fill="var(--color-total)"
-              radius={[4, 4, 0, 0]}
+              fill="url(#fillEmail)"
+              radius={[6, 6, 0, 0]}
               barSize={24}
             />
           </BarChart>

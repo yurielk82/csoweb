@@ -3,9 +3,9 @@
 import { useMemo } from 'react';
 import { BarChart3 } from 'lucide-react';
 import {
-  ComposedChart,
-  Bar,
+  Area,
   Line,
+  ComposedChart,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -50,51 +50,45 @@ function toMonthLabel(monthKey: string): string {
   return `${parseInt(mm, 10)}월`;
 }
 
+const RECENT_MONTHS = 12;
+
 export default function MonthlyStatsChart({ data }: MonthlyStatsChartProps) {
-  // 최근 12개월 슬라이스, 시간순 정렬 (오래된 → 최근)
   const chartData = useMemo(() => {
     const sorted = [...data].sort((a, b) => a.month.localeCompare(b.month));
-    return sorted.slice(-12).map((d) => ({
+    return sorted.slice(-RECENT_MONTHS).map((d) => ({
       ...d,
       label: toMonthLabel(d.month),
     }));
   }, [data]);
 
-  // 시리즈별 데이터 유무 확인
-  const hasTotalAmountData = chartData.some((d) => (d.totalAmount ?? 0) > 0);
   const hasAccessedData = chartData.some((d) => d.accessedCount !== undefined);
   const hasEmailData = chartData.some((d) => d.emailSentCount !== undefined);
 
   const chartConfig = useMemo(() => {
-    const config: ChartConfig = {};
-    if (hasTotalAmountData) {
-      config.totalAmount = {
-        label: '금액(만원)',
-        color: 'hsl(var(--chart-1))',
-      };
-    }
-    config.totalCommission = {
-      label: '수수료(만원)',
-      color: 'hsl(var(--chart-2))',
-    };
-    config.csoCount = {
-      label: 'CSO 업체 수',
-      color: 'hsl(var(--chart-3))',
+    const config: ChartConfig = {
+      totalCommission: {
+        label: '수수료(만원)',
+        color: 'var(--chart-1)',
+      },
+      csoCount: {
+        label: 'CSO 업체 수',
+        color: 'var(--chart-2)',
+      },
     };
     if (hasAccessedData) {
       config.accessedCount = {
         label: '접속 업체 수',
-        color: 'hsl(var(--chart-4))',
+        color: 'var(--chart-3)',
       };
     }
     if (hasEmailData) {
       config.emailSentCount = {
         label: '이메일 발송',
-        color: 'hsl(var(--chart-5))',
+        color: 'var(--chart-5)',
       };
     }
     return config;
-  }, [hasTotalAmountData, hasAccessedData, hasEmailData]);
+  }, [hasAccessedData, hasEmailData]);
 
   if (chartData.length === 0) {
     return (
@@ -109,12 +103,19 @@ export default function MonthlyStatsChart({ data }: MonthlyStatsChartProps) {
     <div className="glass-chart-card">
       <ChartContainer config={chartConfig} className="h-[300px] sm:h-[350px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+          <ComposedChart accessibilityLayer data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="fillCommission" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--color-totalCommission)" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="var(--color-totalCommission)" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} className="stroke-muted" />
             <XAxis
               dataKey="label"
               tick={{ fontSize: 12 }}
               tickLine={false}
+              tickMargin={10}
               axisLine={false}
             />
             <YAxis
@@ -140,55 +141,47 @@ export default function MonthlyStatsChart({ data }: MonthlyStatsChartProps) {
                     if (name === 'csoCount') return [value, 'CSO 업체 수'];
                     if (name === 'accessedCount') return [value, '접속 업체 수'];
                     if (name === 'emailSentCount') return [value, '이메일 발송'];
-                    return [formatManWon(value as number) + '만원', name === 'totalAmount' ? '금액' : '수수료'];
+                    return [`${formatManWon(value as number)}만원`, '수수료'];
                   }}
                 />
               }
             />
             <ChartLegend content={<ChartLegendContent />} />
-            {hasTotalAmountData && (
-              <Bar
-                yAxisId="amount"
-                dataKey="totalAmount"
-                fill="var(--color-totalAmount)"
-                radius={[4, 4, 0, 0]}
-                barSize={20}
-              />
-            )}
-            <Bar
+            <Area
               yAxisId="amount"
+              type="monotone"
               dataKey="totalCommission"
-              fill="var(--color-totalCommission)"
-              radius={[4, 4, 0, 0]}
-              barSize={20}
+              stroke="var(--color-totalCommission)"
+              strokeWidth={2}
+              fill="url(#fillCommission)"
             />
             <Line
               yAxisId="count"
+              type="monotone"
               dataKey="csoCount"
               stroke="var(--color-csoCount)"
               strokeWidth={2}
               dot={{ r: 3 }}
-              type="monotone"
             />
             {hasAccessedData && (
               <Line
                 yAxisId="count"
+                type="monotone"
                 dataKey="accessedCount"
                 stroke="var(--color-accessedCount)"
                 strokeWidth={2}
                 dot={{ r: 3 }}
-                type="monotone"
                 strokeDasharray="5 3"
               />
             )}
             {hasEmailData && (
               <Line
                 yAxisId="count"
+                type="monotone"
                 dataKey="emailSentCount"
                 stroke="var(--color-emailSentCount)"
                 strokeWidth={2}
                 dot={{ r: 3 }}
-                type="monotone"
               />
             )}
           </ComposedChart>
