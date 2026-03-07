@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { COOKIE_NAME } from '@/constants/auth';
+import { MS_PER_SECOND } from '@/constants/defaults';
 
 // Routes that don't require authentication
 const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/change-password', '/complete-profile'];
 
 // In-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1분
+const RATE_LIMIT_WINDOW_MS = 60 * MS_PER_SECOND; // 1분
 const RATE_LIMIT_MAX_REQUESTS: Record<string, number> = {
   '/api/auth/login': 10,
   '/api/auth/register': 5,
@@ -47,7 +48,7 @@ function checkRateLimit(ip: string, path: string): { allowed: boolean; remaining
 let lastCleanup = Date.now();
 function cleanupRateLimitMap() {
   const now = Date.now();
-  if (now - lastCleanup < 5 * 60 * 1000) return;
+  if (now - lastCleanup < 5 * 60 * MS_PER_SECOND) return;
   lastCleanup = now;
   for (const [key, entry] of rateLimitMap) {
     if (now > entry.resetTime) {

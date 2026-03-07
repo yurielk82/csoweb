@@ -1,9 +1,10 @@
 import { Banknote, Building2, Package } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { WAN_UNIT } from '@/constants/defaults';
 
 function formatManWon(value: number): string {
-  const man = Math.round(value / 10000);
-  if (man >= 10000) return `${(man / 10000).toFixed(1)}억`;
+  const man = Math.round(value / WAN_UNIT);
+  if (man >= WAN_UNIT) return `${(man / WAN_UNIT).toFixed(1)}억`;
   return `${man.toLocaleString()}만`;
 }
 

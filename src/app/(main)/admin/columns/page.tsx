@@ -13,6 +13,7 @@ import { useColumnSettings } from '@/hooks/useColumnSettings';
 import { ColumnStatsBar, SummaryInfoCard, BatchActionsCard } from '@/components/admin/columns/ColumnInfoCards';
 import type { ColumnSetting } from '@/types';
 import { NUMERIC_COLUMN_KEYS } from '@/types';
+import { MATCH_OPACITY_HALF } from '@/constants/defaults';
 
 interface SortableColumnProps {
   column: ColumnSetting;
@@ -27,7 +28,7 @@ function SortableColumn({ column, onToggleVisible, onToggleRequired, onToggleSum
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: column.column_key });
 
   return (
-    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }} className={`flex items-center gap-4 p-3 bg-white border rounded-lg ${isDragging ? 'shadow-lg ring-2 ring-primary' : ''} ${!column.is_visible ? 'opacity-60' : ''}`}>
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? MATCH_OPACITY_HALF : 1 }} className={`flex items-center gap-4 p-3 bg-white border rounded-lg ${isDragging ? 'shadow-lg ring-2 ring-primary' : ''} ${!column.is_visible ? 'opacity-60' : ''}`}>
       <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded">
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </button>

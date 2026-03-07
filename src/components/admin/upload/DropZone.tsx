@@ -2,6 +2,7 @@ import { FileSpreadsheet, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { BYTES_PER_KB } from '@/constants/defaults';
 
 interface DropZoneProps {
   file: File | null;
@@ -65,7 +66,7 @@ export function DropZone({
               <div>
                 <p className="font-medium">{file.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                  {(file.size / BYTES_PER_KB / BYTES_PER_KB).toFixed(2)} MB
                 </p>
               </div>
             </div>

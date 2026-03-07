@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAdminDashboard } from '@/hooks/useAdminDashboard';
 import { calculateDelta } from '@/lib/dashboard-utils';
+import { WAN_UNIT } from '@/constants/defaults';
 import { AdminKpiSection } from '@/components/admin/dashboard/AdminKpiSection';
 import { TodoPanel } from '@/components/admin/dashboard/TodoPanel';
 import { EmailSystemBar } from '@/components/admin/dashboard/EmailSystemBar';
@@ -16,8 +17,8 @@ const MonthlyStatsChart = dynamic(
 );
 
 function formatManWon(value: number): string {
-  const man = Math.round(value / 10000);
-  if (man >= 10000) return `${(man / 10000).toFixed(1)}억`;
+  const man = Math.round(value / WAN_UNIT);
+  if (man >= WAN_UNIT) return `${(man / WAN_UNIT).toFixed(1)}억`;
   return `${man.toLocaleString()}만`;
 }
 

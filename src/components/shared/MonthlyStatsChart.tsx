@@ -20,6 +20,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from '@/components/ui/chart';
+import { WAN_UNIT } from '@/constants/defaults';
 
 export interface MonthlyStatData {
   month: string;
@@ -43,9 +44,9 @@ interface MonthlyStatsChartProps {
 
 // 만원 단위 포맷
 function formatManWon(value: number): string {
-  const man = Math.round(value / 10000);
-  if (man >= 10000) {
-    return `${(man / 10000).toFixed(1)}억`;
+  const man = Math.round(value / WAN_UNIT);
+  if (man >= WAN_UNIT) {
+    return `${(man / WAN_UNIT).toFixed(1)}억`;
   }
   return `${man.toLocaleString()}`;
 }

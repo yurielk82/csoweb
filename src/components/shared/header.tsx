@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { API_ROUTES } from '@/constants/api';
+import { HEADER_SCROLL_THRESHOLD } from '@/constants/defaults';
 import {
   type MenuGroup,
   type NavEntry,
@@ -40,7 +41,7 @@ function NavGroupDropdown({ group, pathname }: { group: MenuGroup; pathname: str
   }, []);
 
   const handleLeave = useCallback(() => {
-    closeTimer.current = setTimeout(() => setOpen(false), 150);
+    closeTimer.current = setTimeout(() => setOpen(false), HEADER_SCROLL_THRESHOLD);
   }, []);
 
   return (

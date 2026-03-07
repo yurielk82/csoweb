@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import ExcelJS from 'exceljs';
 import { EXCEL_COLUMN_MAP } from '@/types';
+import { SIMILARITY_THRESHOLD, SUBSTRING_MATCH_SCORE } from '@/constants/defaults';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,7 @@ function similarity(s1: string, s2: string): number {
         costs[j] = j;
       } else if (j > 0) {
         let newValue = costs[j - 1];
+        // eslint-disable-next-line max-depth
         if (shorter.charAt(i - 1) !== longer.charAt(j - 1)) {
           newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
         }
@@ -46,13 +48,13 @@ function findBestMatch(excelColumn: string, dbColumns: string[]): { dbColumn: st
     if (normalized === normalizedDb) return { dbColumn: dbCol, score: 1.0 };
 
     if (normalized.includes(normalizedDb) || normalizedDb.includes(normalized)) {
-      const score = 0.9;
+      const score = SUBSTRING_MATCH_SCORE;
       if (!bestMatch || score > bestMatch.score) bestMatch = { dbColumn: dbCol, score };
       continue;
     }
 
     const score = similarity(normalized, normalizedDb);
-    if (score >= 0.6 && (!bestMatch || score > bestMatch.score)) {
+    if (score >= SIMILARITY_THRESHOLD && (!bestMatch || score > bestMatch.score)) {
       bestMatch = { dbColumn: dbCol, score };
     }
   }

@@ -5,6 +5,7 @@ import { getSettlementRepository } from '@/infrastructure/supabase';
 import { getSupabase } from '@/lib/supabase';
 import { invalidateSettlementCache, invalidateCSOMatchingCache } from '@/lib/data-cache';
 import type { Settlement } from '@/types';
+import { BYTES_PER_KB } from '@/constants/defaults';
 
 // 메모리 제한 증가
 export const maxDuration = 60; // 60초 타임아웃
@@ -15,7 +16,7 @@ const ALLOWED_MIME_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'application/vnd.ms-excel',
 ];
-const MAX_FILE_SIZE = 4 * 1024 * 1024;
+const MAX_FILE_SIZE = 4 * BYTES_PER_KB * BYTES_PER_KB;
 const CSO_MAPPING_BATCH_SIZE = 100;
 
 // ── Validation ──
@@ -30,7 +31,7 @@ function validateUploadFile(file: File): string | null {
     return '허용되지 않는 파일 형식입니다. Excel 파일(.xlsx, .xls)만 업로드 가능합니다.';
   }
   if (file.size > MAX_FILE_SIZE) {
-    const fileSizeMB = file.size / (1024 * 1024);
+    const fileSizeMB = file.size / (BYTES_PER_KB * BYTES_PER_KB);
     return `파일 크기(${fileSizeMB.toFixed(1)}MB)가 4MB를 초과합니다. 파일을 분할해주세요.`;
   }
   return null;
@@ -134,7 +135,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: validationError }, { status: 400 });
     }
 
-    console.log(`Parsing Excel file: ${file.name}, size: ${(file.size / (1024 * 1024)).toFixed(2)}MB`);
+    console.log(`Parsing Excel file: ${file.name}, size: ${(file.size / (BYTES_PER_KB * BYTES_PER_KB)).toFixed(2)}MB`);
 
     const customMapping = parseCustomMapping(formData);
     const buffer = await file.arrayBuffer();

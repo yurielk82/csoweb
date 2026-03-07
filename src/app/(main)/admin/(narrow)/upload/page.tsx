@@ -9,8 +9,9 @@ import { DropZone } from '@/components/admin/upload/DropZone';
 import { MappingDialog } from '@/components/admin/upload/MappingDialog';
 import { UploadResultCard } from '@/components/admin/upload/UploadResultCard';
 import { EmailDialog } from '@/components/admin/upload/EmailDialog';
+import { BYTES_PER_KB } from '@/constants/defaults';
 
-const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+const MAX_FILE_SIZE = 4 * BYTES_PER_KB * BYTES_PER_KB; // 4MB
 
 export default function UploadPage() {
   const up = useFileUpload();

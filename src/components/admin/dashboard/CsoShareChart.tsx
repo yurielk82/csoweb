@@ -11,6 +11,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from '@/components/ui/chart';
+import { WAN_UNIT } from '@/constants/defaults';
 
 interface CsoShareChartProps {
   data: { name: string; value: number }[];
@@ -32,9 +33,9 @@ const CHART_COLORS = [
 
 // 만원 단위 포맷
 function formatManWon(value: number): string {
-  const man = Math.round(value / 10000);
-  if (man >= 10000) {
-    return `${(man / 10000).toFixed(1)}억원`;
+  const man = Math.round(value / WAN_UNIT);
+  if (man >= WAN_UNIT) {
+    return `${(man / WAN_UNIT).toFixed(1)}억원`;
   }
   return `${man.toLocaleString()}만원`;
 }

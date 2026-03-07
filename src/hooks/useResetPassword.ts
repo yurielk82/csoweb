@@ -3,6 +3,7 @@
 import { useState, useEffect, type Dispatch, type SetStateAction } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { API_ROUTES } from '@/constants/api';
+import { TOAST_DURATION_MS } from '@/constants/defaults';
 import { getPasswordStrength } from '@/lib/format';
 
 // ── 타입 ──
@@ -94,7 +95,7 @@ export function useResetPassword() {
         return;
       }
       setSuccess(true);
-      setTimeout(() => router.push('/login'), 3000);
+      setTimeout(() => router.push('/login'), TOAST_DURATION_MS);
     } catch (err) {
       console.error('비밀번호 재설정 처리 중 오류:', err);
       setError('비밀번호 변경 중 오류가 발생했습니다.');

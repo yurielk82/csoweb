@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { getSession } from '@/lib/auth';
 import { getCompanyRepository } from '@/infrastructure/supabase';
+import { DEFAULT_SMTP_PORT } from '@/constants/defaults';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,7 @@ function createSmtpTransporter(config: {
 }) {
   return nodemailer.createTransport({
     host: config.host,
-    port: config.port || 465,
+    port: config.port || DEFAULT_SMTP_PORT,
     secure: config.secure ?? true,
     auth: { user: config.user, pass: config.password },
     authMethod: 'LOGIN',

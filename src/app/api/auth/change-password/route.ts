@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, setSession, hashPassword } from '@/lib/auth';
 import { getUserRepository } from '@/infrastructure/supabase';
+import { PASSWORD_RECENT_DAYS } from '@/constants/defaults';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
     const blockedPasswords = [
       `u${normalizedBN}`,
       normalizedBN,
-      normalizedBN.slice(-5),
+      normalizedBN.slice(PASSWORD_RECENT_DAYS),
     ];
     if (blockedPasswords.includes(new_password)) {
       return NextResponse.json(

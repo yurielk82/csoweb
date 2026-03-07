@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { API_ROUTES } from '@/constants/api';
+import { MS_PER_SECOND } from '@/constants/defaults';
 
 import type { SendLog, SendResult, SendProgress, EmailSection } from './types';
 import { parseSSEStream } from './parseSSE';
@@ -29,7 +30,7 @@ export function useMailMergeSend(deps: SendDeps) {
 
   const progressPercent = progress ? Math.round((progress.current / progress.total) * 100) : 0;
   const remainingTime = progress && progress.delay > 0
-    ? Math.ceil(((progress.total - progress.current) * progress.delay) / 1000) : 0;
+    ? Math.ceil(((progress.total - progress.current) * progress.delay) / MS_PER_SECOND) : 0;
 
   const handleSend = async () => {
     setSending(true);

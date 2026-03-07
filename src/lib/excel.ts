@@ -6,6 +6,7 @@ import ExcelJS from 'exceljs';
 import * as XLSX from 'xlsx';
 import { EXCEL_COLUMN_MAP } from '@/types';
 import type { Settlement } from '@/types';
+import { BYTES_PER_KB } from '@/constants/defaults';
 
 // ── Header parsing helpers ──
 
@@ -83,6 +84,12 @@ function convertCellValue(value: ExcelJS.CellValue): unknown {
 
 // ── Row processing ──
 
+/** 사업자번호 검증 및 정제 — 유효하면 10자리 문자열, 아니면 null */
+function parseBusinessNumber(value: unknown): string | null {
+  const bn = String(value).replace(/\D/g, '');
+  return bn.length === 10 ? bn : null;
+}
+
 function processDataRows(
   worksheet: ExcelJS.Worksheet,
   rowCount: number,
@@ -102,16 +109,17 @@ function processDataRows(
       const value = convertCellValue(cell.value);
       if (value === null) continue;
 
-      if (dbCol === 'business_number') {
-        const bn = String(value).replace(/\D/g, '');
-        if (bn.length === 10) {
-          settlement.business_number = bn;
-        } else if (errorCount < MAX_ERRORS) {
-          errors.push(`행 ${row}: 유효하지 않은 사업자번호 "${value}"`);
-          errorCount++;
-        }
-      } else {
+      if (dbCol !== 'business_number') {
         (settlement as Record<string, unknown>)[dbCol] = value;
+        continue;
+      }
+
+      const bn = parseBusinessNumber(value);
+      if (bn) {
+        settlement.business_number = bn;
+      } else if (errorCount < MAX_ERRORS) {
+        errors.push(`행 ${row}: 유효하지 않은 사업자번호 "${value}"`);
+        errorCount++;
       }
     }
 
@@ -271,7 +279,7 @@ export function validateExcelFile(file: File): {
     return { valid: false, error: '엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.' };
   }
 
-  const maxSize = 4 * 1024 * 1024;
+  const maxSize = 4 * BYTES_PER_KB * BYTES_PER_KB;
   if (file.size > maxSize) {
     return { valid: false, error: '파일 크기는 4MB를 초과할 수 없습니다.' };
   }

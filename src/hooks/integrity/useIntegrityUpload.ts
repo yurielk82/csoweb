@@ -3,10 +3,11 @@
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { API_ROUTES } from '@/constants/api';
+import { BYTES_PER_KB } from '@/constants/defaults';
 import type { MatchingUploadItem, ToastFn } from './types';
 import { parseMatchingFile, handleUploadSuccess } from './helpers';
 
-const MAX_UPLOAD_SIZE = 4 * 1024 * 1024;
+const MAX_UPLOAD_SIZE = 4 * BYTES_PER_KB * BYTES_PER_KB;
 
 export function useIntegrityUpload(toast: ToastFn, fetchIntegrityData: () => Promise<void>) {
   const [showUploadDialog, setShowUploadDialog] = useState(false);

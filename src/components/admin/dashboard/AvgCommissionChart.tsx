@@ -9,6 +9,7 @@ import {
   type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent,
 } from '@/components/ui/chart';
 import type { SettlementMonth } from '@/hooks/useAdminDashboard';
+import { WAN_UNIT } from '@/constants/defaults';
 
 interface AvgCommissionChartProps {
   data: SettlementMonth[];
@@ -33,7 +34,7 @@ export const AvgCommissionChart = memo(function AvgCommissionChart({ data }: Avg
       .slice(-RECENT_MONTHS)
       .map((d) => ({
         label: toMonthLabel(d.month),
-        avgCommission: Math.round(d.totalCommission / d.csoCount / 10000),
+        avgCommission: Math.round(d.totalCommission / d.csoCount / WAN_UNIT),
       }));
   }, [data]);
 

@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { BYTES_PER_KB } from '@/constants/defaults';
 import type { IntegrityRow, MatchingUploadItem } from './types';
 import { formatBusinessNumber } from './CSOTagComponents';
 
@@ -137,7 +138,7 @@ function UploadDropZone({
         <div>
           <p className="font-medium">{uploadFile.name}</p>
           <p className="text-sm text-muted-foreground">
-            {(uploadFile.size / 1024).toFixed(1)} KB | {uploadDuplicatesRemoved > 0
+            {(uploadFile.size / BYTES_PER_KB).toFixed(1)} KB | {uploadDuplicatesRemoved > 0
               ? `${uploadRawCount}건 중 중복 ${uploadDuplicatesRemoved}건 제거 → ${uploadPreviewCount}건`
               : `${uploadPreviewCount}건 감지됨`}
           </p>

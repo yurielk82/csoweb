@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { ColumnMapping, PreviewData } from '@/hooks/useFileUpload';
+import { SUBSTRING_MATCH_SCORE, HIGH_MATCH_SCORE } from '@/constants/defaults';
 
 interface MappingDialogProps {
   open: boolean;
@@ -139,8 +140,8 @@ function ScoreBadge({ score, hasMapped }: { score: number; hasMapped: boolean })
 
   return (
     <Badge
-      variant={score >= 0.9 ? 'default' : score >= 0.7 ? 'secondary' : 'outline'}
-      className={score >= 0.9 ? 'bg-green-600' : ''}
+      variant={score >= SUBSTRING_MATCH_SCORE ? 'default' : score >= HIGH_MATCH_SCORE ? 'secondary' : 'outline'}
+      className={score >= SUBSTRING_MATCH_SCORE ? 'bg-green-600' : ''}
     >
       {score >= 1 ? <Check className="h-3 w-3 mr-1" /> : null}
       {Math.round(score * 100)}%
