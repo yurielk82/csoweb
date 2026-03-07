@@ -2,6 +2,16 @@
 
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 
+## [0.35.2] - 2026-03-07
+
+### Fixed
+- CSO 드롭다운 올바른 도메인 모델 기반 수정 — `getCachedCSOMatchingList()` 활용으로 CSO 업체 목록 정확성 보장
+
+## [0.35.1] - 2026-03-07
+
+### Fixed
+- CSO 드롭다운 누락 — DB DISTINCT 직접 조회로 근본 수정 (settlements 테이블에서 CSO관리업체 DISTINCT 조회)
+
 ## [0.35.0] - 2026-03-07
 
 ### Refactored

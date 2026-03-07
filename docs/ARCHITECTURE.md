@@ -69,7 +69,8 @@ src/
 ├── hooks/               ← 커스텀 훅 (Phase 3 SRP 분리)
 │   ├── useSettlementData.ts   대시보드 상태 + 데이터 페칭 + 핸들러
 │   ├── useFileUpload.ts       업로드 상태 + 업로드/프리뷰 로직
-│   └── useMailMerge.ts        메일머지 상태 + SSE 연결 + 발송
+│   ├── useMailMerge.ts        메일머지 상태 + SSE 연결 + 발송
+│   └── useAdminDashboard.ts   관리자 대시보드 상태 + 페칭 + 계산
 │
 ├── components/          ← UI 컴포넌트
 │   ├── ui/              shadcn/ui 베이스 (Button, Card, Skeleton 등)
@@ -83,11 +84,18 @@ src/
     ├── sitemap.ts       사이트맵 (로그인만)
     ├── (auth)/          로그인, 회원가입 등 인증 페이지 + error.tsx
     ├── (main)/          메인 레이아웃 (max-w-screen-xl) + error.tsx + loading.tsx
+    │   ├── home/               사용자 홈 대시보드 — wide
     │   ├── dashboard/          정산 조회 — wide + loading.tsx (SettlementSkeleton)
     │   ├── monthly-summary/    월별 합계 — wide
     │   ├── (narrow)/           max-w-3xl 라우트 그룹 (URL 미포함)
     │   │   └── profile/        내 정보
     │   └── admin/              관리자 페이지 — wide + loading.tsx (AdminSkeleton)
+    │       ├── columns/        컬럼 표시 설정
+    │       ├── data/           데이터 관리
+    │       ├── emails/         이메일 이력
+    │       ├── integrity/      CSO 매칭 무결성 검사
+    │       ├── members/        회원 관리
+    │       ├── master/         마스터 조회
     │       └── (narrow)/       max-w-3xl 라우트 그룹 (URL 미포함)
     │           ├── upload/         정산서 업로드
     │           ├── email-settings/ 이메일 설정
@@ -142,6 +150,8 @@ domain/ (인터페이스 정의) ← infrastructure/ (구현체)
 | `getCachedUsers()` | `user-data` | (위와 동일) |
 | `getCachedPendingUsers()` | `user-data` | (위와 동일) |
 | `getCachedCSOMatchingList()` | `cso-matching` | POST/DELETE `/api/admin/cso-matching/upsert` |
+| `getCachedUploadSnapshot()` | `upload-snapshot` | POST `/api/upload` |
+| `getCachedUploadSnapshots()` | `upload-snapshot` | POST `/api/upload` |
 
 ### 통합 init API (`GET /api/dashboard/init`)
 
@@ -167,6 +177,14 @@ domain/ (인터페이스 정의) ← infrastructure/ (구현체)
 
 **중요**: 미들웨어는 쿠키 **존재 여부**만 확인합니다. JWT 서명 검증은 서버사이드(API 라우트)에서 수행합니다.
 
+### Rate Limiting
+
+`src/middleware.ts`에 in-memory Rate Limiter가 구현되어 있습니다. API 라우트(`/api/auth/login`, `/api/auth/register` 등)에 대해 IP 기반 요청 빈도를 제한합니다.
+
+- 1분 윈도우, 경로별 최대 요청 수 설정
+- 초과 시 429 응답 + `X-RateLimit-Remaining` 헤더
+- **한계**: Vercel Serverless에서는 인스턴스 간 메모리가 공유되지 않으므로, 분산 환경에서 완벽하지 않음
+
 ### 서버 (JWT 검증)
 
 `src/lib/auth.ts`의 `getSession()`이 핵심입니다:
@@ -182,15 +200,16 @@ domain/ (인터페이스 정의) ← infrastructure/ (구현체)
 - React Context로 전역 제공
 - SSR 안전성: 마운트 전까지 `null` (hydration 오류 방지)
 
-### 권한 3요소
+### 권한 4요소
 
-모든 권한 판단은 이 세 필드로 이루어집니다:
+모든 권한 판단은 이 네 필드로 이루어집니다:
 
 | 필드 | 의미 |
 |------|------|
 | `is_admin` | 관리자 여부 (정산 업로드, 회원 관리 등) |
 | `is_approved` | 관리자 승인 완료 여부 (미승인이면 로그인 불가) |
 | `must_change_password` | 첫 로그인 시 비밀번호 변경 강제 |
+| `profile_complete` | 프로필 완성 여부 (미완성이면 프로필 완성 페이지로 리다이렉트) |
 
 ---
 

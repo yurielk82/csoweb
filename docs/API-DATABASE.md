@@ -81,6 +81,12 @@
 | POST | `/api/admin/cso-matching/upsert` | CSO 매칭 일괄 등록/수정 | 관리자 |
 | POST | `/api/admin/cso-matching/integrity` | 매칭 무결성 검사 | 관리자 |
 
+### 대시보드
+
+| Method | Path | 설명 | 인증 |
+|--------|------|------|------|
+| GET | `/api/dashboard/init` | 대시보드/마스터 통합 초기화 (컬럼, 회사정보, 매칭, 정산월, 합계, 정산 데이터를 1회 호출로 반환) | 회원 |
+
 ### 기타
 
 | Method | Path | 설명 | 인증 |
@@ -88,6 +94,11 @@
 | GET/PUT | `/api/columns` | 정산 테이블 컬럼 표시 설정 | 관리자 |
 | GET/PUT/PATCH | `/api/settings/company` | 회사 기본 정보 설정 (PATCH: 필드 단위 자동 저장) | 관리자 |
 | GET | `/api/system/status` | 시스템 상태 확인 | 회원 |
+| GET | `/api/settlements/cso-companies` | 정산월별 CSO 업체 사업자번호 목록 (`?month=YYYY-MM`) | 관리자 |
+| GET | `/api/settlements/uploads` | 업로드 스냅샷 조회 (전체 또는 `?month=YYYY-MM` 특정 월) | 관리자 |
+| GET | `/api/email/monthly-stats` | 이메일 월별 발송 통계 | 관리자 |
+| POST | `/api/revalidate` | 캐시 태그 수동 무효화 (`?tag=footer-data`) | 관리자 |
+| POST | `/api/verify-biz` | 국세청 사업자등록번호 실시간 상태 조회 | 공개 |
 
 ---
 
