@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import {
   Download,
   Search,
@@ -27,6 +27,14 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -418,6 +426,92 @@ export default function AdminMasterPage() {
     }
   }
 
+  // 테이블 행 렌더링
+  const tableRows: ReactNode[] = [];
+  for (const csoGroup of groupedData) {
+    for (let custIdx = 0; custIdx < csoGroup.customers.length; custIdx++) {
+      const customer = csoGroup.customers[custIdx];
+
+      for (let rowIdx = 0; rowIdx < customer.rows.length; rowIdx++) {
+        const row = customer.rows[rowIdx];
+        tableRows.push(
+          <TableRow key={`${csoGroup.csoName}-${customer.customerName}-${rowIdx}`}>
+            {displayColumns.map(col => {
+              const value = getSettlementValue(row, col.column_key);
+              const isNumber = typeof value === 'number';
+              return (
+                <TableCell
+                  key={col.column_key}
+                  className={isNumber ? 'text-right font-mono tabular-nums' : ''}
+                >
+                  {isNumber ? formatNumber(value) : (value || '-')}
+                </TableCell>
+              );
+            })}
+          </TableRow>
+        );
+      }
+
+      tableRows.push(
+        <TableRow
+          key={`subtotal-${csoGroup.csoName}-${customer.customerName}`}
+          className="bg-muted hover:bg-muted"
+        >
+          {displayColumns.map((col, colIdx) => (
+            <TableCell
+              key={col.column_key}
+              className={
+                col.column_key === '수량' || col.column_key === '금액' || col.column_key === '제약수수료_합계'
+                  ? 'text-right font-mono tabular-nums font-medium'
+                  : 'font-medium'
+              }
+            >
+              {colIdx === labelColumnIndex ? (
+                <span className="text-muted-foreground">{customer.customerName} 합계</span>
+              ) : col.column_key === '수량' ? (
+                formatNumber(customer.subtotal.수량)
+              ) : col.column_key === '금액' ? (
+                formatNumber(customer.subtotal.금액)
+              ) : col.column_key === '제약수수료_합계' ? (
+                <span className="text-primary">{formatNumber(customer.subtotal.제약수수료_합계)}</span>
+              ) : ''}
+            </TableCell>
+          ))}
+        </TableRow>
+      );
+
+      if (custIdx === csoGroup.customers.length - 1) {
+        tableRows.push(
+          <TableRow
+            key={`total-${csoGroup.csoName}`}
+            className="bg-primary/5 hover:bg-primary/5 border-b-2 border-primary/20"
+          >
+            {displayColumns.map((col, colIdx) => (
+              <TableCell
+                key={col.column_key}
+                className={
+                  col.column_key === '수량' || col.column_key === '금액' || col.column_key === '제약수수료_합계'
+                    ? 'text-right font-mono tabular-nums font-bold'
+                    : 'font-bold'
+                }
+              >
+                {colIdx === (csoColumnIndex >= 0 ? csoColumnIndex : 0) ? (
+                  <span className="text-primary">{csoGroup.csoName} 총합계</span>
+                ) : col.column_key === '수량' ? (
+                  formatNumber(csoGroup.total.수량)
+                ) : col.column_key === '금액' ? (
+                  formatNumber(csoGroup.total.금액)
+                ) : col.column_key === '제약수수료_합계' ? (
+                  <span className="text-primary">{formatNumber(csoGroup.total.제약수수료_합계)}</span>
+                ) : ''}
+              </TableCell>
+            ))}
+          </TableRow>
+        );
+      }
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -513,7 +607,7 @@ export default function AdminMasterPage() {
               {showCsoDropdown && (
                 <div
                   ref={dropdownRef}
-                  className="absolute z-50 w-full mt-1 max-h-60 overflow-auto bg-white border rounded-md shadow-lg"
+                  className="absolute z-50 w-full mt-1 max-h-60 overflow-auto bg-popover border rounded-md shadow-lg"
                 >
                   {csoLoading ? (
                     <div className="p-3 text-center text-muted-foreground">
@@ -524,7 +618,7 @@ export default function AdminMasterPage() {
                     <>
                       {/* 전체 선택 옵션 */}
                       <div
-                        className={`p-3 cursor-pointer hover:bg-gray-100 border-b ${!selectedCSO && queryStarted ? 'bg-blue-50' : ''}`}
+                        className={`p-3 cursor-pointer hover:bg-muted border-b ${!selectedCSO && queryStarted ? 'bg-primary/10' : ''}`}
                         onClick={handleSelectAll}
                       >
                         <div className="font-medium">전체 거래처</div>
@@ -533,7 +627,7 @@ export default function AdminMasterPage() {
                       {filteredCsoList.map(cso => (
                         <div
                           key={cso.business_number}
-                          className={`p-3 cursor-pointer hover:bg-gray-100 ${selectedCSO?.business_number === cso.business_number ? 'bg-blue-50' : ''}`}
+                          className={`p-3 cursor-pointer hover:bg-muted ${selectedCSO?.business_number === cso.business_number ? 'bg-primary/10' : ''}`}
                           onClick={() => handleCsoSelect(cso)}
                         >
                           <div className="font-medium">{cso.company_name}</div>
@@ -572,9 +666,9 @@ export default function AdminMasterPage() {
 
           {/* 선택된 CSO 표시 */}
           {selectedCSO && (
-            <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-md">
-              <Building2 className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-800">
+            <div className="flex items-center gap-2 p-2 bg-primary/10 rounded-md">
+              <Building2 className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">
                 선택된 거래처: {selectedCSO.company_name} ({selectedCSO.business_number})
               </span>
               <Button
@@ -619,10 +713,10 @@ export default function AdminMasterPage() {
 
       {/* Notice Section */}
       {noticeSettings?.notice_content && (
-        <Card className="border-amber-200 bg-amber-50">
+        <Card className="border-warning/20 bg-warning/10">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2 text-amber-800">
+              <CardTitle className="text-base flex items-center gap-2 text-warning">
                 <AlertCircle className="h-4 w-4" />
                 Notice
               </CardTitle>
@@ -630,14 +724,14 @@ export default function AdminMasterPage() {
                 variant="ghost"
                 size="sm"
                 onClick={openNoticeDialog}
-                className="h-7 px-2 text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+                className="h-7 px-2 text-warning hover:text-foreground hover:bg-warning/10"
               >
                 <Pencil className="h-3.5 w-3.5 mr-1" />
                 편집
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="text-sm text-amber-900">
+          <CardContent className="text-sm text-foreground">
             <div className="whitespace-pre-line">
               {replaceNoticeVars(noticeSettings.notice_content)}
             </div>
@@ -732,33 +826,25 @@ export default function AdminMasterPage() {
       {/* Summary */}
       {queryStarted && data && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>총 수량</CardDescription>
-              <CardTitle className="text-2xl">
-                {formatNumber(data.totals.수량)}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>총 금액</CardDescription>
-              <CardTitle className="text-2xl">
-                {formatNumber(data.totals.금액)}원
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-blue-200 bg-blue-50">
-            <CardHeader className="pb-2">
-              <CardDescription>제약수수료 합계</CardDescription>
-              <CardTitle className="text-2xl text-blue-600">
-                {formatNumber(data.totals.제약수수료_합계)}원
-              </CardTitle>
-              <p className="text-xs text-blue-700 font-medium mt-1">
-                (세금계산서 발행 금액 / VAT 포함)
-              </p>
-            </CardHeader>
-          </Card>
+          <div className="glass-kpi-card">
+            <p className="text-sm text-muted-foreground mb-2">총 수량</p>
+            <p className="text-2xl font-bold font-mono tabular-nums">
+              {formatNumber(data.totals.수량)}
+            </p>
+          </div>
+          <div className="glass-kpi-card">
+            <p className="text-sm text-muted-foreground mb-2">총 금액</p>
+            <p className="text-2xl font-bold font-mono tabular-nums">
+              {formatNumber(data.totals.금액)}<span className="text-base font-normal ml-0.5">원</span>
+            </p>
+          </div>
+          <div className="glass-kpi-card border-primary/20">
+            <p className="text-sm text-muted-foreground mb-2">제약수수료 합계</p>
+            <p className="text-2xl font-bold font-mono tabular-nums text-primary">
+              {formatNumber(data.totals.제약수수료_합계)}<span className="text-base font-normal ml-0.5">원</span>
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">(세금계산서 발행 금액 / VAT 포함)</p>
+          </div>
         </div>
       )}
 
@@ -775,89 +861,33 @@ export default function AdminMasterPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="settlement-table">
-                <thead>
-                  <tr>
-                    {displayColumns.map(col => (
-                      <th key={col.column_key}>{col.column_name}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={displayColumns.length} className="text-center py-12">
-                        <Loader2 className="h-6 w-6 animate-spin inline mr-2" />
-                        데이터를 불러오는 중...
-                      </td>
-                    </tr>
-                  ) : groupedData.length > 0 ? (
-                    <>
-                      {groupedData.map((csoGroup) => (
-                        <>
-                          {csoGroup.customers.map((customer) => (
-                            <>
-                              {customer.rows.map((row, rowIdx) => (
-                                <tr key={`${csoGroup.csoName}-${customer.customerName}-${rowIdx}`}>
-                                  {displayColumns.map(col => (
-                                    <td
-                                      key={col.column_key}
-                                      className={typeof getSettlementValue(row, col.column_key) === 'number' ? 'number-cell' : ''}
-                                    >
-                                      {typeof getSettlementValue(row, col.column_key) === 'number'
-                                        ? formatNumber(getSettlementValue(row, col.column_key) as number)
-                                        : getSettlementValue(row, col.column_key) || '-'
-                                      }
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                              <tr className="bg-gray-100 font-medium" key={`subtotal-${csoGroup.csoName}-${customer.customerName}`}>
-                                {displayColumns.map((col, colIdx) => (
-                                  <td key={col.column_key} className={typeof customer.subtotal[col.column_key as keyof typeof customer.subtotal] === 'number' ? 'text-right' : ''}>
-                                    {colIdx === labelColumnIndex ? (
-                                      <span className="text-gray-600">{customer.customerName} 합계</span>
-                                    ) : col.column_key === '수량' ? (
-                                      formatNumber(customer.subtotal.수량)
-                                    ) : col.column_key === '금액' ? (
-                                      formatNumber(customer.subtotal.금액)
-                                    ) : col.column_key === '제약수수료_합계' ? (
-                                      <span className="text-blue-600">{formatNumber(customer.subtotal.제약수수료_합계)}</span>
-                                    ) : ''}
-                                  </td>
-                                ))}
-                              </tr>
-                            </>
-                          ))}
-                          <tr className="bg-blue-50 font-bold border-b-2 border-blue-200" key={`total-${csoGroup.csoName}`}>
-                            {displayColumns.map((col, colIdx) => (
-                              <td key={col.column_key} className={typeof csoGroup.total[col.column_key as keyof typeof csoGroup.total] === 'number' ? 'text-right' : ''}>
-                                {colIdx === (csoColumnIndex >= 0 ? csoColumnIndex : 0) ? (
-                                  <span className="text-blue-700">{csoGroup.csoName} 총합계</span>
-                                ) : col.column_key === '수량' ? (
-                                  formatNumber(csoGroup.total.수량)
-                                ) : col.column_key === '금액' ? (
-                                  formatNumber(csoGroup.total.금액)
-                                ) : col.column_key === '제약수수료_합계' ? (
-                                  <span className="text-blue-700">{formatNumber(csoGroup.total.제약수수료_합계)}</span>
-                                ) : ''}
-                              </td>
-                            ))}
-                          </tr>
-                        </>
-                      ))}
-                    </>
-                  ) : (
-                    <tr>
-                      <td colSpan={displayColumns.length} className="text-center py-8 text-muted-foreground">
-                        {selectedCSO ? `${selectedCSO.company_name}의 데이터가 없습니다.` : '데이터가 없습니다.'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted hover:bg-muted">
+                  {displayColumns.map(col => (
+                    <TableHead key={col.column_key} className="whitespace-nowrap sticky top-0 z-10 bg-muted">
+                      {col.column_name}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={displayColumns.length} className="text-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin inline mr-2" />
+                      데이터를 불러오는 중...
+                    </TableCell>
+                  </TableRow>
+                ) : tableRows.length > 0 ? tableRows : (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={displayColumns.length} className="text-center py-8 text-muted-foreground">
+                      {selectedCSO ? `${selectedCSO.company_name}의 데이터가 없습니다.` : '데이터가 없습니다.'}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}

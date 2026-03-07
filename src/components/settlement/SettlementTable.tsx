@@ -1,6 +1,13 @@
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 import { FileSpreadsheet } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import type { Settlement, ColumnSetting } from '@/types';
 import { getSettlementValue } from '@/types';
 
@@ -64,109 +71,151 @@ function buildGroupedData(settlements: Settlement[]): GroupedData[] {
   return result;
 }
 
+function renderGroupedRows(
+  groupedData: GroupedData[],
+  displayColumns: ColumnSetting[],
+  labelColumnIndex: number,
+): ReactNode[] {
+  const rows: ReactNode[] = [];
+
+  for (const csoGroup of groupedData) {
+    for (let custIdx = 0; custIdx < csoGroup.customers.length; custIdx++) {
+      const customer = csoGroup.customers[custIdx];
+
+      // 데이터 행
+      for (let rowIdx = 0; rowIdx < customer.rows.length; rowIdx++) {
+        const row = customer.rows[rowIdx];
+        rows.push(
+          <TableRow key={`${csoGroup.csoName}-${customer.customerName}-${rowIdx}`}>
+            {displayColumns.map(col => {
+              const value = getSettlementValue(row, col.column_key);
+              const isNumber = typeof value === 'number';
+              return (
+                <TableCell
+                  key={col.column_key}
+                  className={isNumber ? 'text-right font-mono tabular-nums' : ''}
+                >
+                  {isNumber ? formatNumber(value) : (value || '-')}
+                </TableCell>
+              );
+            })}
+          </TableRow>
+        );
+      }
+
+      // 거래처 소계 행
+      rows.push(
+        <TableRow
+          key={`subtotal-${csoGroup.csoName}-${customer.customerName}`}
+          className="bg-muted hover:bg-muted"
+        >
+          {displayColumns.map((col, colIdx) => (
+            <TableCell
+              key={col.column_key}
+              className={
+                col.column_key === '수량' || col.column_key === '금액' || col.column_key === '제약수수료_합계'
+                  ? 'text-right font-mono tabular-nums font-medium'
+                  : 'font-medium'
+              }
+            >
+              {colIdx === labelColumnIndex ? (
+                <span className="text-muted-foreground">{customer.customerName} 합계</span>
+              ) : col.column_key === '수량' ? (
+                formatNumber(customer.subtotal.수량)
+              ) : col.column_key === '금액' ? (
+                formatNumber(customer.subtotal.금액)
+              ) : col.column_key === '제약수수료_합계' ? (
+                <span className="text-primary">{formatNumber(customer.subtotal.제약수수료_합계)}</span>
+              ) : ''}
+            </TableCell>
+          ))}
+        </TableRow>
+      );
+
+      // CSO 총합계 행 (마지막 거래처 후)
+      if (custIdx === csoGroup.customers.length - 1) {
+        rows.push(
+          <TableRow
+            key={`total-${csoGroup.csoName}`}
+            className="bg-primary/5 hover:bg-primary/5 border-b-2 border-primary/20"
+          >
+            {displayColumns.map((col, colIdx) => (
+              <TableCell
+                key={col.column_key}
+                className={
+                  col.column_key === '수량' || col.column_key === '금액' || col.column_key === '제약수수료_합계'
+                    ? 'text-right font-mono tabular-nums font-bold'
+                    : 'font-bold'
+                }
+              >
+                {colIdx === labelColumnIndex ? (
+                  <span className="text-primary">{csoGroup.csoName} 총합계</span>
+                ) : col.column_key === '수량' ? (
+                  formatNumber(csoGroup.total.수량)
+                ) : col.column_key === '금액' ? (
+                  formatNumber(csoGroup.total.금액)
+                ) : col.column_key === '제약수수료_합계' ? (
+                  <span className="text-primary">{formatNumber(csoGroup.total.제약수수료_합계)}</span>
+                ) : ''}
+              </TableCell>
+            ))}
+          </TableRow>
+        );
+      }
+    }
+  }
+
+  return rows;
+}
+
 export const SettlementTable = memo(function SettlementTable({
   settlements, displayColumns, labelColumnIndex, selectedMonth, yearMonths, searchQuery,
 }: SettlementTableProps) {
   const groupedData = settlements ? buildGroupedData(settlements) : [];
+  const tableRows = renderGroupedRows(groupedData, displayColumns, labelColumnIndex);
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">정산 상세 내역</CardTitle>
-        <CardDescription>거래처명별 소계 및 CSO관리업체 총합계 포함</CardDescription>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <table className="settlement-table">
-            <thead>
-              <tr>
-                {displayColumns.map(col => (
-                  <th key={col.column_key}>{col.column_name}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {groupedData.length > 0 ? (
-                <>
-                  {groupedData.map((csoGroup) => (
-                    <>
-                      {csoGroup.customers.map((customer) => (
-                        <>
-                          {customer.rows.map((row, rowIdx) => (
-                            <tr key={`${csoGroup.csoName}-${customer.customerName}-${rowIdx}`}>
-                              {displayColumns.map(col => (
-                                <td
-                                  key={col.column_key}
-                                  className={typeof getSettlementValue(row, col.column_key) === 'number' ? 'number-cell' : ''}
-                                >
-                                  {typeof getSettlementValue(row, col.column_key) === 'number'
-                                    ? formatNumber(getSettlementValue(row, col.column_key) as number)
-                                    : getSettlementValue(row, col.column_key) || '-'
-                                  }
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                          <tr className="bg-gray-100 font-medium" key={`subtotal-${csoGroup.csoName}-${customer.customerName}`}>
-                            {displayColumns.map((col, colIdx) => (
-                              <td key={col.column_key} className={typeof customer.subtotal[col.column_key as keyof typeof customer.subtotal] === 'number' ? 'text-right' : ''}>
-                                {colIdx === labelColumnIndex ? (
-                                  <span className="text-gray-600">{customer.customerName} 합계</span>
-                                ) : col.column_key === '수량' ? (
-                                  formatNumber(customer.subtotal.수량)
-                                ) : col.column_key === '금액' ? (
-                                  formatNumber(customer.subtotal.금액)
-                                ) : col.column_key === '제약수수료_합계' ? (
-                                  <span className="text-blue-600">{formatNumber(customer.subtotal.제약수수료_합계)}</span>
-                                ) : ''}
-                              </td>
-                            ))}
-                          </tr>
-                        </>
-                      ))}
-                      <tr className="bg-blue-50 font-bold border-b-2 border-blue-200" key={`total-${csoGroup.csoName}`}>
-                        {displayColumns.map((col, colIdx) => (
-                          <td key={col.column_key} className={typeof csoGroup.total[col.column_key as keyof typeof csoGroup.total] === 'number' ? 'text-right' : ''}>
-                            {colIdx === labelColumnIndex ? (
-                              <span className="text-blue-700">{csoGroup.csoName} 총합계</span>
-                            ) : col.column_key === '수량' ? (
-                              formatNumber(csoGroup.total.수량)
-                            ) : col.column_key === '금액' ? (
-                              formatNumber(csoGroup.total.금액)
-                            ) : col.column_key === '제약수수료_합계' ? (
-                              <span className="text-blue-700">{formatNumber(csoGroup.total.제약수수료_합계)}</span>
-                            ) : ''}
-                          </td>
-                        ))}
-                      </tr>
-                    </>
-                  ))}
-                </>
-              ) : (
-                <tr>
-                  <td colSpan={displayColumns.length} className="text-center py-12">
-                    <div className="flex flex-col items-center gap-3">
-                      <FileSpreadsheet className="h-12 w-12 text-muted-foreground/50" />
-                      <div className="space-y-1">
-                        <p className="text-lg font-medium text-muted-foreground">
-                          {selectedMonth ? `${selectedMonth} 정산 데이터가 없습니다.` : '정산 데이터가 없습니다.'}
-                        </p>
-                        <p className="text-sm text-muted-foreground/70">
-                          {yearMonths.length === 0
-                            ? '아직 등록된 정산 데이터가 없습니다. 관리자에게 문의해주세요.'
-                            : searchQuery
-                              ? `"${searchQuery}" 검색 결과가 없습니다. 다른 검색어를 입력해보세요.`
-                              : '해당 월에 매칭된 정산 내역이 없습니다.'}
-                        </p>
-                      </div>
+    <div className="glass-chart-card overflow-hidden p-0">
+      <div className="px-5 pt-5 pb-3">
+        <h3 className="text-base font-semibold">정산 상세 내역</h3>
+        <p className="text-sm text-muted-foreground mt-0.5">거래처명별 소계 및 CSO관리업체 총합계 포함</p>
+      </div>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted hover:bg-muted">
+              {displayColumns.map(col => (
+                <TableHead key={col.column_key} className="whitespace-nowrap sticky top-0 z-10 bg-muted">
+                  {col.column_name}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tableRows.length > 0 ? tableRows : (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={displayColumns.length} className="text-center py-12">
+                  <div className="flex flex-col items-center gap-3">
+                    <FileSpreadsheet className="h-12 w-12 text-muted-foreground/50" />
+                    <div className="space-y-1">
+                      <p className="text-lg font-medium text-muted-foreground">
+                        {selectedMonth ? `${selectedMonth} 정산 데이터가 없습니다.` : '정산 데이터가 없습니다.'}
+                      </p>
+                      <p className="text-sm text-muted-foreground/70">
+                        {yearMonths.length === 0
+                          ? '아직 등록된 정산 데이터가 없습니다. 관리자에게 문의해주세요.'
+                          : searchQuery
+                            ? `"${searchQuery}" 검색 결과가 없습니다. 다른 검색어를 입력해보세요.`
+                            : '해당 월에 매칭된 정산 내역이 없습니다.'}
+                      </p>
                     </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
   );
 });

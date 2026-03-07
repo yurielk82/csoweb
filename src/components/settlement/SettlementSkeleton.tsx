@@ -1,76 +1,65 @@
-import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
-function SummaryCardSkeleton() {
+function SummaryCardSkeleton({ accent = false }: { accent?: boolean }) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardDescription>
-          <Skeleton className="h-4 w-16" />
-        </CardDescription>
-        <Skeleton className="h-8 w-28" />
-      </CardHeader>
-    </Card>
-  );
-}
-
-function TableRowSkeleton({ columns = 7 }: { columns?: number }) {
-  return (
-    <tr className="border-b">
-      {Array.from({ length: columns }).map((_, i) => (
-        <td key={i} className="p-2">
-          <Skeleton className="h-4 w-full" />
-        </td>
-      ))}
-    </tr>
+    <div className={`glass-kpi-card${accent ? ' border-primary/20' : ''}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <Skeleton className="h-4 w-4 rounded-full" />
+        <Skeleton className="h-4 w-16" />
+      </div>
+      <Skeleton className="h-8 w-28" />
+      {accent && <Skeleton className="h-3 w-40 mt-1" />}
+    </div>
   );
 }
 
 export function SettlementSkeleton() {
   return (
     <div className="space-y-6">
-      {/* 요약 카드 3개: 수량 / 금액 / 수수료 */}
+      {/* 요약 카드 3개 */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <SummaryCardSkeleton />
         <SummaryCardSkeleton />
-        <Card className="border-blue-200 bg-blue-50/30">
-          <CardHeader className="pb-2">
-            <CardDescription>
-              <Skeleton className="h-4 w-24" />
-            </CardDescription>
-            <Skeleton className="h-8 w-32" />
-            <Skeleton className="h-3 w-40 mt-1" />
-          </CardHeader>
-        </Card>
+        <SummaryCardSkeleton accent />
       </div>
 
       {/* 테이블 스켈레톤 */}
-      <Card>
-        <CardHeader className="pb-2">
+      <div className="glass-chart-card overflow-hidden p-0">
+        <div className="px-5 pt-5 pb-3">
           <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-4 w-56 mt-1" />
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  {Array.from({ length: 7 }).map((_, i) => (
-                    <th key={i} className="p-2">
-                      <Skeleton className="h-4 w-full" />
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <TableRowSkeleton key={i} columns={7} />
+          <Skeleton className="h-4 w-56 mt-1.5" />
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted hover:bg-muted">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <TableHead key={i}>
+                  <Skeleton className="h-4 w-full" />
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 10 }).map((_, i) => (
+              <TableRow key={i}>
+                {Array.from({ length: 7 }).map((_, j) => (
+                  <TableCell key={j}>
+                    <Skeleton className="h-4 w-full" />
+                  </TableCell>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

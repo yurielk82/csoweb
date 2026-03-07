@@ -2,6 +2,20 @@
 
 이 프로젝트의 모든 주요 변경사항을 기록합니다.
 
+## [0.32.0] - 2026-03-07
+
+### Changed
+- 사용자 대시보드(`/dashboard`) 전체 재설계 — glass 디자인 시스템 적용
+- SummaryCards: `glass-kpi-card` 토큰 + 아이콘 + `tabular-nums` 숫자 정렬
+- NoticeCard: `warning` 토큰으로 전환 (하드코딩 amber 제거)
+- SettlementTable: HTML table → shadcn/ui Table 전면 재작성 + glass-chart-card
+- SettlementSkeleton: glass-kpi-card + shadcn/ui Table 기반 스켈레톤
+- dashboard/page.tsx: 상태 카드 4종 디자인 토큰 적용 (destructive/muted/primary/warning)
+- admin/master: 테이블 shadcn/ui Table 전환 + 하드코딩 색상 제거
+
+### Removed
+- globals.css에서 `.settlement-table`, `.number-cell` 레거시 CSS 규칙 제거
+
 ## [0.31.1] - 2026-03-07
 
 ### Fixed

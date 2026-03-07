@@ -68,11 +68,11 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6">
         <PageHeader />
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-destructive/20 bg-destructive/10">
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
-            <h2 className="text-xl font-semibold text-red-800 mb-2">로그인이 필요합니다</h2>
-            <p className="text-red-700 text-center max-w-md mb-4">
+            <AlertCircle className="h-16 w-16 text-destructive mb-4" />
+            <h2 className="text-xl font-semibold mb-2">로그인이 필요합니다</h2>
+            <p className="text-muted-foreground text-center max-w-md mb-4">
               {error || '세션이 만료되었거나 로그인이 필요합니다.'}
             </p>
             <Button variant="destructive" onClick={() => window.location.href = '/login'}>
@@ -89,11 +89,11 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6">
         <PageHeader />
-        <Card className="border-gray-200 bg-gray-50">
+        <Card className="border-border bg-muted">
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <RefreshCw className="h-16 w-16 text-gray-400 mb-4" />
-            <h2 className="text-xl font-semibold text-gray-700 mb-2">연결 오류</h2>
-            <p className="text-gray-600 text-center max-w-md mb-4">
+            <RefreshCw className="h-16 w-16 text-muted-foreground mb-4" />
+            <h2 className="text-xl font-semibold mb-2">연결 오류</h2>
+            <p className="text-muted-foreground text-center max-w-md mb-4">
               {error || '서버와 연결할 수 없습니다. 인터넷 연결을 확인해주세요.'}
             </p>
             <Button variant="outline" onClick={() => window.location.reload()}>
@@ -111,11 +111,11 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6">
         <PageHeader />
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-primary/20 bg-primary/10">
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <FileSpreadsheet className="h-16 w-16 text-blue-400 mb-4" />
-            <h2 className="text-xl font-semibold text-blue-800 mb-2">정산서가 아직 업로드되지 않았습니다</h2>
-            <p className="text-blue-700 text-center max-w-md">
+            <FileSpreadsheet className="h-16 w-16 text-primary mb-4" />
+            <h2 className="text-xl font-semibold mb-2">정산서가 아직 업로드되지 않았습니다</h2>
+            <p className="text-muted-foreground text-center max-w-md">
               관리자가 정산서를 업로드하면 이곳에서 조회할 수 있습니다.
             </p>
           </CardContent>
@@ -129,15 +129,15 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6">
         <PageHeader />
-        <Card className="border-amber-200 bg-amber-50">
+        <Card className="border-warning/20 bg-warning/10">
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <AlertCircle className="h-16 w-16 text-amber-500 mb-4" />
-            <h2 className="text-xl font-semibold text-amber-800 mb-2">조회 가능한 정산 데이터가 없습니다</h2>
-            <p className="text-amber-700 text-center max-w-md">
+            <AlertCircle className="h-16 w-16 text-warning mb-4" />
+            <h2 className="text-xl font-semibold mb-2">조회 가능한 정산 데이터가 없습니다</h2>
+            <p className="text-muted-foreground text-center max-w-md">
               현재 회원님의 사업자번호와 매칭된 정산 데이터가 없습니다.<br />
               관리자에게 문의하여 CSO 매칭 등록을 요청해주세요.
             </p>
-            <div className="mt-4 p-3 bg-amber-100 rounded-lg text-sm text-amber-800">
+            <div className="mt-4 p-3 bg-muted rounded-lg text-sm text-foreground">
               <p><strong>문의 시 안내사항:</strong></p>
               <ul className="list-disc list-inside mt-1 space-y-1">
                 <li>가입 시 등록한 사업자번호 확인</li>

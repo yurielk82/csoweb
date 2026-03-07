@@ -10,14 +10,14 @@ export function NoticeCard({ content, replaceVars }: NoticeCardProps) {
   if (!content) return null;
 
   return (
-    <Card className="border-amber-200 bg-amber-50">
+    <Card className="border-warning/20 bg-warning/10">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center gap-2 text-amber-800">
+        <CardTitle className="text-base flex items-center gap-2 text-warning">
           <AlertCircle className="h-4 w-4" />
           Notice
         </CardTitle>
       </CardHeader>
-      <CardContent className="text-sm text-amber-900">
+      <CardContent className="text-sm text-foreground">
         <div className="whitespace-pre-line">
           {replaceVars(content)}
         </div>
