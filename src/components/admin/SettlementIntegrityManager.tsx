@@ -576,15 +576,25 @@ export default function SettlementIntegrityManager() {
     const row = tableData.find((r) => r.id === rowId);
     if (!row) return;
 
-    // 중복 검증
+    // 같은 row에 이미 존재하는 CSO명 체크
+    if (row.cso_company_names.includes(csoName)) {
+      toast({
+        variant: 'destructive',
+        title: '중복 업체명',
+        description: `"${csoName}"은(는) 이미 추가되어 있습니다.`,
+      });
+      return;
+    }
+
+    // 다른 사업자에 이미 매핑된 CSO명 체크
     const existingBizNum = csoMapping[csoName];
     if (existingBizNum && existingBizNum !== row.business_number) {
       toast({
         variant: 'destructive',
-        title: '중복 경고',
+        title: '중복 매핑',
         description: `"${csoName}"은(는) 이미 다른 사업자(${formatBusinessNumber(existingBizNum)})에 매핑되어 있습니다.`,
       });
-      // 경고만 표시하고 계속 진행
+      return;
     }
 
     // 낙관적 업데이트
@@ -649,14 +659,15 @@ export default function SettlementIntegrityManager() {
     const row = tableData.find((r) => r.id === rowId);
     if (!row) return;
 
-    // 중복 검증
+    // 다른 사업자에 이미 매핑된 CSO명 체크
     const existingBizNum = csoMapping[newName];
     if (existingBizNum && existingBizNum !== row.business_number) {
       toast({
         variant: 'destructive',
-        title: '중복 경고',
+        title: '중복 매핑',
         description: `"${newName}"은(는) 이미 다른 사업자(${formatBusinessNumber(existingBizNum)})에 매핑되어 있습니다.`,
       });
+      return;
     }
 
     // 낙관적 업데이트
