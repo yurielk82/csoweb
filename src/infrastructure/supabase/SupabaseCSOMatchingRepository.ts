@@ -5,6 +5,7 @@
 import { supabase } from './client';
 import type { CSOMatchingRepository } from '@/domain/cso-matching/CSOMatchingRepository';
 import type { CSOMatching } from '@/domain/cso-matching/types';
+import { TEST_CSO_PREFIX } from '@/constants/defaults';
 
 export class SupabaseCSOMatchingRepository implements CSOMatchingRepository {
   async getMatchedCompanyNames(businessNumber: string): Promise<string[]> {
@@ -18,7 +19,12 @@ export class SupabaseCSOMatchingRepository implements CSOMatchingRepository {
       return [];
     }
 
-    return (data || []).map(d => d.cso_company_name);
+    // 테스트 계정의 [TEST] 접두사를 제거하여 실제 CSO명으로 반환
+    return (data || []).map(d =>
+      d.cso_company_name.startsWith(TEST_CSO_PREFIX)
+        ? d.cso_company_name.slice(TEST_CSO_PREFIX.length)
+        : d.cso_company_name
+    );
   }
 
   async findAll(): Promise<CSOMatching[]> {

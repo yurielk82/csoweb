@@ -20,6 +20,7 @@ export const mockAdminUser: User = {
   password_hash: '$2a$12$hashedpassword',
   is_admin: true,
   is_approved: true,
+  is_test: false,
   must_change_password: false,
   profile_complete: true,
   failed_login_attempts: 0,
@@ -40,6 +41,7 @@ export const mockRegularUser: User = {
   password_hash: '$2a$12$hashedpassword',
   is_admin: false,
   is_approved: true,
+  is_test: false,
   must_change_password: false,
   profile_complete: true,
   failed_login_attempts: 0,
@@ -77,6 +79,7 @@ export const mockAdminSession: UserSession = {
   email: mockAdminUser.email,
   is_admin: true,
   is_approved: true,
+  is_test: false,
   must_change_password: false,
   profile_complete: true,
 };
@@ -88,6 +91,7 @@ export const mockRegularSession: UserSession = {
   email: mockRegularUser.email,
   is_admin: false,
   is_approved: true,
+  is_test: false,
   must_change_password: false,
   profile_complete: true,
 };

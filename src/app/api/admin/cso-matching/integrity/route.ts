@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
 import { getSession } from '@/lib/auth';
-import { SUPABASE_PAGE_SIZE } from '@/constants/defaults';
+import { SUPABASE_PAGE_SIZE, TEST_CSO_PREFIX } from '@/constants/defaults';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +22,7 @@ interface IntegrityResultV2 {
 }
 
 type MatchingRow = { cso_company_name: string; business_number: string };
-type UserRow = { business_number: string; company_name: string; is_approved: boolean; is_admin: boolean };
+type UserRow = { business_number: string; company_name: string; is_approved: boolean; is_admin: boolean; is_test: boolean };
 type SettlementRow = { 'CSO관리업체': string | null; '정산월': string | null; business_number: string };
 type MonthRow = { '정산월': string | null };
 
@@ -34,6 +34,8 @@ function buildCsoMaps(matchingData: MatchingRow[]) {
 
   for (const match of matchingData) {
     const normalizedName = match.cso_company_name.trim();
+    // 테스트 계정의 [TEST] 접두사 매핑은 무결성 검사에서 제외
+    if (normalizedName.startsWith(TEST_CSO_PREFIX)) continue;
     if (!bizToCSO.has(match.business_number)) bizToCSO.set(match.business_number, new Set());
     bizToCSO.get(match.business_number)!.add(normalizedName);
     csoToBiz.set(normalizedName, match.business_number);
@@ -48,7 +50,8 @@ function buildUserMap(usersData: UserRow[]) {
   const adminCompanyNames = new Set<string>();
 
   for (const user of usersData) {
-    if (user.is_admin) {
+    // 관리자와 테스트 계정은 무결성 검사에서 제외
+    if (user.is_admin || user.is_test) {
       adminBizNumbers.add(user.business_number);
       if (user.company_name) adminCompanyNames.add(user.company_name.trim());
       continue;
@@ -265,7 +268,7 @@ export async function GET(request: NextRequest) {
     // 1. 병렬 데이터 조회
     const [matchingResult, usersResult, settlementData] = await Promise.all([
       supabase.from('cso_matching').select('cso_company_name, business_number'),
-      supabase.from('users').select('business_number, company_name, is_approved, is_admin'),
+      supabase.from('users').select('business_number, company_name, is_approved, is_admin, is_test'),
       fetchAllSettlements(supabase, month),
     ]);
 

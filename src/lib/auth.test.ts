@@ -54,6 +54,7 @@ const testSession: UserSession = {
   email: 'test@test.com',
   is_admin: false,
   is_approved: true,
+  is_test: false,
   must_change_password: false,
   profile_complete: true,
 };

@@ -8,15 +8,21 @@ import { sendEmail } from '@/lib/email';
 import { invalidateSettlementCache } from '@/lib/data-cache';
 import { MAX_FAILED_LOGIN_ATTEMPTS, TOKEN_EXPIRY_MINUTES } from '@/constants/defaults';
 
+type SessionUser = {
+  id: string; business_number: string; company_name: string; email: string;
+  is_admin: boolean; is_approved: boolean; is_test: boolean;
+  must_change_password: boolean; profile_complete: boolean;
+};
+
 type LoginResult =
-  | { type: 'success'; user: { id: string; business_number: string; company_name: string; email: string; is_admin: boolean; is_approved: boolean; must_change_password: boolean; profile_complete: boolean }; redirect: string }
+  | { type: 'success'; user: SessionUser; redirect: string }
   | { type: 'not_found' }
   | { type: 'locked' }
   | { type: 'failed'; failedCount: number; maxAttempts: number }
   | { type: 'locked_now'; maxAttempts: number }
   | { type: 'pending' }
-  | { type: 'must_change'; user: { id: string; business_number: string; company_name: string; email: string; is_admin: boolean; is_approved: boolean; must_change_password: boolean; profile_complete: boolean }; redirect: string }
-  | { type: 'incomplete'; user: { id: string; business_number: string; company_name: string; email: string; is_admin: boolean; is_approved: boolean; must_change_password: boolean; profile_complete: boolean }; redirect: string };
+  | { type: 'must_change'; user: SessionUser; redirect: string }
+  | { type: 'incomplete'; user: SessionUser; redirect: string };
 
 export async function authenticateUser(
   businessNumber: string,
@@ -84,13 +90,14 @@ export async function authenticateUser(
     return { type: 'pending' };
   }
 
-  const sessionUser = {
+  const sessionUser: SessionUser = {
     id: user.id,
     business_number: user.business_number,
     company_name: user.company_name,
     email: user.email,
     is_admin: user.is_admin,
     is_approved: user.is_approved,
+    is_test: user.is_test ?? false,
     must_change_password: user.must_change_password || false,
     profile_complete: user.profile_complete ?? true,
   };

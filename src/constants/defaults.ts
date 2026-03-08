@@ -39,6 +39,10 @@ export const EMAIL_LOG_DEFAULT_LIMIT = 100;
 /** SMTP 기본 포트 (SSL) */
 export const DEFAULT_SMTP_PORT = 465;
 
+// ── 테스트 계정 ──
+/** 테스트 계정 CSO 매핑 접두사 — PK 충돌 방지용 */
+export const TEST_CSO_PREFIX = '[TEST] ';
+
 // ── 인증/보안 ──
 /** 세션(JWT + 쿠키) 만료 시간 (시간 단위) */
 export const SESSION_EXPIRY_HOURS = 24;

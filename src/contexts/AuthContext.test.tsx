@@ -28,6 +28,7 @@ function TestConsumer() {
         email: 'test@test.com',
         is_admin: false,
         is_approved: true,
+        is_test: false,
         must_change_password: false,
         profile_complete: true,
       })}>
@@ -100,6 +101,7 @@ describe('AuthContext', () => {
       email: 'stored@test.com',
       is_admin: false,
       is_approved: true,
+      is_test: false,
       must_change_password: false,
       profile_complete: true,
     }));

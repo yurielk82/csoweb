@@ -23,6 +23,7 @@ function mapDbUserToUser(dbUser: DbUser): User {
     password_hash: dbUser.password_hash,
     is_admin: dbUser.is_admin,
     is_approved: dbUser.is_approved,
+    is_test: dbUser.is_test ?? false,
     must_change_password: dbUser.must_change_password || false,
     profile_complete: dbUser.profile_complete ?? true,
     password_changed_at: dbUser.password_changed_at || undefined,

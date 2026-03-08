@@ -19,6 +19,7 @@ export interface User {
   password_hash: string;
   is_admin: boolean;
   is_approved: boolean;
+  is_test: boolean;
   must_change_password: boolean;
   profile_complete: boolean;
   password_changed_at?: string;
@@ -33,6 +34,7 @@ export interface UserSession {
   email: string;
   is_admin: boolean;
   is_approved: boolean;
+  is_test: boolean;
   must_change_password: boolean;
   profile_complete: boolean;
 }

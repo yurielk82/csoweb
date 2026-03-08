@@ -4,6 +4,7 @@ import { getUserRepository } from '@/infrastructure/supabase';
 import { sendEmail } from '@/lib/email';
 import { invalidateUserCache, invalidateCSOMatchingCache } from '@/lib/data-cache';
 import { getSupabase } from '@/lib/supabase';
+import { TEST_CSO_PREFIX } from '@/constants/defaults';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,13 +58,17 @@ export async function POST(request: NextRequest) {
     }
     
     // CSO 매핑 자동 등록: 회사명 → 사업자번호 (승인 시 보장)
+    // 테스트 계정은 [TEST] 접두사를 붙여 PK 충돌 방지
     try {
       const supabase = getSupabase();
+      const csoCompanyName = user.is_test
+        ? TEST_CSO_PREFIX + user.company_name.trim()
+        : user.company_name.trim();
       const { error: matchError } = await supabase
         .from('cso_matching')
         .upsert(
           {
-            cso_company_name: user.company_name.trim(),
+            cso_company_name: csoCompanyName,
             business_number: user.business_number,
             updated_at: new Date().toISOString(),
           },
