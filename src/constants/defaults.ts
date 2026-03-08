@@ -43,6 +43,16 @@ export const DEFAULT_SMTP_PORT = 465;
 /** 테스트 계정 CSO 매핑 접두사 — PK 충돌 방지용 */
 export const TEST_CSO_PREFIX = '[TEST] ';
 
+/** 테스트 계정 사업자번호 목록 */
+export const TEST_BUSINESS_NUMBERS = [
+  '8482200821',
+  '9999999999',
+  '9999999998',
+  '9999999997',
+  '9999999996',
+  '9999999995',
+] as const;
+
 // ── 인증/보안 ──
 /** 세션(JWT + 쿠키) 만료 시간 (시간 단위) */
 export const SESSION_EXPIRY_HOURS = 24;
@@ -94,6 +104,12 @@ export const HIGH_MATCH_SCORE = 0.7;
 export const MATCH_OPACITY_HALF = 0.5;
 
 // ── 비밀번호 ──
+/** 일반 계정 최소 비밀번호 길이 (영문+숫자 조합 필수) */
+export const MIN_PASSWORD_LENGTH = 6;
+
+/** 테스트 계정 최소 비밀번호 길이 (숫자만 가능) */
+export const TEST_MIN_PASSWORD_LENGTH = 4;
+
 /** 최근 비밀번호 변경 기준일 (일) — 음수 */
 export const PASSWORD_RECENT_DAYS = -5;
 

@@ -3,7 +3,7 @@
 import { useState, useEffect, type Dispatch, type SetStateAction } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { API_ROUTES } from '@/constants/api';
-import { TOAST_DURATION_MS } from '@/constants/defaults';
+import { TOAST_DURATION_MS, MIN_PASSWORD_LENGTH } from '@/constants/defaults';
 import { getPasswordStrength } from '@/lib/format';
 
 // ── 타입 ──
@@ -72,7 +72,7 @@ export function useResetPassword() {
     e.preventDefault();
     setError('');
 
-    if (formData.new_password.length < 6) {
+    if (formData.new_password.length < MIN_PASSWORD_LENGTH) {
       setError('비밀번호는 6자 이상이어야 합니다.');
       return;
     }

@@ -166,26 +166,39 @@ describe('isValidEmail', () => {
 });
 
 describe('isValidPassword', () => {
-  it('8자 이상 영문+숫자 조합이면 유효하다', () => {
+  it('6자 이상 영문+숫자 조합이면 유효하다', () => {
+    expect(isValidPassword('abc123')).toBe(true);
     expect(isValidPassword('abcd1234')).toBe(true);
     expect(isValidPassword('Password1')).toBe(true);
-    expect(isValidPassword('longpass99')).toBe(true);
   });
 
-  it('8자 미만이면 무효하다', () => {
-    expect(isValidPassword('abc123')).toBe(false);
+  it('6자 미만이면 무효하다', () => {
+    expect(isValidPassword('ab12')).toBe(false);
     expect(isValidPassword('')).toBe(false);
   });
 
   it('숫자만 있으면 무효하다', () => {
-    expect(isValidPassword('12345678')).toBe(false);
+    expect(isValidPassword('123456')).toBe(false);
   });
 
   it('영문만 있으면 무효하다', () => {
-    expect(isValidPassword('abcdefgh')).toBe(false);
+    expect(isValidPassword('abcdef')).toBe(false);
   });
 
-  it('정확히 8자 영문+숫자는 유효하다', () => {
-    expect(isValidPassword('abcdef12')).toBe(true);
+  it('정확히 6자 영문+숫자는 유효하다', () => {
+    expect(isValidPassword('abc123')).toBe(true);
+  });
+
+  describe('테스트 계정 (isTest=true)', () => {
+    it('4자 이상이면 유효하다 (숫자만 가능)', () => {
+      expect(isValidPassword('1234', true)).toBe(true);
+      expect(isValidPassword('abcd', true)).toBe(true);
+      expect(isValidPassword('12345678', true)).toBe(true);
+    });
+
+    it('4자 미만이면 무효하다', () => {
+      expect(isValidPassword('123', true)).toBe(false);
+      expect(isValidPassword('', true)).toBe(false);
+    });
   });
 });

@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     if (!isValidPassword(new_password)) {
       return NextResponse.json(
-        { success: false, error: '비밀번호는 영문+숫자 조합 8자 이상이어야 합니다.' },
+        { success: false, error: '비밀번호는 영문+숫자 조합 6자 이상이어야 합니다.' },
         { status: 400 }
       );
     }

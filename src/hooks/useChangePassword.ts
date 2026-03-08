@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { API_ROUTES } from '@/constants/api';
+import { MIN_PASSWORD_LENGTH, TEST_MIN_PASSWORD_LENGTH } from '@/constants/defaults';
 
 interface SessionData {
   business_number: string;
@@ -11,9 +12,8 @@ interface SessionData {
   must_change_password: boolean;
   profile_complete: boolean;
   is_admin: boolean;
+  is_test: boolean;
 }
-
-const MIN_PASSWORD_LENGTH = 8;
 const BLOCKED_SUFFIX_LENGTH = 5;
 
 // ── Validation ──
@@ -22,13 +22,18 @@ function validateNewPassword(
   newPassword: string,
   confirmPassword: string,
   businessNumber: string,
+  isTest = false,
 ): string | null {
-  if (
+  if (isTest) {
+    if (newPassword.length < TEST_MIN_PASSWORD_LENGTH) {
+      return '비밀번호는 4자 이상이어야 합니다.';
+    }
+  } else if (
     newPassword.length < MIN_PASSWORD_LENGTH ||
     !/[a-zA-Z]/.test(newPassword) ||
     !/[0-9]/.test(newPassword)
   ) {
-    return '비밀번호는 영문+숫자 조합 8자 이상이어야 합니다.';
+    return '비밀번호는 영문+숫자 조합 6자 이상이어야 합니다.';
   }
   if (newPassword !== confirmPassword) return '비밀번호가 일치하지 않습니다.';
 
@@ -85,7 +90,7 @@ export function useChangePassword() {
 
     const validationError = validateNewPassword(
       formData.new_password, formData.confirm_password,
-      session?.business_number || '',
+      session?.business_number || '', session?.is_test ?? false,
     );
     if (validationError) { setError(validationError); return; }
 

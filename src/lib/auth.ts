@@ -2,7 +2,12 @@ import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
 import type { UserSession } from '@/types';
-import { SESSION_EXPIRY_HOURS, BCRYPT_SALT_ROUNDS } from '@/constants/defaults';
+import {
+  SESSION_EXPIRY_HOURS,
+  BCRYPT_SALT_ROUNDS,
+  MIN_PASSWORD_LENGTH,
+  TEST_MIN_PASSWORD_LENGTH,
+} from '@/constants/defaults';
 import { COOKIE_NAME } from '@/constants/auth';
 
 if (!process.env.JWT_SECRET) {
@@ -89,8 +94,9 @@ export function isValidEmail(email: string): boolean {
   return emailRegex.test(email);
 }
 
-export function isValidPassword(password: string): boolean {
-  if (password.length < 8) return false;
+export function isValidPassword(password: string, isTest = false): boolean {
+  if (isTest) return password.length >= TEST_MIN_PASSWORD_LENGTH;
+  if (password.length < MIN_PASSWORD_LENGTH) return false;
   if (!/[a-zA-Z]/.test(password)) return false;
   if (!/[0-9]/.test(password)) return false;
   return true;

@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { API_ROUTES } from '@/constants/api';
+import { MIN_PASSWORD_LENGTH } from '@/constants/defaults';
 
 export interface PasswordFormData {
   currentPassword: string;
@@ -13,8 +14,6 @@ export interface PasswordFormData {
 const INITIAL_PASSWORD: PasswordFormData = {
   currentPassword: '', newPassword: '', confirmPassword: '',
 };
-
-const MIN_PASSWORD_LENGTH = 6;
 
 export function useProfilePassword() {
   const { toast } = useToast();

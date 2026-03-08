@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { API_ROUTES } from '@/constants/api';
+import { MIN_PASSWORD_LENGTH } from '@/constants/defaults';
 import { formatPhoneNumber, formatBusinessNumber } from '@/lib/format';
 import { useDaumPostcode } from '@/hooks/useDaumPostcode';
 
@@ -30,7 +31,6 @@ const INITIAL_BIZ_VERIFICATION: BizVerification = {
   errorMessage: null,
 };
 
-const MIN_PASSWORD_LENGTH = 8;
 const BIZ_NUMBER_DIGITS = 10;
 
 // ── 유효성 검사 ──
@@ -61,7 +61,7 @@ function validateRegisterForm(
     !/[a-zA-Z]/.test(formData.password) ||
     !/[0-9]/.test(formData.password)
   ) {
-    return '비밀번호는 영문+숫자 조합 8자 이상이어야 합니다.';
+    return '비밀번호는 영문+숫자 조합 6자 이상이어야 합니다.';
   }
   return null;
 }

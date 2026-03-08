@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, setSession, hashPassword } from '@/lib/auth';
+import { getSession, setSession, hashPassword, isValidPassword } from '@/lib/auth';
 import { getUserRepository } from '@/infrastructure/supabase';
 import { PASSWORD_RECENT_DAYS } from '@/constants/defaults';
 
@@ -24,9 +24,12 @@ export async function POST(request: NextRequest) {
     const { new_password } = body;
 
     // 비밀번호 유효성 검사
-    if (!new_password || new_password.length < 8 || !/[a-zA-Z]/.test(new_password) || !/[0-9]/.test(new_password)) {
+    if (!new_password || !isValidPassword(new_password, session.is_test)) {
+      const msg = session.is_test
+        ? '비밀번호는 4자 이상이어야 합니다.'
+        : '비밀번호는 영문+숫자 조합 6자 이상이어야 합니다.';
       return NextResponse.json(
-        { success: false, error: '비밀번호는 영문+숫자 조합 8자 이상이어야 합니다.' },
+        { success: false, error: msg },
         { status: 400 }
       );
     }
