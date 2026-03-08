@@ -3,7 +3,8 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { API_ROUTES } from '@/constants/api';
-import { MIN_PASSWORD_LENGTH } from '@/constants/defaults';
+import { MIN_PASSWORD_LENGTH, TEST_MIN_PASSWORD_LENGTH } from '@/constants/defaults';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface PasswordFormData {
   currentPassword: string;
@@ -17,6 +18,8 @@ const INITIAL_PASSWORD: PasswordFormData = {
 
 export function useProfilePassword() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isTest = user?.is_test ?? false;
   const [saving, setSaving] = useState(false);
   const [passwordForm, setPasswordForm] = useState<PasswordFormData>(INITIAL_PASSWORD);
   const [passwordError, setPasswordError] = useState('');
@@ -33,8 +36,17 @@ export function useProfilePassword() {
       setPasswordError('새 비밀번호가 일치하지 않습니다.');
       return;
     }
-    if (newPassword.length < MIN_PASSWORD_LENGTH) {
-      setPasswordError('비밀번호는 6자 이상이어야 합니다.');
+    if (isTest) {
+      if (newPassword.length < TEST_MIN_PASSWORD_LENGTH) {
+        setPasswordError('비밀번호는 4자 이상이어야 합니다.');
+        return;
+      }
+    } else if (
+      newPassword.length < MIN_PASSWORD_LENGTH ||
+      !/[a-zA-Z]/.test(newPassword) ||
+      !/[0-9]/.test(newPassword)
+    ) {
+      setPasswordError('비밀번호는 영문+숫자 조합 6자 이상이어야 합니다.');
       return;
     }
 
@@ -59,7 +71,7 @@ export function useProfilePassword() {
     } finally {
       setSaving(false);
     }
-  }, [passwordForm, toast]);
+  }, [passwordForm, toast, isTest]);
 
   return {
     saving, passwordForm, passwordError,

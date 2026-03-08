@@ -72,8 +72,12 @@ export function useResetPassword() {
     e.preventDefault();
     setError('');
 
-    if (formData.new_password.length < MIN_PASSWORD_LENGTH) {
-      setError('비밀번호는 6자 이상이어야 합니다.');
+    if (
+      formData.new_password.length < MIN_PASSWORD_LENGTH ||
+      !/[a-zA-Z]/.test(formData.new_password) ||
+      !/[0-9]/.test(formData.new_password)
+    ) {
+      setError('비밀번호는 영문+숫자 조합 6자 이상이어야 합니다.');
       return;
     }
     if (formData.new_password !== formData.confirm_password) {

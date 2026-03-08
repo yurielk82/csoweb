@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, hashPassword, verifyPassword } from '@/lib/auth';
+import { getSession, hashPassword, verifyPassword, isValidPassword } from '@/lib/auth';
 import { getUserRepository } from '@/infrastructure/supabase';
 import { invalidateUserCache } from '@/lib/data-cache';
 import type { User } from '@/domain/user/types';
@@ -32,12 +32,20 @@ interface HandlePasswordChangeOptions {
   newPassword: string;
   passwordHash: string;
   businessNumber: string;
+  isTest: boolean;
   userRepo: ReturnType<typeof getUserRepository>;
 }
 
 async function handlePasswordChange({
-  currentPassword, newPassword, passwordHash, businessNumber, userRepo,
+  currentPassword, newPassword, passwordHash, businessNumber, isTest, userRepo,
 }: HandlePasswordChangeOptions) {
+  if (!isValidPassword(newPassword, isTest)) {
+    const msg = isTest
+      ? '비밀번호는 4자 이상이어야 합니다.'
+      : '비밀번호는 영문+숫자 조합 6자 이상이어야 합니다.';
+    return NextResponse.json({ success: false, error: msg }, { status: 400 });
+  }
+
   const isValid = await verifyPassword(currentPassword, passwordHash);
   if (!isValid) {
     return NextResponse.json({ success: false, error: '현재 비밀번호가 일치하지 않습니다.' }, { status: 400 });
@@ -94,7 +102,8 @@ export async function PUT(request: NextRequest) {
     if (body.current_password && body.new_password) {
       return handlePasswordChange({
         currentPassword: body.current_password, newPassword: body.new_password,
-        passwordHash: user.password_hash, businessNumber: session.business_number, userRepo,
+        passwordHash: user.password_hash, businessNumber: session.business_number,
+        isTest: session.is_test, userRepo,
       });
     }
 

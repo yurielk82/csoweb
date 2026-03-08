@@ -107,7 +107,7 @@ export const MATCH_OPACITY_HALF = 0.5;
 /** 일반 계정 최소 비밀번호 길이 (영문+숫자 조합 필수) */
 export const MIN_PASSWORD_LENGTH = 6;
 
-/** 테스트 계정 최소 비밀번호 길이 (숫자만 가능) */
+/** 테스트 계정 최소 비밀번호 길이 (형식 제한 없음) */
 export const TEST_MIN_PASSWORD_LENGTH = 4;
 
 /** 최근 비밀번호 변경 기준일 (일) — 음수 */

@@ -35,7 +35,7 @@ function validateRegisterInput(input: RegisterInput): string | null {
   const normalizedBN = normalizeBusinessNumber(input.business_number);
   if (!isValidBusinessNumber(normalizedBN)) return '유효한 사업자번호를 입력해주세요. (10자리 숫자)';
   if (!isValidEmail(input.email)) return '유효한 이메일 주소를 입력해주세요.';
-  if (!isValidPassword(input.password)) return '비밀번호는 영문+숫자 조합 8자 이상이어야 합니다.';
+  if (!isValidPassword(input.password)) return '비밀번호는 영문+숫자 조합 6자 이상이어야 합니다.';
   return null;
 }
 
