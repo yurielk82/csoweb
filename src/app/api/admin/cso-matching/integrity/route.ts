@@ -50,10 +50,15 @@ function buildUserMap(usersData: UserRow[]) {
   const adminCompanyNames = new Set<string>();
 
   for (const user of usersData) {
-    // 관리자와 테스트 계정은 무결성 검사에서 제외
-    if (user.is_admin || user.is_test) {
+    // 관리자는 무결성 검사에서 제외 (BN + 회사명 모두)
+    if (user.is_admin) {
       adminBizNumbers.add(user.business_number);
       if (user.company_name) adminCompanyNames.add(user.company_name.trim());
+      continue;
+    }
+    // 테스트 계정은 BN만 제외 (회사명은 실제 CSO와 일치할 수 있으므로 필터 제외)
+    if (user.is_test) {
+      adminBizNumbers.add(user.business_number);
       continue;
     }
     userMap.set(user.business_number, { company_name: user.company_name, is_approved: user.is_approved });
